@@ -1,6 +1,8 @@
 const Anthropic = require('@anthropic-ai/sdk');
 
 exports.handler = async (event, context) => {
+    console.log('Function started');
+
     // Only allow POST requests
     if (event.httpMethod !== 'POST') {
         return {
@@ -31,7 +33,20 @@ exports.handler = async (event, context) => {
 
     try {
         // Parse the intake form data from the request body
-        const intakeData = JSON.parse(event.body);
+        let intakeData;
+        try {
+            intakeData = JSON.parse(event.body);
+            console.log('Parsed intake data:', JSON.stringify(intakeData, null, 2));
+        } catch (parseError) {
+            console.error('JSON parse error:', parseError);
+            return {
+                statusCode: 400,
+                body: JSON.stringify({ error: 'Invalid JSON in request body', details: parseError.message }),
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            };
+        }
 
         // Craft a detailed prompt for generating the plan
         const prompt = `You are a professional fitness coach and nutritionist. Based on the following client intake data, generate a comprehensive, personalized 12-week training and nutrition plan. The plan should be safe, effective, and tailored to the client's goals, experience level, and any limitations.
@@ -69,9 +84,15 @@ Ensure the plan is realistic, sustainable, and motivating. Use clear, actionable
 
     } catch (error) {
         console.error('Error generating plan:', error);
+        console.error('Error stack:', error.stack);
         return {
             statusCode: 500,
-            body: JSON.stringify({ error: 'Failed to generate plan', details: error.message }),
+            body: JSON.stringify({
+                error: 'Failed to generate plan',
+                details: error.message,
+                stack: error.stack,
+                name: error.name
+            }),
             headers: {
                 'Content-Type': 'application/json'
             }
