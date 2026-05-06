@@ -1,0 +1,8 @@
+{
+  "name": "netlify-functions",
+  "version": "1.0.0",
+  "description": "Netlify Functions for Plus4Performance",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.24.3"
+  }
+}

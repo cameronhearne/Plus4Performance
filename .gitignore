@@ -1,0 +1,14 @@
+# macOS
+.DS_Store
+
+# Netlify functions dependencies
+netlify/functions/node_modules/
+
+# OS generated files
+*.log
+
+# Optional local env
+.env
+
+# npm package lock if root package is not intended
+package-lock.json
