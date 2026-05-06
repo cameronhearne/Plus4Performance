@@ -1,101 +1,45 @@
-const Anthropic = require('@anthropic-ai/sdk');
-
 exports.handler = async (event, context) => {
-    console.log('Function started');
+  if (event.httpMethod !== 'POST') {
+    return { statusCode: 405, body: 'Method Not Allowed' };
+  }
 
-    // Only allow POST requests
-    if (event.httpMethod !== 'POST') {
-        return {
-            statusCode: 405,
-            body: JSON.stringify({ error: 'Method Not Allowed' }),
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        };
-    }
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    return { statusCode: 500, body: JSON.stringify({ error: 'No API key' }) };
+  }
 
-    // Get API key from environment variable
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-        return {
-            statusCode: 500,
-            body: JSON.stringify({ error: 'API key not configured' }),
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        };
-    }
+  let intakeData;
+  try {
+    intakeData = JSON.parse(event.body);
+  } catch (e) {
+    return { statusCode: 400, body: JSON.stringify({ error: 'Invalid JSON', details: e.message }) };
+  }
 
-    // Initialize Anthropic client
-    const anthropic = new Anthropic({
-        apiKey: apiKey,
-    });
+  const prompt = `You are a professional fitness coach. Based on this client data, generate a personalised 12 week training and nutrition plan:\n\n${JSON.stringify(intakeData, null, 2)}`;
 
-    try {
-        // Parse the intake form data from the request body
-        let intakeData;
-        try {
-            intakeData = JSON.parse(event.body);
-            console.log('Parsed intake data:', JSON.stringify(intakeData, null, 2));
-        } catch (parseError) {
-            console.error('JSON parse error:', parseError);
-            return {
-                statusCode: 400,
-                body: JSON.stringify({ error: 'Invalid JSON in request body', details: parseError.message }),
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            };
-        }
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({
+      model: 'claude-opus-4-5',
+      max_tokens: 8000,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
 
-        // Craft a detailed prompt for generating the plan
-        const prompt = `You are a professional fitness coach and nutritionist. Based on the following client intake data, generate a comprehensive, personalized 12-week training and nutrition plan. The plan should be safe, effective, and tailored to the client's goals, experience level, and any limitations.
+  const data = await response.json();
 
-Intake Data:
-${JSON.stringify(intakeData, null, 2)}
+  if (!response.ok) {
+    return { statusCode: 500, body: JSON.stringify({ error: 'API error', details: data }) };
+  }
 
-Please structure the plan as follows:
-1. Executive Summary: Brief overview of the plan based on their goals and profile
-2. Weekly Training Schedule: Detailed workouts for each training day, including exercises, sets, reps, and progression
-3. Nutrition Guidelines: Daily calorie targets, macronutrient breakdown, meal timing, and sample meals
-4. Progression and Adjustments: How the plan will evolve over 12 weeks
-5. Recovery and Monitoring: Tips for recovery, tracking progress, and when to adjust
-6. Safety Notes: Any specific considerations based on their health information
-
-Ensure the plan is realistic, sustainable, and motivating. Use clear, actionable language.`;
-
-        // Call Anthropic API
-        const response = await anthropic.messages.create({
-            model: 'claude-3-5-sonnet-20241022',
-            max_tokens: 8000,
-            messages: [
-                { role: 'user', content: prompt }
-            ]
-        });
-
-        // Return the generated plan
-        return {
-            statusCode: 200,
-            body: response.content[0].text,
-            headers: {
-                'Content-Type': 'text/plain'
-            }
-        };
-
-    } catch (error) {
-        console.error('Error generating plan:', error);
-        console.error('Error stack:', error.stack);
-        return {
-            statusCode: 500,
-            body: JSON.stringify({
-                error: 'Failed to generate plan',
-                details: error.message,
-                stack: error.stack,
-                name: error.name
-            }),
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        };
-    }
+  return {
+    statusCode: 200,
+    headers: { 'Content-Type': 'text/plain' },
+    body: data.content[0].text
+  };
 };
