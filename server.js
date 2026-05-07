@@ -15,7 +15,7 @@ const server = http.createServer(async (req, res) => {
 
     try {
       const intakeData = JSON.parse(body);
-      
+
       const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -26,19 +26,17 @@ const server = http.createServer(async (req, res) => {
         body: JSON.stringify({
           model: 'claude-opus-4-5',
           max_tokens: 8000,
-          messages: [{ role: 'user', content: `You are a professional fitness coach. Based on this client data, generate a full personalised 12 week training and nutrition plan:\n\n${JSON.stringify(intakeData, null, 2)}` }]
+          messages: [{ role: 'user', content: 'You are a professional fitness coach. Based on this client data, generate a full personalised 12 week training and nutrition plan:\n\n' + JSON.stringify(intakeData, null, 2) }]
         })
       });
 
       const data = await anthropicResponse.json();
-      
-      if (!anthropicResponse.ok) {
-        console.error('Anthropic error
 
-:', JSON.stringify(data));
+      if (!anthropicResponse.ok) {
+        console.error('Anthropic error:', JSON.stringify(data));
         return;
       }
-      
+
       const plan = data.content[0].text;
       console.log('Plan generated, length:', plan.length);
 
@@ -46,7 +44,7 @@ const server = http.createServer(async (req, res) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.RESEND_API_KEY}`
+          'Authorization': 'Bearer ' + process.env.RESEND_API_KEY
         },
         body: JSON.stringify({
           from: 'Plus 4 Performance <hello@plus4performance.com>',
@@ -67,4 +65,4 @@ const server = http.createServer(async (req, res) => {
 });
 
 const PORT = process.env.PORT || 8080;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, () => console.log('Server running on port ' + PORT));
