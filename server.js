@@ -35,3 +35,36 @@ const server = http.createServer(async (req, res) => {
       if (!anthropicResponse.ok) {
         console.error('Anthropic error
 
+:', JSON.stringify(data));
+        return;
+      }
+      
+      const plan = data.content[0].text;
+      console.log('Plan generated, length:', plan.length);
+
+      const emailResponse = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.RESEND_API_KEY}`
+        },
+        body: JSON.stringify({
+          from: 'Plus 4 Performance <hello@plus4performance.com>',
+          to: intakeData.email,
+          subject: 'Your Plus 4 Performance Plan is Ready',
+          text: plan
+        })
+      });
+
+      const emailData = await emailResponse.json();
+      console.log('Email status:', emailResponse.status);
+      console.log('Email response:', JSON.stringify(emailData));
+
+    } catch (err) {
+      console.error('Error:', err.message);
+    }
+  });
+});
+
+const PORT = process.env.PORT || 8080;
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
