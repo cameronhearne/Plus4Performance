@@ -1,8 +1,28 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const PDFDocument = require('pdfkit');
 
 const coachingBible = fs.readFileSync(path.join(__dirname, 'coaching_bible.txt'), 'utf8');
+
+function generatePDF(plan, clientName) {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ margin: 50 });
+    const chunks = [];
+    doc.on('data', chunk => chunks.push(chunk));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+
+    doc.fontSize(24).font('Helvetica-Bold').text('PLUS 4 PERFORMANCE', { align: 'center' });
+    doc.moveDown(0.5);
+    doc.fontSize(18).font('Helvetica').text(clientName + ' — 12 Week Plan', { align: 'center' });
+    doc.moveDown(1);
+    doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
+    doc.moveDown(1);
+    doc.fontSize(11).font('Helvetica').text(plan, { lineGap: 4 });
+    doc.end();
+  });
+}
 
 const server = http.createServer(async (req, res) => {
   if (req.method !== 'POST' || req.url !== '/generate-plan') {
@@ -29,7 +49,7 @@ const server = http.createServer(async (req, res) => {
         },
         body: JSON.stringify({
           model: 'claude-opus-4-5',
-          max_tokens: 8000,
+          max_tokens: 16000,
           system: coachingBible,
           messages: [{ role: 'user', content: 'Build a full personalised 12 week training and nutrition plan for this client. Follow the coaching bible exactly.\n\nClient data:\n' + JSON.stringify(intakeData, null, 2) }]
         })
@@ -45,6 +65,10 @@ const server = http.createServer(async (req, res) => {
       const plan = data.content[0].text;
       console.log('Plan generated, length:', plan.length);
 
+      const clientName = intakeData.name || 'Client';
+      const pdfBuffer = await generatePDF(plan, clientName);
+      const pdfBase64 = pdfBuffer.toString('base64');
+
       const emailResponse = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
@@ -55,7 +79,11 @@ const server = http.createServer(async (req, res) => {
           from: 'Plus 4 Performance <hello@plus4performance.com>',
           to: intakeData.email,
           subject: 'Your Plus 4 Performance Plan is Ready',
-          text: plan
+          html: '<h2>Your Plus 4 Performance Plan is Ready</h2><p>Hi ' + clientName + ',</p><p>Your personalised 12 week plan is attached. Start strong.</p><p>The Plus 4 Performance Team</p>',
+          attachments: [{
+            filename: 'Plus4Performance_Plan.pdf',
+            content: pdfBase64
+          }]
         })
       });
 
