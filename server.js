@@ -31,46 +31,7 @@ const server = http.createServer(async (req, res) => {
       });
 
       const data = await anthropicResponse.json();
-      console.log('Anthropic response status:', anthropicResponse.status);
       
       if (!anthropicResponse.ok) {
-        console.error('Anthropic error:', JSON.stringify(data));
-        return;
-      }
-      
-      const plan = data.content[0].text;
-      console.log('Plan generated, length:', plan.length);
+        console.error('Anthropic error
 
-      const klaviyoBody = {
-        data: {
-          type: 'event',
-          attributes: {
-            metric: { data: { type: 'metric', attributes: { name: 'Plan Generated' } } },
-            profile: { data: { type: 'profile', attributes: { email: intakeData.email } } },
-            properties: { plan: plan }
-          }
-        }
-      };
-
-      const klaviyoResponse = await fetch('https://a.klaviyo.com/api/events/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Klaviyo-API-Key ${process.env.KLAVIYO_API_KEY}`,
-          'revision': '2023-12-15'
-        },
-        body: JSON.stringify(klaviyoBody)
-      });
-
-      const klaviyoText = await klaviyoResponse.text();
-      console.log('Klaviyo status:', klaviyoResponse.status);
-      console.log('Klaviyo response:', klaviyoText);
-
-    } catch (err) {
-      console.error('Error:', err.message);
-    }
-  });
-});
-
-const PORT = process.env.PORT || 8080;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
