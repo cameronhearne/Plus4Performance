@@ -545,7 +545,7 @@
             submitBtn.disabled = true;
             
             try {
-                const response = await fetch('/.netlify/functions/generate-plan', {
+                const response = await fetch('/.netlify/functions/generate-plan-background', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
