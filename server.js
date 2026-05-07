@@ -1,4 +1,8 @@
 const http = require('http');
+const fs = require('fs');
+const path = require('path');
+
+const coachingBible = fs.readFileSync(path.join(__dirname, 'coaching_bible.txt'), 'utf8');
 
 const server = http.createServer(async (req, res) => {
   if (req.method !== 'POST' || req.url !== '/generate-plan') {
@@ -26,7 +30,8 @@ const server = http.createServer(async (req, res) => {
         body: JSON.stringify({
           model: 'claude-opus-4-5',
           max_tokens: 8000,
-          messages: [{ role: 'user', content: 'You are a professional fitness coach. Based on this client data, generate a full personalised 12 week training and nutrition plan:\n\n' + JSON.stringify(intakeData, null, 2) }]
+          system: coachingBible,
+          messages: [{ role: 'user', content: 'Build a full personalised 12 week training and nutrition plan for this client. Follow the coaching bible exactly.\n\nClient data:\n' + JSON.stringify(intakeData, null, 2) }]
         })
       });
 
