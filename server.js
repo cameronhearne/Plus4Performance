@@ -44,5 +44,19 @@ const server = http.createServer(async (req, res) => {
           data: {
             type: 'event',
             attributes: {
-              metric: { data: { type: 'metric', attributes
+              metric: { data: { type: 'metric', attributes: { name: 'Plan Generated' } } },
+              profile: { data: { type: 'profile', attributes: { email: intakeData.email } } },
+              properties: { plan: plan }
+            }
+          }
+        })
+      });
 
+    } catch (err) {
+      console.error('Error:', err);
+    }
+  });
+});
+
+const PORT = process.env.PORT || 8080;
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
