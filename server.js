@@ -289,7 +289,7 @@ const server = http.createServer(async (req, res) => {
         },
         body: JSON.stringify({
           model: 'claude-opus-4-5',
-          max_tokens: 16000,
+          max_tokens: 32000,
           system: systemPrompt,
           messages: [{ role: 'user', content: 'Build a full personalised 12 week training and nutrition plan for this client. Follow the coaching bible exactly. Return ONLY valid JSON.\n\nClient data:\n' + JSON.stringify(intakeData, null, 2) }]
         })
