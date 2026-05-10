@@ -13,7 +13,7 @@ const ACCENT = '#787878';
 
 function generatePDF(planData, clientName) {
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ margin: 40, size: 'A4', autoFirstPage: false });
+    const doc = new PDFDocument({ margin: 40, size: 'A4', autoFirstPage: true });
     const chunks = [];
     doc.on('data', chunk => chunks.push(chunk));
     doc.on('end', () => resolve(Buffer.concat(chunks)));
@@ -29,7 +29,6 @@ function generatePDF(planData, clientName) {
     }
 
     // PAGE 1 - Cover/Personal Summary
-    doc.addPage();
     if (fs.existsSync(logoPath)) {
       doc.image(logoPath, 40, 40, { width: 50 });
     }
