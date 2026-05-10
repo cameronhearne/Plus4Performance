@@ -13,7 +13,7 @@ const ACCENT = '#787878';
 
 function generatePDF(planData, clientName) {
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ margin: 40, size: 'A4', autoFirstPage: true });
+    const doc = new PDFDocument({ margin: 40, size: 'A4', autoFirstPage: false });
     const chunks = [];
     doc.on('data', chunk => chunks.push(chunk));
     doc.on('end', () => resolve(Buffer.concat(chunks)));
@@ -23,6 +23,7 @@ function generatePDF(planData, clientName) {
     });
 
     function addFooter(name) {
+      const savedY = doc.y;
       doc.fontSize(8).fillColor(SILVER)
         .text('PLUS 4 PERFORMANCE  ·  ' + name.toUpperCase() + '  ·  12 WEEK PLAN',
           40, doc.page.height - 30, { align: 'center' });
