@@ -30,6 +30,7 @@ function generatePDF(planData, clientName) {
     }
 
     // PAGE 1 - Cover/Personal Summary
+    doc.addPage();
     if (fs.existsSync(logoPath)) {
       doc.image(logoPath, 40, 40, { width: 50 });
     }
