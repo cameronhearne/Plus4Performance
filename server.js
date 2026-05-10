@@ -6,10 +6,14 @@ const PDFDocument = require('pdfkit');
 const coachingBible = fs.readFileSync(path.join(__dirname, 'coaching_bible.txt'), 'utf8');
 const logoPath = path.join(__dirname, 'logo_small.png');
 
+const DARK = '#0d0d0d';
+const WHITE = '#F5F3EE';
+const SILVER = '#C8C8C8';
+const ACCENT = '#787878';
+
 function generatePDF(planData, clientName) {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ margin: 40, size: 'A4', autoFirstPage: false });
-    doc.addPage({ size: 'A4' });
     const chunks = [];
     doc.on('data', chunk => chunks.push(chunk));
     doc.on('end', () => resolve(Buffer.concat(chunks)));
@@ -17,16 +21,6 @@ function generatePDF(planData, clientName) {
     doc.on('pageAdded', () => {
       doc.rect(0, 0, doc.page.width, doc.page.height).fill(DARK);
     });
-    doc.addPage();
-
-    const DARK = '#0d0d0d';
-    const WHITE = '#F5F3EE';
-    const SILVER = '#C8C8C8';
-    const ACCENT = '#787878';
-
-    function addPageBackground() {
-      doc.rect(0, 0, doc.page.width, doc.page.height).fill(DARK);
-    }
 
     function addFooter(name) {
       doc.fontSize(8).fillColor(SILVER)
@@ -35,7 +29,7 @@ function generatePDF(planData, clientName) {
     }
 
     // PAGE 1 - Cover/Personal Summary
-
+    doc.addPage();
     if (fs.existsSync(logoPath)) {
       doc.image(logoPath, 40, 40, { width: 50 });
     }
@@ -51,7 +45,6 @@ function generatePDF(planData, clientName) {
     doc.moveTo(40, doc.y + 20).lineTo(doc.page.width - 40, doc.y + 20)
       .strokeColor(ACCENT).lineWidth(0.5).stroke();
 
-    // Stats block
     const statsY = doc.y + 35;
     doc.fontSize(9).fillColor(SILVER).font('Helvetica-Bold')
       .text('YOUR STATS', 40, statsY)
@@ -90,7 +83,6 @@ function generatePDF(planData, clientName) {
       rowY += 16;
     });
 
-    // Supplements
     if (planData.supplements && planData.supplements.length) {
       doc.moveDown(2);
       doc.fontSize(9).fillColor(SILVER).font('Helvetica-Bold').text('SUPPLEMENTS', 40, doc.y);
@@ -100,38 +92,36 @@ function generatePDF(planData, clientName) {
       });
     }
 
-    // Personal note
     if (planData.personal_note) {
       doc.moveDown(2);
       doc.moveTo(40, doc.y).lineTo(doc.page.width - 40, doc.y)
         .strokeColor(ACCENT).lineWidth(0.5).stroke();
       doc.moveDown(1);
-      doc.fontSize(10).fillColor(WHITE).font('Helvetica-Oblique').text(planData.personal_note, 40, doc.y, { width: doc.page.width - 80 });
+      doc.fontSize(10).fillColor(WHITE).font('Helvetica-Oblique')
+        .text(planData.personal_note, 40, doc.y, { width: doc.page.width - 80 });
     }
 
     addFooter(client.name);
 
     // PAGE 2 - How to use
     doc.addPage();
-
     doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold').text('HOW TO USE THIS PLAN', 40, 60);
     doc.moveTo(40, doc.y + 10).lineTo(doc.page.width - 40, doc.y + 10)
       .strokeColor(ACCENT).lineWidth(0.5).stroke();
     doc.moveDown(2);
-    doc.fontSize(10).fillColor(WHITE).font('Helvetica').text(planData.how_to_use || '', 40, doc.y, { width: doc.page.width - 80, lineGap: 4 });
+    doc.fontSize(10).fillColor(WHITE).font('Helvetica')
+      .text(planData.how_to_use || '', 40, doc.y, { width: doc.page.width - 80, lineGap: 4 });
     addFooter(client.name);
 
     // TRAINING SESSIONS
     if (planData.sessions) {
       planData.sessions.forEach(session => {
         doc.addPage();
-    
         doc.fontSize(9).fillColor(SILVER).font('Helvetica-Bold').text('TRAINING', 40, 50);
         doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold').text(session.name.toUpperCase(), 40, 65);
         doc.moveTo(40, doc.y + 10).lineTo(doc.page.width - 40, doc.y + 10)
           .strokeColor(ACCENT).lineWidth(0.5).stroke();
 
-        // Table header
         let tableY = doc.y + 25;
         const cols = { ex: 40, sets: 260, reps: 310, rest: 370, notes: 420 };
         doc.fontSize(8).fillColor(SILVER).font('Helvetica-Bold');
@@ -164,7 +154,6 @@ function generatePDF(planData, clientName) {
     // NUTRITION PAGE
     if (planData.nutrition) {
       doc.addPage();
-  
       const nut = planData.nutrition;
       doc.fontSize(9).fillColor(SILVER).font('Helvetica-Bold').text('NUTRITION', 40, 50);
       doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold').text('YOUR NUTRITION PLAN', 40, 65);
@@ -187,7 +176,6 @@ function generatePDF(planData, clientName) {
         nutY += 18;
       });
 
-      // Meal plan
       if (nut.meal_plan && nut.meal_plan.length) {
         nutY += 20;
         doc.moveTo(40, nutY).lineTo(doc.page.width - 40, nutY)
@@ -213,7 +201,6 @@ function generatePDF(planData, clientName) {
     // GROCERY LIST
     if (planData.grocery_list) {
       doc.addPage();
-  
       doc.fontSize(9).fillColor(SILVER).font('Helvetica-Bold').text('NUTRITION', 40, 50);
       doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold').text('GROCERY LIST', 40, 65);
       doc.moveTo(40, doc.y + 10).lineTo(doc.page.width - 40, doc.y + 10)
@@ -245,8 +232,7 @@ function generatePDF(planData, clientName) {
 
     // FINAL PAGE
     doc.addPage();
-
-    doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold').text("WHAT HAPPENS NEXT", 40, 60);
+    doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold').text('WHAT HAPPENS NEXT', 40, 60);
     doc.moveTo(40, doc.y + 10).lineTo(doc.page.width - 40, doc.y + 10)
       .strokeColor(ACCENT).lineWidth(0.5).stroke();
     doc.moveDown(2);
@@ -261,8 +247,8 @@ function generatePDF(planData, clientName) {
       doc.image(logoPath, 40, doc.y, { width: 40 });
     }
     doc.fontSize(9).fillColor(SILVER).text('PLUS 4 PERFORMANCE', 90, doc.y - 10);
-
     addFooter(client.name);
+
     doc.end();
   });
 }
