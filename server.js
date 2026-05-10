@@ -11,244 +11,254 @@ const WHITE = '#F5F3EE';
 const SILVER = '#C8C8C8';
 const ACCENT = '#787878';
 
+function newPage(doc) {
+  doc.addPage();
+  doc.rect(0, 0, doc.page.width, doc.page.height).fill(DARK);
+}
+
+function footer(doc, name) {
+  doc.save();
+  doc.fontSize(8).fillColor(SILVER)
+    .text('PLUS 4 PERFORMANCE  ·  ' + name.toUpperCase() + '  ·  12 WEEK PLAN',
+      40, doc.page.height - 30, { align: 'center', width: doc.page.width - 80 });
+  doc.restore();
+}
+
+function divider(doc) {
+  doc.moveTo(40, doc.y + 8).lineTo(doc.page.width - 40, doc.y + 8)
+    .strokeColor(ACCENT).lineWidth(0.5).stroke();
+  doc.y += 24;
+}
+
 function generatePDF(planData, clientName) {
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ margin: 40, size: 'A4', autoFirstPage: false });
+    const doc = new PDFDocument({ margin: 0, size: 'A4', autoFirstPage: false });
     const chunks = [];
     doc.on('data', chunk => chunks.push(chunk));
     doc.on('end', () => resolve(Buffer.concat(chunks)));
     doc.on('error', reject);
-    doc.on('pageAdded', () => {
-      doc.rect(0, 0, doc.page.width, doc.page.height).fill(DARK);
-    });
 
-    function addFooter(name) {
-      const savedY = doc.y;
-      doc.fontSize(8).fillColor(SILVER)
-        .text('PLUS 4 PERFORMANCE  ·  ' + name.toUpperCase() + '  ·  12 WEEK PLAN',
-          40, doc.page.height - 30, { align: 'center' });
-    }
+    const client = planData.client || {};
+    const W = 595;
+    const H = 842;
 
-    // PAGE 1 - Cover/Personal Summary
-    doc.addPage();
+    // ── PAGE 1: Personal Summary ──────────────────────────────────────────
+    newPage(doc);
+
+    // Logo
     if (fs.existsSync(logoPath)) {
-      doc.image(logoPath, 40, 40, { width: 50 });
+      doc.image(logoPath, 40, 40, { width: 44 });
     }
-    doc.fontSize(9).fillColor(SILVER)
-      .text(new Date().toLocaleDateString('en-GB'), 0, 50, { align: 'right', width: doc.page.width - 40 });
+    // Date
+    doc.fontSize(9).fillColor(SILVER).font('Helvetica')
+      .text(new Date().toLocaleDateString('en-GB'), 40, 44, { align: 'right', width: W - 80 });
 
-    const client = planData.client;
-    doc.fontSize(48).fillColor(WHITE).font('Helvetica-Bold')
-      .text(client.name.toUpperCase() + "'S", 40, 130);
-    doc.fontSize(36).fillColor(SILVER)
-      .text('12 WEEK ' + client.goal.toUpperCase() + ' PLAN', 40, doc.y + 5);
+    // Title
+    doc.fontSize(52).fillColor(WHITE).font('Helvetica-Bold')
+      .text((client.name || 'YOUR').toUpperCase() + "'S", 40, 110);
+    doc.fontSize(32).fillColor(SILVER).font('Helvetica-Bold')
+      .text('12 WEEK ' + (client.goal || 'PLAN').toUpperCase(), 40, doc.y + 4);
 
-    doc.moveTo(40, doc.y + 20).lineTo(doc.page.width - 40, doc.y + 20)
+    // Divider
+    doc.moveTo(40, doc.y + 16).lineTo(W - 40, doc.y + 16)
       .strokeColor(ACCENT).lineWidth(0.5).stroke();
 
-    const statsY = doc.y + 35;
+    // Stats columns
+    const sY = doc.y + 32;
     doc.fontSize(9).fillColor(SILVER).font('Helvetica-Bold')
-      .text('YOUR STATS', 40, statsY)
-      .text('YOUR TARGETS', doc.page.width / 2, statsY);
+      .text('YOUR STATS', 40, sY)
+      .text('YOUR TARGETS', W / 2, sY);
 
-    const stats = [
-      ['Age', client.age + ' years'],
-      ['Height', client.height + 'cm'],
-      ['Current weight', client.current_weight + 'kg'],
-      ['Target weight', client.target_weight + 'kg'],
-      ['Goal', client.goal],
-      ['Experience', client.experience],
-      ['Start date', client.plan_start],
-      ['End date', client.plan_end]
+    const leftStats = [
+      ['Age', (client.age || '') + ' years'],
+      ['Height', (client.height || '') + 'cm'],
+      ['Current weight', (client.current_weight || '') + 'kg'],
+      ['Target weight', (client.target_weight || '') + 'kg'],
+      ['Experience', client.experience || ''],
+      ['Start date', client.plan_start || ''],
+      ['End date', client.plan_end || ''],
+    ];
+    const rightStats = [
+      ['Daily calories', (client.tdee || '') + ' kcal'],
+      ['Protein', (planData.nutrition && planData.nutrition.protein ? planData.nutrition.protein + 'g' : '')],
+      ['Carbs', (planData.nutrition && planData.nutrition.carbs ? planData.nutrition.carbs + 'g' : '')],
+      ['Fats', (planData.nutrition && planData.nutrition.fats ? planData.nutrition.fats + 'g' : '')],
+      ['Training days', (client.training_days || '') + ' per week'],
+      ['Split', client.split || ''],
     ];
 
-    const targets = [
-      ['Daily calories', client.tdee + ' kcal'],
-      ['Training days', client.training_days + ' per week'],
-      ['Split', client.split],
-      ['BMR', client.bmr + ' kcal'],
-      ['TDEE', client.tdee + ' kcal']
-    ];
-
-    let rowY = statsY + 20;
-    stats.forEach(([label, value]) => {
-      doc.fontSize(9).fillColor(ACCENT).font('Helvetica').text(label + ':', 40, rowY);
-      doc.fillColor(WHITE).text(value, 160, rowY);
-      rowY += 16;
+    let ry = sY + 18;
+    leftStats.forEach(([l, v]) => {
+      doc.fontSize(9).fillColor(ACCENT).font('Helvetica').text(l + ':', 40, ry);
+      doc.fillColor(WHITE).text(v, 170, ry);
+      ry += 16;
     });
 
-    rowY = statsY + 20;
-    targets.forEach(([label, value]) => {
-      doc.fontSize(9).fillColor(ACCENT).font('Helvetica').text(label + ':', doc.page.width / 2, rowY);
-      doc.fillColor(WHITE).text(value, doc.page.width / 2 + 120, rowY);
-      rowY += 16;
+    ry = sY + 18;
+    rightStats.forEach(([l, v]) => {
+      doc.fontSize(9).fillColor(ACCENT).font('Helvetica').text(l + ':', W / 2, ry);
+      doc.fillColor(WHITE).text(String(v), W / 2 + 120, ry);
+      ry += 16;
     });
 
+    // Supplements
+    let sy = ry + 20;
     if (planData.supplements && planData.supplements.length) {
-      doc.moveDown(2);
-      doc.fontSize(9).fillColor(SILVER).font('Helvetica-Bold').text('SUPPLEMENTS', 40, doc.y);
-      doc.moveDown(0.5);
+      doc.fontSize(9).fillColor(SILVER).font('Helvetica-Bold').text('SUPPLEMENTS', 40, sy);
+      sy += 16;
       planData.supplements.forEach(s => {
-        doc.fontSize(9).fillColor(WHITE).font('Helvetica').text('· ' + s, 40);
+        doc.fontSize(9).fillColor(WHITE).font('Helvetica').text('· ' + s, 40, sy);
+        sy += 14;
       });
+      sy += 8;
     }
 
+    // Personal note
     if (planData.personal_note) {
-      doc.moveDown(2);
-      doc.moveTo(40, doc.y).lineTo(doc.page.width - 40, doc.y)
-        .strokeColor(ACCENT).lineWidth(0.5).stroke();
-      doc.moveDown(1);
+      doc.moveTo(40, sy).lineTo(W - 40, sy).strokeColor(ACCENT).lineWidth(0.5).stroke();
+      sy += 16;
       doc.fontSize(10).fillColor(WHITE).font('Helvetica-Oblique')
-        .text(planData.personal_note, 40, doc.y, { width: doc.page.width - 80 });
+        .text(planData.personal_note, 40, sy, { width: W - 80 });
     }
 
-    addFooter(client.name);
+    footer(doc, client.name || clientName);
 
-    // PAGE 2 - How to use
-    doc.addPage();
+    // ── PAGE 2: How to use ────────────────────────────────────────────────
+    newPage(doc);
     doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold').text('HOW TO USE THIS PLAN', 40, 60);
-    doc.moveTo(40, doc.y + 10).lineTo(doc.page.width - 40, doc.y + 10)
-      .strokeColor(ACCENT).lineWidth(0.5).stroke();
-    doc.moveDown(2);
+    doc.moveTo(40, 96).lineTo(W - 40, 96).strokeColor(ACCENT).lineWidth(0.5).stroke();
     doc.fontSize(10).fillColor(WHITE).font('Helvetica')
-      .text(planData.how_to_use || '', 40, doc.y, { width: doc.page.width - 80, lineGap: 4 });
-    addFooter(client.name);
+      .text(planData.how_to_use || '', 40, 116, { width: W - 80, lineGap: 4 });
+    footer(doc, client.name || clientName);
 
-    // TRAINING SESSIONS
-    if (planData.sessions) {
+    // ── TRAINING PAGES ────────────────────────────────────────────────────
+    if (planData.sessions && planData.sessions.length) {
       planData.sessions.forEach(session => {
-        doc.addPage();
+        newPage(doc);
         doc.fontSize(9).fillColor(SILVER).font('Helvetica-Bold').text('TRAINING', 40, 50);
-        doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold').text(session.name.toUpperCase(), 40, 65);
-        doc.moveTo(40, doc.y + 10).lineTo(doc.page.width - 40, doc.y + 10)
-          .strokeColor(ACCENT).lineWidth(0.5).stroke();
+        doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold').text((session.name || '').toUpperCase(), 40, 64);
+        doc.moveTo(40, 100).lineTo(W - 40, 100).strokeColor(ACCENT).lineWidth(0.5).stroke();
 
-        let tableY = doc.y + 25;
-        const cols = { ex: 40, sets: 260, reps: 310, rest: 370, notes: 420 };
+        // Table header
+        const cols = { ex: 40, sets: 250, reps: 300, rest: 360, notes: 415 };
+        let ty = 118;
         doc.fontSize(8).fillColor(SILVER).font('Helvetica-Bold');
-        doc.text('EXERCISE', cols.ex, tableY);
-        doc.text('SETS', cols.sets, tableY);
-        doc.text('REPS', cols.reps, tableY);
-        doc.text('REST', cols.rest, tableY);
-        doc.text('NOTES', cols.notes, tableY);
-        tableY += 18;
-        doc.moveTo(40, tableY).lineTo(doc.page.width - 40, tableY)
-          .strokeColor(ACCENT).lineWidth(0.3).stroke();
-        tableY += 8;
+        doc.text('EXERCISE', cols.ex, ty);
+        doc.text('SETS', cols.sets, ty);
+        doc.text('REPS', cols.reps, ty);
+        doc.text('REST', cols.rest, ty);
+        doc.text('NOTES', cols.notes, ty);
+        ty += 16;
+        doc.moveTo(40, ty).lineTo(W - 40, ty).strokeColor(ACCENT).lineWidth(0.3).stroke();
+        ty += 8;
 
-        session.exercises && session.exercises.forEach((ex, i) => {
-          const bg = i % 2 === 0 ? '#111111' : '#0d0d0d';
-          doc.rect(40, tableY - 4, doc.page.width - 80, 20).fill(bg);
+        (session.exercises || []).forEach((ex, i) => {
+          const rowBg = i % 2 === 0 ? '#141414' : '#0d0d0d';
+          doc.rect(40, ty - 3, W - 80, 22).fill(rowBg);
           doc.fontSize(9).fillColor(WHITE).font('Helvetica');
-          doc.text(ex.name, cols.ex, tableY, { width: 210 });
-          doc.text(String(ex.sets), cols.sets, tableY);
-          doc.text(String(ex.reps), cols.reps, tableY);
-          doc.text(String(ex.rest || ''), cols.rest, tableY);
-          doc.text(String(ex.notes || ''), cols.notes, tableY, { width: 120 });
-          tableY += 20;
+          doc.text(ex.name || '', cols.ex, ty, { width: 200 });
+          doc.text(String(ex.sets || ''), cols.sets, ty);
+          doc.text(String(ex.reps || ''), cols.reps, ty);
+          doc.text(String(ex.rest || ''), cols.rest, ty);
+          doc.text(String(ex.notes || ''), cols.notes, ty, { width: 140 });
+          ty += 22;
         });
 
-        addFooter(client.name);
+        footer(doc, client.name || clientName);
       });
     }
 
-    // NUTRITION PAGE
+    // ── NUTRITION PAGE ────────────────────────────────────────────────────
     if (planData.nutrition) {
-      doc.addPage();
+      newPage(doc);
       const nut = planData.nutrition;
       doc.fontSize(9).fillColor(SILVER).font('Helvetica-Bold').text('NUTRITION', 40, 50);
-      doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold').text('YOUR NUTRITION PLAN', 40, 65);
-      doc.moveTo(40, doc.y + 10).lineTo(doc.page.width - 40, doc.y + 10)
-        .strokeColor(ACCENT).lineWidth(0.5).stroke();
+      doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold').text('YOUR NUTRITION PLAN', 40, 64);
+      doc.moveTo(40, 100).lineTo(W - 40, 100).strokeColor(ACCENT).lineWidth(0.5).stroke();
 
-      let nutY = doc.y + 30;
-      const macros = [
-        ['Daily Calories', nut.daily_calories + ' kcal'],
+      let ny = 120;
+      [
+        ['Daily calories', nut.daily_calories + ' kcal'],
         ['Protein', nut.protein + 'g'],
         ['Carbohydrates', nut.carbs + 'g'],
         ['Fats', nut.fats + 'g'],
         ['Training day calories', nut.training_day_calories + ' kcal'],
-        ['Rest day calories', nut.rest_day_calories + ' kcal']
-      ];
-
-      macros.forEach(([label, value]) => {
-        doc.fontSize(9).fillColor(ACCENT).font('Helvetica').text(label + ':', 40, nutY);
-        doc.fillColor(WHITE).text(value, 220, nutY);
-        nutY += 18;
+        ['Rest day calories', nut.rest_day_calories + ' kcal'],
+      ].forEach(([l, v]) => {
+        doc.fontSize(9).fillColor(ACCENT).font('Helvetica').text(l + ':', 40, ny);
+        doc.fillColor(WHITE).text(String(v), 220, ny);
+        ny += 18;
       });
 
       if (nut.meal_plan && nut.meal_plan.length) {
-        nutY += 20;
-        doc.moveTo(40, nutY).lineTo(doc.page.width - 40, nutY)
-          .strokeColor(ACCENT).lineWidth(0.5).stroke();
-        nutY += 20;
-        doc.fontSize(11).fillColor(SILVER).font('Helvetica-Bold').text('MEAL PLAN', 40, nutY);
-        nutY += 20;
+        ny += 12;
+        doc.moveTo(40, ny).lineTo(W - 40, ny).strokeColor(ACCENT).lineWidth(0.5).stroke();
+        ny += 16;
+        doc.fontSize(11).fillColor(SILVER).font('Helvetica-Bold').text('MEAL PLAN', 40, ny);
+        ny += 20;
 
         nut.meal_plan.forEach(meal => {
-          doc.fontSize(10).fillColor(WHITE).font('Helvetica-Bold').text(meal.meal.toUpperCase(), 40, nutY);
-          nutY += 16;
-          meal.foods && meal.foods.forEach(food => {
-            doc.fontSize(9).fillColor(ACCENT).font('Helvetica').text('· ' + food, 55, nutY);
-            nutY += 14;
+          doc.fontSize(10).fillColor(WHITE).font('Helvetica-Bold').text((meal.meal || '').toUpperCase(), 40, ny);
+          ny += 16;
+          (meal.foods || []).forEach(food => {
+            doc.fontSize(9).fillColor(ACCENT).font('Helvetica').text('· ' + food, 55, ny);
+            ny += 14;
           });
-          nutY += 6;
+          ny += 8;
         });
       }
 
-      addFooter(client.name);
+      footer(doc, client.name || clientName);
     }
 
-    // GROCERY LIST
+    // ── GROCERY LIST ──────────────────────────────────────────────────────
     if (planData.grocery_list) {
-      doc.addPage();
-      doc.fontSize(9).fillColor(SILVER).font('Helvetica-Bold').text('NUTRITION', 40, 50);
-      doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold').text('GROCERY LIST', 40, 65);
-      doc.moveTo(40, doc.y + 10).lineTo(doc.page.width - 40, doc.y + 10)
-        .strokeColor(ACCENT).lineWidth(0.5).stroke();
-
-      let gY = doc.y + 30;
+      newPage(doc);
       const gl = planData.grocery_list;
-      const categories = [
+      doc.fontSize(9).fillColor(SILVER).font('Helvetica-Bold').text('NUTRITION', 40, 50);
+      doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold').text('GROCERY LIST', 40, 64);
+      doc.moveTo(40, 100).lineTo(W - 40, 100).strokeColor(ACCENT).lineWidth(0.5).stroke();
+
+      let gy = 120;
+      [
         ['PROTEINS', gl.proteins],
         ['CARBOHYDRATES', gl.carbs],
         ['FRUITS & VEGETABLES', gl.fruits_veg],
         ['FATS', gl.fats],
-        ['SUPPLEMENTS', gl.supplements]
-      ];
-
-      categories.forEach(([cat, items]) => {
+        ['SUPPLEMENTS', gl.supplements],
+      ].forEach(([cat, items]) => {
         if (!items || !items.length) return;
-        doc.fontSize(10).fillColor(SILVER).font('Helvetica-Bold').text(cat, 40, gY);
-        gY += 18;
+        doc.fontSize(10).fillColor(SILVER).font('Helvetica-Bold').text(cat, 40, gy);
+        gy += 18;
         items.forEach(item => {
-          doc.fontSize(9).fillColor(WHITE).font('Helvetica').text('· ' + item, 55, gY);
-          gY += 14;
+          doc.fontSize(9).fillColor(WHITE).font('Helvetica').text('· ' + item, 55, gy);
+          gy += 14;
         });
-        gY += 10;
+        gy += 10;
       });
 
-      addFooter(client.name);
+      footer(doc, client.name || clientName);
     }
 
-    // FINAL PAGE
-    doc.addPage();
+    // ── FINAL PAGE ────────────────────────────────────────────────────────
+    newPage(doc);
     doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold').text('WHAT HAPPENS NEXT', 40, 60);
-    doc.moveTo(40, doc.y + 10).lineTo(doc.page.width - 40, doc.y + 10)
-      .strokeColor(ACCENT).lineWidth(0.5).stroke();
-    doc.moveDown(2);
+    doc.moveTo(40, 96).lineTo(W - 40, 96).strokeColor(ACCENT).lineWidth(0.5).stroke();
     doc.fontSize(11).fillColor(WHITE).font('Helvetica')
-      .text(planData.what_happens_next || '', 40, doc.y, { width: doc.page.width - 80, lineGap: 6 });
-    doc.moveDown(3);
-    doc.fontSize(9).fillColor(SILVER).text('Video library: plus4performance.com/videos', 40);
-    doc.text('Progress tracker: plus4performance.com/tracker', 40);
-    doc.text('Support: hello@plus4performance.com', 40);
-    doc.moveDown(2);
+      .text(planData.what_happens_next || '', 40, 116, { width: W - 80, lineGap: 6 });
+
+    let finalY = doc.y + 40;
+    doc.fontSize(9).fillColor(SILVER)
+      .text('Video library: plus4performance.com/videos', 40, finalY);
+    doc.text('Progress tracker: plus4performance.com/tracker', 40, finalY + 14);
+    doc.text('Support: hello@plus4performance.com', 40, finalY + 28);
+
     if (fs.existsSync(logoPath)) {
-      doc.image(logoPath, 40, doc.y, { width: 40 });
+      doc.image(logoPath, 40, finalY + 60, { width: 36 });
     }
-    doc.fontSize(9).fillColor(SILVER).text('PLUS 4 PERFORMANCE', 90, doc.y - 10);
-    addFooter(client.name);
+    doc.fontSize(9).fillColor(SILVER).text('PLUS 4 PERFORMANCE', 86, finalY + 68);
+
+    footer(doc, client.name || clientName);
 
     doc.end();
   });
@@ -306,13 +316,13 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
-      console.log('Plan parsed successfully for:', planData.client && planData.client.name);
+      console.log('Plan parsed for:', planData.client && planData.client.name);
 
       const clientName = (planData.client && planData.client.name) || intakeData.name || 'Client';
       const pdfBuffer = await generatePDF(planData, clientName);
-      const pdfBase64 = pdfBuffer.toString('base64');
-
       console.log('PDF generated, size:', pdfBuffer.length);
+
+      const pdfBase64 = pdfBuffer.toString('base64');
 
       const emailResponse = await fetch('https://api.resend.com/emails', {
         method: 'POST',
