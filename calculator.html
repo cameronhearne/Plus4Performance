@@ -742,22 +742,54 @@
             var tdeeValue = bmrValue * formData.activityMultiplier;
             var bmiValue = formData.weightKg / ((formData.heightCm / 100) * (formData.heightCm / 100));
 
-            var resultsHTML =
-                '<div class="result-card">' +
-                    '<div class="result-label">BMR</div>' +
-                    '<div class="result-value" id="bmrVal">' + Math.round(bmrValue) + '</div>' +
-                    '<div class="result-description">Estimated calories your body burns at rest each day.</div>' +
-                '</div>' +
-                '<div class="result-card">' +
-                    '<div class="result-label">TDEE</div>' +
-                    '<div class="result-value" id="tdeeVal">' + Math.round(tdeeValue) + '</div>' +
-                    '<div class="result-description">Your daily maintenance calories based on activity.</div>' +
-                '</div>' +
-                '<div class="result-card">' +
-                    '<div class="result-label">BMI</div>' +
-                    '<div class="result-value" id="bmiVal">' + bmiValue.toFixed(1) + '</div>' +
-                    '<div class="result-description">A quick measure of your body mass relative to height.</div>' +
-                '</div>';
+            // Calculate goal-based calories and macros
+var fatLossCalories = Math.round(tdeeValue - 400);
+var muscleCalories = Math.round(tdeeValue + 300);
+var protein = Math.round(formData.weightKg * 2.2);
+var fatLossFat = Math.round((fatLossCalories * 0.25) / 9);
+var fatLossCarbs = Math.round((fatLossCalories - (protein * 4) - (fatLossFat * 9)) / 4);
+var muscleCarbs = Math.round((muscleCalories - (protein * 4) - (fatLossFat * 9)) / 4);
+
+var bmiCategory = '';
+if (bmiValue < 18.5) bmiCategory = 'Underweight';
+else if (bmiValue < 25) bmiCategory = 'Healthy Weight';
+else if (bmiValue < 30) bmiCategory = 'Overweight';
+else bmiCategory = 'Obese';
+
+var trainingDays = formData.activityMultiplier >= 1.55 ? '4-5' : '3-4';
+var split = formData.activityMultiplier >= 1.55 ? 'Push / Pull / Legs split' : 'Upper / Lower split';
+
+var resultsHTML =
+    '<div class="result-card">' +
+        '<div class="result-label">Your Daily Calories</div>' +
+        '<div class="result-value">' + Math.round(tdeeValue) + ' kcal</div>' +
+        '<div class="result-description">This is your maintenance — the calories your body needs to stay exactly where it is.</div>' +
+    '</div>' +
+    '<div class="result-card">' +
+        '<div class="result-label">Fat Loss Target</div>' +
+        '<div class="result-value">' + fatLossCalories + ' kcal</div>' +
+        '<div class="result-description">A 400 calorie deficit. Enough to lose fat consistently without killing your energy or muscle.</div>' +
+    '</div>' +
+    '<div class="result-card">' +
+        '<div class="result-label">Muscle Building Target</div>' +
+        '<div class="result-value">' + muscleCalories + ' kcal</div>' +
+        '<div class="result-description">A 300 calorie surplus. Enough to build muscle without unnecessary fat gain.</div>' +
+    '</div>' +
+    '<div class="result-card">' +
+        '<div class="result-label">Your Protein Target</div>' +
+        '<div class="result-value">' + protein + 'g per day</div>' +
+        '<div class="result-description">Hit this every day regardless of your goal — it protects muscle and controls hunger.</div>' +
+    '</div>' +
+    '<div class="result-card">' +
+        '<div class="result-label">BMI</div>' +
+        '<div class="result-value">' + bmiValue.toFixed(1) + ' — ' + bmiCategory + '</div>' +
+        '<div class="result-description">A general indicator only. Your plan is built around your actual stats, not this number.</div>' +
+    '</div>' +
+    '<div class="result-card">' +
+        '<div class="result-label">Training Recommendation</div>' +
+        '<div class="result-value">' + trainingDays + ' days per week</div>' +
+        '<div class="result-description">Based on your activity level, a ' + split + ' will maximise your results. Your full plan programmes every session in detail.</div>' +
+    '</div>';
 
             document.getElementById('resultsContainer').innerHTML = resultsHTML;
         }
