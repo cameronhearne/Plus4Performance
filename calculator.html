@@ -450,10 +450,13 @@
                 <!-- Results will be inserted here -->
             </div>
 
-            <div class="cta-copy">Personalised training and nutrition support starts here.</div>
-            <a href="/plan" style="display: block; text-decoration: none;">
-                <button class="cta-button">Get Your Personalised 12-Week Plan — £19.99</button>
-            </a>
+<div class="cta-copy">These are your numbers. Your 12-week plan builds the exact training and nutrition programme around them — every session, every meal, your grocery list included. Launching soon.</div>
+
+<div id="waitlistForm" style="margin-top: 15px;">
+    <input type="email" id="waitlistEmail" placeholder="Enter your email to join the waitlist" style="width: 100%; padding: 14px; background: #1a1a1a; border: 1px solid #c0c0c0; color: #fff; font-size: 14px; box-sizing: border-box; margin-bottom: 10px;">
+    <button id="waitlistBtn" class="cta-button">Join the Waitlist — Plan Coming Soon</button>
+    <p id="waitlistConfirm" style="display:none; color: #c0c0c0; text-align: center; margin-top: 10px;">You're on the list. We'll email you when it launches.</p>
+</div>
         </div>
     </div>
 
@@ -845,7 +848,48 @@ var resultsHTML =
                     showStep(3);
                 }
             });
+        }var waitlistBtn = document.getElementById('waitlistBtn');
+if (waitlistBtn) {
+    waitlistBtn.addEventListener('click', async function() {
+        var email = document.getElementById('waitlistEmail').value.trim();
+        if (!email || email.indexOf('@') === -1) {
+            alert('Please enter a valid email address.');
+            return;
         }
+        try {
+            await fetch('https://a.klaviyo.com/client/subscriptions/?company_id=UzDvVm', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'revision': '2024-02-15'
+                },
+                body: JSON.stringify({
+                    data: {
+                        type: 'subscription',
+                        attributes: {
+                            profile: {
+                                data: {
+                                    type: 'profile',
+                                    attributes: { email: email }
+                                }
+                            }
+                        },
+                        relationships: {
+                            list: {
+                                data: { type: 'list', id: 'TmAWsp' }
+                            }
+                        }
+                    }
+                })
+            });
+            document.getElementById('waitlistConfirm').style.display = 'block';
+            waitlistBtn.style.display = 'none';
+            document.getElementById('waitlistEmail').style.display = 'none';
+        } catch(e) {
+            alert('Something went wrong. Please try again.');
+        }
+    });
+}
     </script>
 </body>
 </html>
