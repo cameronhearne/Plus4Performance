@@ -293,8 +293,35 @@ const server = http.createServer(async (req, res) => {
           model: 'claude-opus-4-5',
           max_tokens: 32000,
           system: systemPrompt,
-          messages: [{ role: 'user', content: 'Build a full personalised 12 week training and nutrition plan for this client. Follow the coaching bible exactly. Return ONLY valid JSON.\n\nClient data:\n' + JSON.stringify(intakeData, null, 2) }]
-        })
+system: systemPrompt,
+          messages: [{ role: 'user', content: `You are building a complete, detailed 12-week personalised training and nutrition plan. This is a paid product — the client expects professional, specific, substantive output. Generic responses are unacceptable.
+
+TRAINING REQUIREMENTS:
+- Build every single training session for all 12 weeks. Do not summarise or say "repeat week 1". Write out each session in full.
+- Select exercises from the exercise library in the coaching bible. Use the priority ratings — prioritise Tier 1 exercises, use Tier 2 for variety, avoid Tier 3 unless justified.
+- Apply progressive overload week by week exactly as described in Section 3 of the coaching bible. Sets, reps, and load must progress.
+- Include the full coaching cues and common mistakes from the exercise library for every exercise in the notes field.
+- Respect all injury contraindications the client has flagged. Apply the relevant protocol from Section 9.
+- Session structure must follow Section 2 exactly — warm up, working sets, cool down, correct rest periods.
+
+NUTRITION REQUIREMENTS:
+- Calculate calories and macros using Mifflin St Jeor exactly as described in Section 7. Show your working in the personal_note field.
+- Apply training day vs rest day splits per Section 7.
+- Build a full meal plan using foods from the food library in Section 8. Be specific — name actual foods with quantities.
+- The grocery list must reflect the meal plan exactly. No generic entries.
+- Apply dietary preference adjustments from Section 7 based on the client's stated preferences.
+
+PERSONAL NOTE:
+- Reference the client's specific goal, stats, experience level and any injuries directly. This must feel like it was written for this individual, not a template.
+
+STANDARDS:
+- Every field must be fully populated. No placeholders. No "see coaching bible". No summaries.
+- The plan must be substantive enough that a client could follow it for 12 weeks with no further guidance.
+- Follow Section 10 presentation standards for all text fields.
+
+Client data:
+${JSON.stringify(intakeData, null, 2)}` }]
+      })
       });
 
       const data = await anthropicResponse.json();
