@@ -59,6 +59,7 @@
             color: #e0e0e0;
             font-size: 14px;
             transition: border-color 0.3s ease;
+        }
         input[type="number"]::-webkit-outer-spin-button,
         input[type="number"]::-webkit-inner-spin-button {
             -webkit-appearance: none;
@@ -562,7 +563,6 @@
 // Handle preferred days checkboxes
 if (section === 3) {
     formData.preferredDays = Array.from(document.querySelectorAll('input[name="preferredDays"]:checked')).map(cb => cb.value);
-}
 }
         }
 
