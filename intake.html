@@ -445,7 +445,8 @@
                 </div>
                 <div class="form-group">
                     <label for="startDate">Plan start date</label>
-<input type="date" id="startDate" required>                </div>
+                    <input type="date" id="startDate" required>
+                </div>
                 <button type="button" class="back-button" onclick="prevSection()">Back</button>
                 <button type="button" class="continue-btn" onclick="nextSection(5)">Continue</button>
             </div>
@@ -605,13 +606,8 @@ if (section === 3) {
                 });
                 
                 if (response.ok) {
-                    const planText = await response.text();
                     document.getElementById('intakeForm').style.display = 'none';
                     document.getElementById('confirmation').style.display = 'block';
-                    document.getElementById('confirmation').innerHTML = `
-                        <h2>Your intake is complete. Your personalised 12-week plan will be delivered to your email within 24 hours. Check your spam folder if you don't see it.</h2>
-                        <div style="background: #0a0a0a; padding: 20px; border-radius: 0; text-align: left; margin-top: 20px; white-space: pre-wrap; font-family: monospace; font-size: 14px; color: #e0e0e0;">${planText}</div>
-                    `;
                 } else {
                     const error = await response.json();
                     alert('Error generating plan: ' + error.error);
