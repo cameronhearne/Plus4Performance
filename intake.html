@@ -176,7 +176,7 @@
         <div class="progress-bar">
             <div class="progress-fill" id="progressFill"></div>
         </div>
-        <form id="intakeForm">
+        <form id="intakeForm" novalidate>
             <!-- Section 1 -->
             <div class="section active" id="section1">
                 <h2>SECTION 1 — YOUR DETAILS</h2>
@@ -589,34 +589,33 @@ if (section === 3) {
 
         document.getElementById('intakeForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            
-            // Show loading state
+
             const submitBtn = document.querySelector('#summary button[type="submit"]');
-            const originalText = submitBtn.textContent;
-            submitBtn.textContent = 'Generating Your Plan...';
-            submitBtn.disabled = true;
-            
+            const originalText = submitBtn ? submitBtn.textContent : 'GENERATE MY PLAN';
+            if (submitBtn) { submitBtn.textContent = 'Generating Your Plan...'; submitBtn.disabled = true; }
+
             try {
+                console.log('Sending to Railway:', JSON.stringify(formData).substring(0, 200));
                 const response = await fetch('https://plus4performance-production.up.railway.app/generate-plan', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(formData)
                 });
-                
+                console.log('Railway response status:', response.status);
+
                 if (response.ok) {
                     document.getElementById('intakeForm').style.display = 'none';
                     document.getElementById('confirmation').style.display = 'block';
                 } else {
-                    const error = await response.json();
-                    alert('Error generating plan: ' + error.error);
+                    const errorText = await response.text();
+                    console.error('Railway error response:', errorText);
+                    alert('Error submitting plan. Please try again.');
                 }
-            } catch (error) {
-                alert('Error: ' + error.message);
+            } catch (err) {
+                console.error('Fetch error:', err);
+                alert('Could not reach server. Please check your connection and try again.');
             } finally {
-                submitBtn.textContent = originalText;
-                submitBtn.disabled = false;
+                if (submitBtn) { submitBtn.textContent = originalText; submitBtn.disabled = false; }
             }
         });
 
