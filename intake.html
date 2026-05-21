@@ -289,20 +289,26 @@
         </select>
     </div>
 
-    <!-- Preferred Days — only shown for fixed schedule -->
-    <div class="form-group" id="preferredDaysGroup" style="display:none;">
-        <label for="preferredDays">Preferred training days</label>
-        <select id="preferredDays" multiple style="height: 160px;">
-            <option value="monday">Monday</option>
-            <option value="tuesday">Tuesday</option>
-            <option value="wednesday">Wednesday</option>
-            <option value="thursday">Thursday</option>
-            <option value="friday">Friday</option>
-            <option value="saturday">Saturday</option>
-            <option value="sunday">Sunday</option>
-        </select>
-        <p style="font-size:11px; color:#777; margin-top:6px;">Hold Ctrl (Windows) or Cmd (Mac) to select multiple days</p>
-    </div>
+<!-- Preferred Days — only shown for fixed schedule -->
+<div class="form-group" id="preferredDaysGroup" style="display:none;">
+    <label>Preferred training days</label>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+        <label style="display:flex; align-items:center; gap:10px; padding:12px; border:1px solid #555; cursor:pointer;">
+            <input type="checkbox" name="preferredDays" value="monday"> Monday
+        </label>
+        <label style="display:flex; align-items:center; gap:10px; padding:12px; border:1px solid #555; cursor:pointer;">
+            <input type="checkbox" name="preferredDays" value="tuesday"> Tuesday
+        </label>
+        <label style="display:flex; align-items:center; gap:10px; padding:12px; border:1px solid #555; cursor:pointer;">
+            <input type="checkbox" name="preferredDays" value="wednesday"> Wednesday
+        </label>
+        <label style="display:flex; align-items:center; gap:10px; padding:12px; border:1px solid #555; cursor:pointer;">
+            <input type="checkbox" name="preferredDays" value="thursday"> Thursday
+        </label>
+        <label style="display:flex; align-items:center; gap:10px; padding:12px; border:1px solid #555; cursor:pointer;">
+            <input type="checkbox" name="preferredDays" value="friday"> Friday
+        </label>
+        <label style="display:flex; align-items:c
 
     <!-- Training Split -->
     <div class="form-group">
@@ -345,11 +351,11 @@
                 <div class="form-group">
                     <label for="mealsPerDay">Meals per day</label>
                     <select id="mealsPerDay" required>
-                        <option value="">Select...</option>
-                        <option value="2">2</option>
-                        <option value="3">3</option>
-                        <option value="4">4</option>
-                        <option value="5">5</option>
+<option value="">Select...</option>
+<option value="3">3</option>
+<option value="4">4</option>
+<option value="5">5</option>
+<option value="6">6</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -421,8 +427,7 @@
                 </div>
                 <div class="form-group">
                     <label for="startDate">Plan start date</label>
-                    <input type="date" id="startDate" required min="{new Date().toISOString().split('T')[0]}">
-                </div>
+<input type="date" id="startDate" required>                </div>
                 <button type="button" class="back-button" onclick="prevSection()">Back</button>
                 <button type="button" class="continue-btn" onclick="nextSection(5)">Continue</button>
             </div>
@@ -547,12 +552,10 @@
                 }
             }
 
-            // Handle multi-select preferred days
+// Handle preferred days checkboxes
 if (section === 3) {
-    const preferredDays = document.getElementById('preferredDays');
-    if (preferredDays) {
-        formData.preferredDays = Array.from(preferredDays.selectedOptions).map(o => o.value);
-    }
+    formData.preferredDays = Array.from(document.querySelectorAll('input[name="preferredDays"]:checked')).map(cb => cb.value);
+}
 }
         }
 
@@ -638,7 +641,7 @@ if (section === 3) {
             const injuries = document.getElementById('injuries').value;
             document.getElementById('injuryDetails').style.display = injuries === 'yes' ? 'block' : 'none';
         }
-
+document.getElementById('startDate').min = new Date().toISOString().split('T')[0];
         // Day selector toggle
 function toggleDaySelector() {
     const scheduleType = document.getElementById('scheduleType').value;
