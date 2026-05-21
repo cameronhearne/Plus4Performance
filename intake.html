@@ -557,6 +557,14 @@
                     formData.goal = selectedGoal.dataset.goal;
                 }
             }
+
+            // Handle multi-select preferred days
+if (section === 3) {
+    const preferredDays = document.getElementById('preferredDays');
+    if (preferredDays) {
+        formData.preferredDays = Array.from(preferredDays.selectedOptions).map(o => o.value);
+    }
+}
         }
 
         function showSummary() {
