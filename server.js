@@ -266,6 +266,13 @@ function generatePDF(planData, clientName) {
 
 const server = http.createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
+  if (req.method === 'OPTIONS') {
+  res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.writeHead(204);
+  res.end();
+  return;
+}
 
   if (req.method === 'GET' && req.url.startsWith('/verify-session')) {
     const sessionId = new URL(req.url, 'http://localhost').searchParams.get('session_id');
