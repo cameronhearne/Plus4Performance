@@ -63,9 +63,12 @@
         input[type="number"]::-webkit-outer-spin-button,
         input[type="number"]::-webkit-inner-spin-button {
             -webkit-appearance: none;
+            appearance: none;
             margin: 0;
+            display: none;
         }
         input[type="number"] {
+            -webkit-appearance: none;
             -moz-appearance: textfield;
             appearance: textfield;
         }
@@ -674,6 +677,10 @@ function toggleDaySelector() {
                 const anyChecked = Array.from(document.querySelectorAll('#section5 input[type="checkbox"]')).some(c => c.checked);
                 document.getElementById('redFlagMessage').style.display = anyChecked ? 'block' : 'none';
             });
+        });
+
+        document.querySelectorAll('input[type="number"]').forEach(input => {
+            input.addEventListener('wheel', e => e.preventDefault(), { passive: false });
         });
     </script>
 </body>
