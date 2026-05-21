@@ -1,6 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script>
+  const params = new URLSearchParams(window.location.search);
+  const sessionId = params.get('session_id');
+  if (!sessionId) {
+    window.location.href = 'https://plus4performance.com/plan.html';
+  } else {
+    fetch(`https://plus4performance-production.up.railway.app/verify-session?session_id=${sessionId}`)
+      .then(r => r.json())
+      .then(data => {
+        if (!data.valid) {
+          window.location.href = 'https://plus4performance.com/plan.html';
+        }
+      });
+  }
+</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Build Your Plan | Plus 4 Performance</title>

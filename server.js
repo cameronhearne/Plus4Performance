@@ -265,10 +265,29 @@ function generatePDF(planData, clientName) {
 }
 
 const server = http.createServer(async (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+
+  if (req.method === 'GET' && req.url.startsWith('/verify-session')) {
+    const sessionId = new URL(req.url, 'http://localhost').searchParams.get('session_id');
+    if (!sessionId) { res.writeHead(200); res.end(JSON.stringify({ valid: false })); return; }
+    try {
+      const stripeRes = await fetch(`https://api.stripe.com/v1/checkout/sessions/${sessionId}`, {
+        headers: { 'Authorization': `Bearer ${process.env.STRIPE_SECRET_KEY}` }
+      });
+      const session = await stripeRes.json();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ valid: session.payment_status === 'paid' }));
+    } catch (err) {
+      res.writeHead(200); res.end(JSON.stringify({ valid: false }));
+    }
+    return;
+  }
+
   if (req.method !== 'POST' || req.url !== '/generate-plan') {
     res.writeHead(404);
     res.end('Not found');
     return;
+  }
   }
 
   let body = '';
@@ -293,7 +312,6 @@ const server = http.createServer(async (req, res) => {
           model: 'claude-opus-4-5',
           max_tokens: 32000,
           system: systemPrompt,
-system: systemPrompt,
           messages: [{ role: 'user', content: `You are building a complete, detailed 12-week personalised training and nutrition plan. This is a paid product — the client expects professional, specific, substantive output. Generic responses are unacceptable.
 
 TRAINING REQUIREMENTS:
