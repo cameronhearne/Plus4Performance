@@ -2,6 +2,9 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const PDFDocument = require('pdfkit');
+const Anthropic = require('@anthropic-ai/sdk');
+
+const anthropic = new Anthropic();
 
 const coachingBible = fs.readFileSync(path.join(__dirname, 'coaching_bible.txt'), 'utf8');
 const logoPath = path.join(__dirname, 'logo_small.png');
@@ -307,18 +310,11 @@ const server = http.createServer(async (req, res) => {
 
       const systemPrompt = coachingBible + '\n\nCRITICAL INSTRUCTION: You must respond with ONLY a valid JSON object. No text before or after the JSON. No markdown. No code blocks. The JSON must exactly follow this structure:\n{\n  "client": {\n    "name": string,\n    "goal": string,\n    "age": number,\n    "height": number,\n    "current_weight": number,\n    "target_weight": number,\n    "bmr": number,\n    "tdee": number,\n    "plan_start": string,\n    "plan_end": string,\n    "experience": string,\n    "training_days": number,\n    "split": string\n  },\n  "personal_note": string,\n  "how_to_use": string,\n  "sessions": [{"name": string, "exercises": [{"name": string, "sets": number, "reps": string, "rest": string, "notes": string}]}],\n  "nutrition": {"daily_calories": number, "protein": number, "carbs": number, "fats": number, "training_day_calories": number, "rest_day_calories": number, "meal_plan": [{"meal": string, "foods": [string]}]},\n  "grocery_list": {"proteins": [string], "carbs": [string], "fruits_veg": [string], "fats": [string], "supplements": [string]},\n  "supplements": [string],\n  "what_happens_next": string\n}';
 
-      const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': process.env.ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01'
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
-          max_tokens: 32000,
-          system: systemPrompt,
-          messages: [{ role: 'user', content: `You are building a complete, detailed 12-week personalised training and nutrition plan. This is a paid product — the client expects professional, specific, substantive output. Generic responses are unacceptable.
+      const message = await anthropic.messages.create({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 32000,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: `You are building a complete, detailed 12-week personalised training and nutrition plan. This is a paid product — the client expects professional, specific, substantive output. Generic responses are unacceptable.
 
 TRAINING REQUIREMENTS:
 - Build every single training session for all 12 weeks. Do not summarise or say "repeat week 1". Write out each session in full.
@@ -345,17 +341,9 @@ STANDARDS:
 
 Client data:
 ${JSON.stringify(intakeData, null, 2)}` }]
-      })
       });
 
-      const data = await anthropicResponse.json();
-
-      if (!anthropicResponse.ok) {
-        console.error('Anthropic error:', JSON.stringify(data));
-        return;
-      }
-
-      const rawText = data.content[0].text;
+      const rawText = message.content[0].text;
       console.log('Raw response length:', rawText.length);
 
       let planData;
