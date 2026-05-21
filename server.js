@@ -288,7 +288,6 @@ const server = http.createServer(async (req, res) => {
     res.end('Not found');
     return;
   }
-  }
 
   let body = '';
   req.on('data', chunk => body += chunk);
