@@ -343,7 +343,7 @@ Client data:
 ${JSON.stringify(intakeData, null, 2)}` }]
       }).finalMessage();
 
-      const rawText = message.content[0].text;
+      const rawText = message.content[0].text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
       console.log('Raw response length:', rawText.length);
 
       let planData;
