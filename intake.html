@@ -330,15 +330,12 @@
     <div class="form-group">
         <label for="equipment">Available equipment</label>
         <select id="equipment" required>
-            <option value="">Select...</option>
-            <option value="full_gym">Full commercial gym — all equipment available</option>
-            <option value="dumbbells_cables">Dumbbells and cables — no barbell</option>
-            <option value="dumbbells_only">Dumbbells only</option>
-            <option value="barbell_rack">Barbell and rack only</option>
-            <option value="home_gym">Home gym — mixed equipment</option>
-            <option value="kettlebells">Kettlebells</option>
-            <option value="bands">Resistance bands</option>
-            <option value="bodyweight">No equipment — bodyweight only</option>
+         <option value="">Select...</option>
+<option value="specialist_gym">Specialist gym — powerlifting or serious lifting gym, all equipment available</option>
+<option value="commercial_gym">Commercial gym — PureGym, Virgin, Fitness First or similar</option>
+<option value="budget_gym">Budget or basic gym — dumbbells, barbells, cables and standard machines</option>
+<option value="home_gym">Home gym — training at home with equipment</option>
+<option value="bodyweight">Bodyweight only — no equipment</option>
         </select>
     </div>
 
@@ -642,6 +639,18 @@ if (section === 3) {
             document.getElementById('injuryDetails').style.display = injuries === 'yes' ? 'block' : 'none';
         }
 document.getElementById('startDate').min = new Date().toISOString().split('T')[0];
+
+const equipmentMap = {
+    'specialist_gym': ['barbell', 'dumbbells', 'cables', 'machines', 'bench', 'rack', 'cable_crossover', 'leg_press', 'smith_machine', 'pull_up_bar', 'dip_station', 'resistance_bands', 'kettlebells', 'hack_squat', 'pendulum_squat', 'cybex_row', 'hip_thrust_machine', 'tbar_row', 'maggrip_attachment'],
+    'commercial_gym': ['barbell', 'dumbbells', 'cables', 'machines', 'bench', 'rack', 'cable_crossover', 'leg_press', 'smith_machine', 'pull_up_bar', 'dip_station'],
+    'budget_gym': ['barbell', 'dumbbells', 'cables', 'machines', 'bench', 'rack'],
+    'home_gym': ['dumbbells', 'adjustable_bench', 'resistance_bands', 'pull_up_bar'],
+    'bodyweight': []
+};
+
+document.getElementById('equipment').addEventListener('change', function() {
+    formData.equipmentList = equipmentMap[this.value] || [];
+});
         // Day selector toggle
 function toggleDaySelector() {
     const scheduleType = document.getElementById('scheduleType').value;
