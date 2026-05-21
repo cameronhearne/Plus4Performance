@@ -262,75 +262,94 @@
                 <button type="button" class="back-button" onclick="prevSection()">Back</button>
                 <button type="button" class="continue-btn" onclick="nextSection(2)">Continue</button>
             </div>
-            <!-- Section 3 -->
-            <div class="section" id="section3">
-                <h2>SECTION 3 — TRAINING PREFERENCES</h2>
-                <div class="form-group">
-                    <label for="trainingDays">Training days per week</label>
-                    <select id="trainingDays" required>
-                        <option value="">Select...</option>
-                        <option value="3">3</option>
-                        <option value="4">4</option>
-                        <option value="5">5</option>
-                        <option value="6">6</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="sessionLength">Session length</label>
-                    <select id="sessionLength" required>
-                        <option value="">Select...</option>
-                        <option value="45">45 minutes</option>
-                        <option value="60">60 minutes</option>
-                        <option value="75">75 minutes</option>
-                        <option value="90">90 minutes</option>
-                        <option value="120">120 minutes</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="experience">Experience level</label>
-                    <select id="experience" required>
-                        <option value="">Select...</option>
-                        <option value="beginner">Beginner — under 6 months consistent training</option>
-                        <option value="intermediate">Intermediate — 6 months to 3 years</option>
-                        <option value="advanced">Advanced — over 3 years</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="trainingSplit">Training split preference</label>
-                    <select id="trainingSplit" required>
-                        <option value="">Select...</option>
-                        <option value="push_pull_legs">Push Pull Legs</option>
-                        <option value="upper_lower">Upper Lower</option>
-                        <option value="full_body">Full Body</option>
-                        <option value="not_sure">Not sure — let the coach decide</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Available equipment</label>
-                    <div class="checkbox-group">
-                        <div class="checkbox-item"><input type="checkbox" id="gym"> Full commercial gym</div>
-                        <div class="checkbox-item"><input type="checkbox" id="dumbbells"> Dumbbells only</div>
-                        <div class="checkbox-item"><input type="checkbox" id="barbell"> Barbell and rack</div>
-                        <div class="checkbox-item"><input type="checkbox" id="cables"> Cables and machines</div>
-                        <div class="checkbox-item"><input type="checkbox" id="bands"> Resistance bands</div>
-                        <div class="checkbox-item"><input type="checkbox" id="bodyweight"> No equipment bodyweight only</div>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Preferred training days</label>
-                    <div class="checkbox-group">
-                        <div class="checkbox-item"><input type="checkbox" id="mon"> Monday</div>
-                        <div class="checkbox-item"><input type="checkbox" id="tue"> Tuesday</div>
-                        <div class="checkbox-item"><input type="checkbox" id="wed"> Wednesday</div>
-                        <div class="checkbox-item"><input type="checkbox" id="thu"> Thursday</div>
-                        <div class="checkbox-item"><input type="checkbox" id="fri"> Friday</div>
-                        <div class="checkbox-item"><input type="checkbox" id="sat"> Saturday</div>
-                        <div class="checkbox-item"><input type="checkbox" id="sun"> Sunday</div>
-                    </div>
-                </div>
-                <button type="button" class="back-button" onclick="prevSection()">Back</button>
-                <button type="button" class="continue-btn" onclick="nextSection(3)">Continue</button>
-            </div>
+      <!-- Section 3 -->
+<div class="section" id="section3">
+    <h2>SECTION 3 — TRAINING PREFERENCES</h2>
+
+    <!-- Training Days Per Week -->
+    <div class="form-group">
+        <label for="trainingDays">Training days per week</label>
+        <select id="trainingDays" required>
+            <option value="">Select...</option>
+            <option value="3">3 days</option>
+            <option value="4">4 days — recommended sweet spot for most people</option>
+            <option value="5">5 days</option>
+            <option value="6">6 days</option>
+        </select>
+    </div>
+
+    <!-- Session Length -->
+    <div class="form-group">
+        <label for="sessionLength">Session length</label>
+        <select id="sessionLength" required>
+            <option value="">Select...</option>
+            <option value="45">45 minutes</option>
+            <option value="60">60 minutes — train effectively without it becoming a part-time job</option>
+            <option value="90">90 minutes</option>
+            <option value="120">2 hours</option>
+        </select>
+    </div>
+
+    <!-- Training Schedule Preference -->
+    <div class="form-group">
+        <label for="scheduleType">Training schedule preference</label>
+        <select id="scheduleType" required onchange="toggleDaySelector()">
+            <option value="">Select...</option>
+            <option value="fixed">Fixed schedule — same days every week</option>
+            <option value="rolling">Rolling programme — follow sessions in sequence regardless of day</option>
+        </select>
+    </div>
+
+    <!-- Preferred Days — only shown for fixed schedule -->
+    <div class="form-group" id="preferredDaysGroup" style="display:none;">
+        <label for="preferredDays">Preferred training days</label>
+        <select id="preferredDays" multiple style="height: 160px;">
+            <option value="monday">Monday</option>
+            <option value="tuesday">Tuesday</option>
+            <option value="wednesday">Wednesday</option>
+            <option value="thursday">Thursday</option>
+            <option value="friday">Friday</option>
+            <option value="saturday">Saturday</option>
+            <option value="sunday">Sunday</option>
+        </select>
+        <p style="font-size:11px; color:#777; margin-top:6px;">Hold Ctrl (Windows) or Cmd (Mac) to select multiple days</p>
+    </div>
+
+    <!-- Training Split -->
+    <div class="form-group">
+        <label for="trainingSplit">Training split preference</label>
+        <select id="trainingSplit" required>
+            <option value="">Select...</option>
+            <option value="recommend">Recommend the best split for me</option>
+            <option value="push_pull_legs">Push Pull Legs — chest/shoulders/triceps, back/biceps, legs</option>
+            <option value="upper_lower">Upper Lower — upper body and lower body alternating</option>
+            <option value="full_body">Full Body — hit everything every session</option>
+            <option value="arnold_split">Arnold Split — chest and back, shoulders and arms, legs x2</option>
+            <option value="chest_back_shoulders_arms">Chest and Back + Shoulders and Arms — classic hypertrophy 5 day</option>
+            <option value="ppl_posterior">PPL + Posterior Chain — dedicated hamstring and glute day</option>
+            <option value="upper_lower_x">Upper Lower Plus — high frequency upper lower with additional specialisation day</option>
+        </select>
+    </div>
+
+    <!-- Equipment -->
+    <div class="form-group">
+        <label for="equipment">Available equipment</label>
+        <select id="equipment" required>
+            <option value="">Select...</option>
+            <option value="full_gym">Full commercial gym — all equipment available</option>
+            <option value="dumbbells_cables">Dumbbells and cables — no barbell</option>
+            <option value="dumbbells_only">Dumbbells only</option>
+            <option value="barbell_rack">Barbell and rack only</option>
+            <option value="home_gym">Home gym — mixed equipment</option>
+            <option value="kettlebells">Kettlebells</option>
+            <option value="bands">Resistance bands</option>
+            <option value="bodyweight">No equipment — bodyweight only</option>
+        </select>
+    </div>
+
+    <button type="button" class="back-button" onclick="prevSection()">Back</button>
+    <button type="button" class="continue-btn" onclick="nextSection(3)">Continue</button>
+</div>
             <!-- Section 4 -->
             <div class="section" id="section4">
                 <h2>SECTION 4 — NUTRITION PREFERENCES</h2>
@@ -622,6 +641,13 @@
             const injuries = document.getElementById('injuries').value;
             document.getElementById('injuryDetails').style.display = injuries === 'yes' ? 'block' : 'none';
         }
+
+        // Day selector toggle
+function toggleDaySelector() {
+    const scheduleType = document.getElementById('scheduleType').value;
+    const daysGroup = document.getElementById('preferredDaysGroup');
+    daysGroup.style.display = scheduleType === 'fixed' ? 'block' : 'none';
+}
 
         // Red flag message
         document.querySelectorAll('#section5 input[type="checkbox"]').forEach(cb => {
