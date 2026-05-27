@@ -258,6 +258,42 @@ function generatePlanPDF(planData, clientName) {
       footer(doc, client.name || clientName);
     }
 
+    // ── PROGRESS TRACKER ─────────────────────────────────────────────────
+    newPage(doc);
+    doc.fontSize(9).fillColor(SILVER).font('Helvetica-Bold').text('TRACKING', 40, 50);
+    doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold').text('PROGRESS TRACKER', 40, 64);
+    doc.moveTo(40, 100).lineTo(W - 40, 100).strokeColor(ACCENT).lineWidth(0.5).stroke();
+
+    const tcols = { week: 40, date: 80, bw: 148, lift1: 210, lift2: 320, lift3: 430, notes: 510 };
+    let tty = 118;
+    doc.fontSize(7).fillColor(SILVER).font('Helvetica-Bold');
+    doc.text('WEEK', tcols.week, tty);
+    doc.text('DATE', tcols.date, tty);
+    doc.text('BODYWEIGHT', tcols.bw, tty);
+    doc.text('KEY LIFT 1', tcols.lift1, tty);
+    doc.text('KEY LIFT 2', tcols.lift2, tty);
+    doc.text('KEY LIFT 3', tcols.lift3, tty);
+    doc.text('NOTES', tcols.notes, tty);
+    tty += 14;
+    doc.moveTo(40, tty).lineTo(W - 40, tty).strokeColor(ACCENT).lineWidth(0.3).stroke();
+    tty += 6;
+
+    for (let w = 1; w <= 12; w++) {
+      const rowBg = w % 2 === 0 ? '#141414' : '#0d0d0d';
+      doc.rect(40, tty - 2, W - 80, 26).fill(rowBg);
+      doc.fontSize(9).fillColor(WHITE).font('Helvetica');
+      doc.text(String(w), tcols.week, tty + 4);
+      doc.text('', tcols.date, tty + 4);
+      doc.text('', tcols.bw, tty + 4);
+      doc.text('', tcols.lift1, tty + 4);
+      doc.text('', tcols.lift2, tty + 4);
+      doc.text('', tcols.lift3, tty + 4);
+      doc.text('', tcols.notes, tty + 4);
+      tty += 26;
+    }
+
+    footer(doc, client.name || clientName);
+
     // ── WHAT HAPPENS NEXT ─────────────────────────────────────────────────
     newPage(doc);
     doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold').text('WHAT HAPPENS NEXT', 40, 60);
@@ -394,6 +430,8 @@ NUTRITION REQUIREMENTS:
 - Build a full meal plan using foods from the food library in Section 8. Be specific — name actual foods with quantities.
 - The grocery list must reflect the meal plan exactly. No generic entries.
 - Apply dietary preference adjustments from Section 7 based on the client's stated preferences.
+- In the grocery list supplements section, always give a specific weekly quantity for every supplement — for example Creatine monohydrate 35g (5g x 7 days). Never write check your supply.
+- Double check every meal entry before finalising. Each meal must list only one entry per food item with no contradictions or duplicates. Quantities must be consistent throughout.
 
 PERSONAL NOTE:
 - Reference the client's specific goal, stats, experience level and any injuries directly. This must feel like it was written for this individual, not a template.
@@ -402,6 +440,7 @@ STANDARDS:
 - Every field must be fully populated. No placeholders. No "see coaching bible". No summaries.
 - The plan must be substantive enough that a client could follow it for 12 weeks with no further guidance.
 - Follow Section 10 presentation standards for all text fields.
+- All dates must be formatted as DD Month YYYY — for example 27 June 2026. Never use hyphens or ISO format.
 
 Client data:
 ${JSON.stringify(intakeData, null, 2)}` }]
