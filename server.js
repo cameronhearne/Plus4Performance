@@ -132,7 +132,7 @@ function generatePlanPDF(planData, clientName) {
     }
 
     if (planData.personal_note) {
-      if (sy > 580) {
+      if (sy > 480) {
         footer(doc, client.name || clientName);
         newPage(doc);
         sy = 80;
@@ -146,12 +146,14 @@ function generatePlanPDF(planData, clientName) {
     footer(doc, client.name || clientName);
 
     // ── HOW TO USE ────────────────────────────────────────────────────────
-    newPage(doc);
-    doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold').text('HOW TO USE THIS PLAN', 40, 60);
-    doc.moveTo(40, 96).lineTo(W - 40, 96).strokeColor(ACCENT).lineWidth(0.5).stroke();
-    doc.fontSize(10).fillColor(WHITE).font('Helvetica')
-      .text(planData.how_to_use || '', 40, 116, { width: W - 80, lineGap: 4 });
-    footer(doc, client.name || clientName);
+    if (planData.how_to_use) {
+      newPage(doc);
+      doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold').text('HOW TO USE THIS PLAN', 40, 60);
+      doc.moveTo(40, 96).lineTo(W - 40, 96).strokeColor(ACCENT).lineWidth(0.5).stroke();
+      doc.fontSize(10).fillColor(WHITE).font('Helvetica')
+        .text(planData.how_to_use, 40, 116, { width: W - 80, lineGap: 4 });
+      footer(doc, client.name || clientName);
+    }
 
     // ── TRAINING SESSION TABLES ───────────────────────────────────────────
     if (planData.sessions && planData.sessions.length) {
@@ -231,31 +233,34 @@ function generatePlanPDF(planData, clientName) {
 
     // ── GROCERY LIST ──────────────────────────────────────────────────────
     if (planData.grocery_list) {
-      newPage(doc);
       const gl = planData.grocery_list;
-      doc.fontSize(9).fillColor(SILVER).font('Helvetica-Bold').text('NUTRITION', 40, 50);
-      doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold').text('GROCERY LIST', 40, 64);
-      doc.moveTo(40, 100).lineTo(W - 40, 100).strokeColor(ACCENT).lineWidth(0.5).stroke();
-
-      let gy = 120;
-      [
+      const glCategories = [
         ['PROTEINS', gl.proteins],
         ['CARBOHYDRATES', gl.carbs],
         ['FRUITS & VEGETABLES', gl.fruits_veg],
         ['FATS', gl.fats],
         ['SUPPLEMENTS', gl.supplements],
-      ].forEach(([cat, items]) => {
-        if (!items || !items.length) return;
-        doc.fontSize(10).fillColor(SILVER).font('Helvetica-Bold').text(cat, 40, gy);
-        gy += 18;
-        items.forEach(item => {
-          doc.fontSize(9).fillColor(WHITE).font('Helvetica').text('· ' + item, 55, gy);
-          gy += 14;
-        });
-        gy += 10;
-      });
+      ].filter(([, items]) => items && items.length);
 
-      footer(doc, client.name || clientName);
+      if (glCategories.length) {
+        newPage(doc);
+        doc.fontSize(9).fillColor(SILVER).font('Helvetica-Bold').text('NUTRITION', 40, 50);
+        doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold').text('GROCERY LIST', 40, 64);
+        doc.moveTo(40, 100).lineTo(W - 40, 100).strokeColor(ACCENT).lineWidth(0.5).stroke();
+
+        let gy = 120;
+        glCategories.forEach(([cat, items]) => {
+          doc.fontSize(10).fillColor(SILVER).font('Helvetica-Bold').text(cat, 40, gy);
+          gy += 18;
+          items.forEach(item => {
+            doc.fontSize(9).fillColor(WHITE).font('Helvetica').text('· ' + item, 55, gy);
+            gy += 14;
+          });
+          gy += 10;
+        });
+
+        footer(doc, client.name || clientName);
+      }
     }
 
     // ── PROGRESS TRACKER ─────────────────────────────────────────────────
@@ -295,19 +300,21 @@ function generatePlanPDF(planData, clientName) {
     footer(doc, client.name || clientName);
 
     // ── WHAT HAPPENS NEXT ─────────────────────────────────────────────────
-    newPage(doc);
-    doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold').text('WHAT HAPPENS NEXT', 40, 60);
-    doc.moveTo(40, 96).lineTo(W - 40, 96).strokeColor(ACCENT).lineWidth(0.5).stroke();
-    doc.fontSize(11).fillColor(WHITE).font('Helvetica')
-      .text(planData.what_happens_next || '', 40, 116, { width: W - 80, lineGap: 6 });
+    if (planData.what_happens_next) {
+      newPage(doc);
+      doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold').text('WHAT HAPPENS NEXT', 40, 60);
+      doc.moveTo(40, 96).lineTo(W - 40, 96).strokeColor(ACCENT).lineWidth(0.5).stroke();
+      doc.fontSize(11).fillColor(WHITE).font('Helvetica')
+        .text(planData.what_happens_next, 40, 116, { width: W - 80, lineGap: 6 });
 
-    const logoY = doc.y + 40;
-    if (fs.existsSync(logoPath)) {
-      doc.image(logoPath, 40, logoY, { width: 36 });
+      const logoY = doc.y + 40;
+      if (fs.existsSync(logoPath)) {
+        doc.image(logoPath, 40, logoY, { width: 36 });
+      }
+      doc.fontSize(9).fillColor(SILVER).text('PLUS 4 PERFORMANCE', 86, logoY + 8);
+
+      footer(doc, client.name || clientName);
     }
-    doc.fontSize(9).fillColor(SILVER).text('PLUS 4 PERFORMANCE', 86, logoY + 8);
-
-    footer(doc, client.name || clientName);
     doc.end();
   });
 }
@@ -427,7 +434,7 @@ TRAINING REQUIREMENTS: Build one entry per session type (e.g. Push Day, Pull Day
 NUTRITION REQUIREMENTS:
 - Calculate calories and macros using Mifflin St Jeor exactly as described in Section 7. Show your working in the personal_note field.
 - Apply training day vs rest day splits per Section 7.
-- Build a full meal plan using foods from the food library in Section 8. Be specific — name actual foods with quantities.
+- Build a full meal plan using foods from the food library in Section 8. Be specific — name actual foods with quantities. Label meals as M1, M2, M3, M4, M5, M6. Do not include times for any meal except M4 which must always be labelled as M4 — POST WORKOUT. The timing of all other meals is irrelevant and must not be specified.
 - The grocery list must reflect the meal plan exactly. No generic entries.
 - Apply dietary preference adjustments from Section 7 based on the client's stated preferences.
 - In the grocery list supplements section, always give a specific weekly quantity for every supplement — for example Creatine monohydrate 35g (5g x 7 days). Never write check your supply.
