@@ -153,8 +153,10 @@
         }
         .summary { margin-bottom: 30px; }
         .summary h2 { font-size: 20px; margin-bottom: 20px; color: #fff; }
-        .summary-item { margin-bottom: 10px; }
-        .summary-item strong { color: #c0c0c0; }
+        .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border-top: 1px solid #333; }
+        .summary-item { display: contents; }
+        .summary-label { font-size: 13px; color: #c0c0c0; padding: 10px 12px 10px 0; border-bottom: 1px solid #222; }
+        .summary-value { font-size: 13px; color: #fff; padding: 10px 0; border-bottom: 1px solid #222; }
         .confirmation { display: none; text-align: center; }
         .confirmation h2 { color: #fff; margin-bottom: 20px; }
         .confirmation pre { background: #0a0a0a; padding: 20px; border-radius: 0; text-align: left; overflow-x: auto; }
@@ -577,12 +579,44 @@ if (section === 3) {
 }
         }
 
+        const FIELD_LABELS = {
+            firstName: 'Name',
+            email: 'Email',
+            sex: 'Sex',
+            age: 'Age',
+            heightCmValue: 'Height',
+            weightKgValue: 'Current Weight',
+            targetWeight: 'Target Weight',
+            activity: 'Activity Level',
+            goal: 'Goal',
+            equipmentList: 'Equipment',
+            trainingDays: 'Training Days Per Week',
+            sessionLength: 'Session Length (mins)',
+            scheduleType: 'Schedule Type',
+            trainingSplit: 'Training Split',
+        };
+
+        function formatValue(key, value) {
+            if (Array.isArray(value)) return value.map(v => formatValue(key, v)).join(', ');
+            if (value === null || value === undefined || value === '') return null;
+            return String(value)
+                .replace(/_/g, ' ')
+                .replace(/\b\w/g, c => c.toUpperCase());
+        }
+
         function showSummary() {
-            let summaryHTML = '';
-            for (let key in formData) {
-                summaryHTML += '<div class="summary-item"><strong>' + key + ':</strong> ' + formData[key] + '</div>';
-            }
-            document.getElementById('summaryContent').innerHTML = summaryHTML;
+            const rows = Object.entries(FIELD_LABELS)
+                .map(([key, label]) => {
+                    const raw = formData[key];
+                    const formatted = formatValue(key, raw);
+                    if (!formatted) return '';
+                    return '<div class="summary-label">' + label + '</div>' +
+                           '<div class="summary-value">' + formatted + '</div>';
+                })
+                .join('');
+
+            document.getElementById('summaryContent').innerHTML =
+                '<div class="summary-grid">' + rows + '</div>';
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
             document.getElementById('summary').classList.add('active');
         }
