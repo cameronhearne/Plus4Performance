@@ -309,7 +309,7 @@ const server = http.createServer(async (req, res) => {
     try {
       const intakeData = JSON.parse(body);
 
-      const systemPrompt = coachingBible + '\n\nCRITICAL INSTRUCTION: You must respond with ONLY a valid JSON object. No text before or after the JSON. No markdown. No code blocks. The JSON must exactly follow this structure:\n{\n  "client": {\n    "name": string,\n    "goal": string,\n    "age": number,\n    "height": number,\n    "current_weight": number,\n    "target_weight": number,\n    "bmr": number,\n    "tdee": number,\n    "plan_start": string,\n    "plan_end": string,\n    "experience": string,\n    "training_days": number,\n    "split": string\n  },\n  "personal_note": string,\n  "how_to_use": string,\n  "sessions": [{"name": string, "exercises": [{"name": string, "sets": number, "reps": string, "rest": string, "progression": string, "notes": string}]}],\n  "nutrition": {"daily_calories": number, "protein": number, "carbs": number, "fats": number, "training_day_calories": number, "rest_day_calories": number, "meal_plan": [{"meal": string, "foods": [string]}]},\n  "grocery_list": {"proteins": [string], "carbs": [string], "fruits_veg": [string], "fats": [string], "supplements": [string]},\n  "supplements": [string],\n  "what_happens_next": string\n}';
+      const systemPrompt = coachingBible + '\n\nCRITICAL INSTRUCTION: You must respond with ONLY a valid JSON object. No text before or after the JSON. No markdown. No code blocks. The JSON must exactly follow this structure:\n{\n  "client": {\n    "name": string,\n    "goal": string,\n    "age": number,\n    "height": number,\n    "current_weight": number,\n    "target_weight": number,\n    "bmr": number,\n    "tdee": number,\n    "plan_start": string,\n    "plan_end": string,\n    "experience": string,\n    "training_days": number,\n    "split": string\n  },\n  "personal_note": string,\n  "how_to_use": string,\n  "sessions": [{"name": string, "exercises": [{"name": string, "sets": string, "reps": string, "rest": string, "notes": string, "progression": string}]}],\n  "nutrition": {"daily_calories": number, "protein": number, "carbs": number, "fats": number, "training_day_calories": number, "rest_day_calories": number, "meal_plan": [{"meal": string, "foods": [string]}]},\n  "grocery_list": {"proteins": [string], "carbs": [string], "fruits_veg": [string], "fats": [string], "supplements": [string]},\n  "supplements": [string],\n  "what_happens_next": string\n}';
 
       const message = await anthropic.messages.stream({
         model: 'claude-sonnet-4-6',
@@ -317,14 +317,7 @@ const server = http.createServer(async (req, res) => {
         system: systemPrompt,
         messages: [{ role: 'user', content: `You are building a complete, detailed 12-week personalised training and nutrition plan. This is a paid product — the client expects professional, specific, substantive output. Generic responses are unacceptable.
 
-TRAINING REQUIREMENTS:
-- Build one entry per session type (e.g. Push Day, Pull Day, Leg Day, Upper Day, Lower Day) — do NOT repeat sessions week by week.
-- Select exercises from the exercise library in the coaching bible. Use the priority ratings — prioritise Tier 1 exercises, use Tier 2 for variety, avoid Tier 3 unless justified.
-- For every exercise, populate the progression field with a plain-English description of how sets, reps and load change across the 12 weeks — for example: "3x10 weeks 1-4, 4x8 weeks 5-8, 4x6 weeks 9-12 — add weight each time the reps feel easy". This is how the client knows how to progress; make it specific and actionable.
-- The sets and reps fields should reflect the starting values (weeks 1-4).
-- Include coaching cues and common mistakes from the exercise library in the notes field.
-- Respect all injury contraindications the client has flagged. Apply the relevant protocol from Section 9.
-- Session structure must follow Section 2 exactly — warm up, working sets, cool down, correct rest periods.
+TRAINING REQUIREMENTS: Build one entry per session type (e.g. Push Day, Pull Day, Leg Day). Do not repeat sessions for each week. For each exercise include coaching cues and common mistakes in the notes field. In the progression field describe exactly how sets, reps and load change across the 12 weeks in plain English — for example: Weeks 1-4: 3x10 at a moderate weight. Weeks 5-8: 4x8, increase weight by 2.5kg. Weeks 9-12: 4x6, push to near failure. Select exercises from the exercise library using priority ratings.
 
 NUTRITION REQUIREMENTS:
 - Calculate calories and macros using Mifflin St Jeor exactly as described in Section 7. Show your working in the personal_note field.
