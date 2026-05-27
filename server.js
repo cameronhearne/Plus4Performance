@@ -33,7 +33,25 @@ function divider(doc) {
   doc.y += 24;
 }
 
-function generatePDF(planData, clientName) {
+function makeCoverPage(doc, client, clientName, title, W, H) {
+  newPage(doc);
+  if (fs.existsSync(logoPath)) {
+    doc.image(logoPath, 40, 40, { width: 60 });
+  }
+  const coverNameY = H / 2 - 80;
+  doc.fontSize(64).fillColor(WHITE).font('Helvetica-Bold')
+    .text((client.name || clientName).toUpperCase(), 40, coverNameY, { width: W - 80, align: 'center' });
+  const dividerY = doc.y + 16;
+  doc.moveTo(40, dividerY).lineTo(W - 40, dividerY).strokeColor(SILVER).lineWidth(0.5).stroke();
+  doc.fontSize(28).fillColor(SILVER).font('Helvetica-Bold')
+    .text(title, 40, dividerY + 20, { width: W - 80, align: 'center' });
+  doc.fontSize(12).fillColor(ACCENT).font('Helvetica')
+    .text((client.plan_start || '') + '  —  ' + (client.plan_end || ''), 40, doc.y + 12, { width: W - 80, align: 'center' });
+  doc.fontSize(9).fillColor(SILVER).font('Helvetica')
+    .text('plus4performance.com', 40, H - 40, { width: W - 80, align: 'center' });
+}
+
+function generatePlanPDF(planData, clientName) {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ margin: 0, size: 'A4', autoFirstPage: false });
     const chunks = [];
@@ -46,51 +64,26 @@ function generatePDF(planData, clientName) {
     const H = 842;
 
     // ── COVER PAGE ────────────────────────────────────────────────────────
-    newPage(doc);
-
-    if (fs.existsSync(logoPath)) {
-      doc.image(logoPath, 40, 40, { width: 60 });
-    }
-
     const planTitle = '12 WEEK ' + (client.goal || 'TRAINING PLAN').toUpperCase();
-    const coverNameY = H / 2 - 80;
-    doc.fontSize(64).fillColor(WHITE).font('Helvetica-Bold')
-      .text((client.name || clientName).toUpperCase(), 40, coverNameY, { width: W - 80, align: 'center' });
+    makeCoverPage(doc, client, clientName, planTitle, W, H);
 
-    const dividerY = doc.y + 16;
-    doc.moveTo(40, dividerY).lineTo(W - 40, dividerY).strokeColor(SILVER).lineWidth(0.5).stroke();
-
-    doc.fontSize(28).fillColor(SILVER).font('Helvetica-Bold')
-      .text(planTitle, 40, dividerY + 20, { width: W - 80, align: 'center' });
-
-    doc.fontSize(12).fillColor(ACCENT).font('Helvetica')
-      .text((client.plan_start || '') + '  —  ' + (client.plan_end || ''), 40, doc.y + 12, { width: W - 80, align: 'center' });
-
-    doc.fontSize(9).fillColor(SILVER).font('Helvetica')
-      .text('plus4performance.com', 40, H - 40, { width: W - 80, align: 'center' });
-
-    // ── PAGE 1: Personal Summary ──────────────────────────────────────────
+    // ── PERSONAL SUMMARY ──────────────────────────────────────────────────
     newPage(doc);
 
-    // Logo
     if (fs.existsSync(logoPath)) {
       doc.image(logoPath, 40, 40, { width: 44 });
     }
-    // Date
     doc.fontSize(9).fillColor(SILVER).font('Helvetica')
       .text(new Date().toLocaleDateString('en-GB'), 40, 44, { align: 'right', width: W - 80 });
 
-    // Title
     doc.fontSize(52).fillColor(WHITE).font('Helvetica-Bold')
       .text((client.name || 'YOUR').toUpperCase() + "'S", 40, 110);
     doc.fontSize(32).fillColor(SILVER).font('Helvetica-Bold')
       .text('12 WEEK ' + (client.goal || 'PLAN').toUpperCase(), 40, doc.y + 4);
 
-    // Divider
     doc.moveTo(40, doc.y + 16).lineTo(W - 40, doc.y + 16)
       .strokeColor(ACCENT).lineWidth(0.5).stroke();
 
-    // Stats columns
     const sY = doc.y + 32;
     doc.fontSize(9).fillColor(SILVER).font('Helvetica-Bold')
       .text('YOUR STATS', 40, sY)
@@ -120,7 +113,6 @@ function generatePDF(planData, clientName) {
       doc.fillColor(WHITE).text(v, 170, ry);
       ry += 16;
     });
-
     ry = sY + 18;
     rightStats.forEach(([l, v]) => {
       doc.fontSize(9).fillColor(ACCENT).font('Helvetica').text(l + ':', W / 2, ry);
@@ -128,7 +120,6 @@ function generatePDF(planData, clientName) {
       ry += 16;
     });
 
-    // Supplements
     let sy = ry + 20;
     if (planData.supplements && planData.supplements.length) {
       doc.fontSize(9).fillColor(SILVER).font('Helvetica-Bold').text('SUPPLEMENTS', 40, sy);
@@ -140,12 +131,11 @@ function generatePDF(planData, clientName) {
       sy += 8;
     }
 
-    // Personal note
     if (planData.personal_note) {
-      if (sy >= 650) {
+      if (sy > 580) {
         footer(doc, client.name || clientName);
         newPage(doc);
-        sy = 60;
+        sy = 80;
       }
       doc.moveTo(40, sy).lineTo(W - 40, sy).strokeColor(ACCENT).lineWidth(0.5).stroke();
       sy += 16;
@@ -155,7 +145,7 @@ function generatePDF(planData, clientName) {
 
     footer(doc, client.name || clientName);
 
-    // ── PAGE 2: How to use ────────────────────────────────────────────────
+    // ── HOW TO USE ────────────────────────────────────────────────────────
     newPage(doc);
     doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold').text('HOW TO USE THIS PLAN', 40, 60);
     doc.moveTo(40, 96).lineTo(W - 40, 96).strokeColor(ACCENT).lineWidth(0.5).stroke();
@@ -163,10 +153,9 @@ function generatePDF(planData, clientName) {
       .text(planData.how_to_use || '', 40, 116, { width: W - 80, lineGap: 4 });
     footer(doc, client.name || clientName);
 
-    // ── TRAINING PAGES ────────────────────────────────────────────────────
+    // ── TRAINING SESSION TABLES ───────────────────────────────────────────
     if (planData.sessions && planData.sessions.length) {
       planData.sessions.forEach(session => {
-        // Exercise table page
         newPage(doc);
         doc.fontSize(9).fillColor(SILVER).font('Helvetica-Bold').text('TRAINING', 40, 50);
         doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold').text((session.name || '').toUpperCase(), 40, 64);
@@ -195,49 +184,10 @@ function generatePDF(planData, clientName) {
         });
 
         footer(doc, client.name || clientName);
-
-        // Coaching notes page(s) for this session
-        newPage(doc);
-        doc.fontSize(9).fillColor(SILVER).font('Helvetica-Bold').text('TRAINING', 40, 50);
-        doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold')
-          .text('COACHING NOTES — ' + (session.name || '').toUpperCase(), 40, 64);
-        doc.moveTo(40, 100).lineTo(W - 40, 100).strokeColor(ACCENT).lineWidth(0.5).stroke();
-
-        let ny = 120;
-        (session.exercises || []).forEach(ex => {
-          // Estimate space needed: name + label + ~3 lines each field + gap
-          const progLines = Math.ceil((String(ex.progression || '').length) / 80) + 1;
-          const notesLines = Math.ceil((String(ex.notes || '').length) / 80) + 1;
-          const needed = 20 + 14 + (progLines * 14) + 10 + 14 + (notesLines * 14) + 28;
-          if (ny + needed > 780) {
-            footer(doc, client.name || clientName);
-            newPage(doc);
-            doc.fontSize(9).fillColor(SILVER).font('Helvetica-Bold').text('TRAINING', 40, 50);
-            doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold')
-              .text('COACHING NOTES — ' + (session.name || '').toUpperCase(), 40, 64);
-            doc.moveTo(40, 100).lineTo(W - 40, 100).strokeColor(ACCENT).lineWidth(0.5).stroke();
-            ny = 120;
-          }
-
-          doc.fontSize(11).fillColor(SILVER).font('Helvetica-Bold').text((ex.name || '').toUpperCase(), 40, ny);
-          ny += 20;
-
-          doc.fontSize(8).fillColor(SILVER).font('Helvetica-Bold').text('PROGRESSION', 40, ny);
-          ny += 14;
-          doc.fontSize(9).fillColor(WHITE).font('Helvetica').text(ex.progression || '', 40, ny, { width: W - 80, lineGap: 3 });
-          ny = doc.y + 10;
-
-          doc.fontSize(8).fillColor(SILVER).font('Helvetica-Bold').text('CUES', 40, ny);
-          ny += 14;
-          doc.fontSize(9).fillColor(WHITE).font('Helvetica').text(ex.notes || '', 40, ny, { width: W - 80, lineGap: 3 });
-          ny = doc.y + 28;
-        });
-
-        footer(doc, client.name || clientName);
       });
     }
 
-    // ── NUTRITION PAGE ────────────────────────────────────────────────────
+    // ── NUTRITION ─────────────────────────────────────────────────────────
     if (planData.nutrition) {
       newPage(doc);
       const nut = planData.nutrition;
@@ -265,7 +215,6 @@ function generatePDF(planData, clientName) {
         ny += 16;
         doc.fontSize(11).fillColor(SILVER).font('Helvetica-Bold').text('MEAL PLAN', 40, ny);
         ny += 20;
-
         nut.meal_plan.forEach(meal => {
           doc.fontSize(10).fillColor(WHITE).font('Helvetica-Bold').text((meal.meal || '').toUpperCase(), 40, ny);
           ny += 16;
@@ -309,26 +258,80 @@ function generatePDF(planData, clientName) {
       footer(doc, client.name || clientName);
     }
 
-    // ── FINAL PAGE ────────────────────────────────────────────────────────
+    // ── WHAT HAPPENS NEXT ─────────────────────────────────────────────────
     newPage(doc);
     doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold').text('WHAT HAPPENS NEXT', 40, 60);
     doc.moveTo(40, 96).lineTo(W - 40, 96).strokeColor(ACCENT).lineWidth(0.5).stroke();
     doc.fontSize(11).fillColor(WHITE).font('Helvetica')
       .text(planData.what_happens_next || '', 40, 116, { width: W - 80, lineGap: 6 });
 
-    const finalY = doc.y + 40;
-    doc.fontSize(9).fillColor(SILVER)
-      .text('Video library: plus4performance.com/videos', 40, finalY);
-    doc.text('Progress tracker: plus4performance.com/tracker', 40, finalY + 14);
-    doc.text('Support: hello@plus4performance.com', 40, finalY + 28);
-
-    const logoY = finalY + 60;
+    const logoY = doc.y + 40;
     if (fs.existsSync(logoPath)) {
       doc.image(logoPath, 40, logoY, { width: 36 });
     }
     doc.fontSize(9).fillColor(SILVER).text('PLUS 4 PERFORMANCE', 86, logoY + 8);
 
     footer(doc, client.name || clientName);
+    doc.end();
+  });
+}
+
+function generateCoachingPDF(planData, clientName) {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ margin: 0, size: 'A4', autoFirstPage: false });
+    const chunks = [];
+    doc.on('data', chunk => chunks.push(chunk));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+
+    const client = planData.client || {};
+    const W = 595;
+    const H = 842;
+
+    // ── COVER PAGE ────────────────────────────────────────────────────────
+    makeCoverPage(doc, client, clientName, 'COACHING GUIDE', W, H);
+
+    // ── COACHING NOTES BY SESSION ─────────────────────────────────────────
+    if (planData.sessions && planData.sessions.length) {
+      planData.sessions.forEach(session => {
+        newPage(doc);
+        doc.fontSize(9).fillColor(SILVER).font('Helvetica-Bold').text('COACHING GUIDE', 40, 50);
+        doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold')
+          .text('COACHING NOTES — ' + (session.name || '').toUpperCase(), 40, 64);
+        doc.moveTo(40, 100).lineTo(W - 40, 100).strokeColor(ACCENT).lineWidth(0.5).stroke();
+
+        let ny = 120;
+        (session.exercises || []).forEach(ex => {
+          const progLines = Math.ceil((String(ex.progression || '').length) / 80) + 1;
+          const notesLines = Math.ceil((String(ex.notes || '').length) / 80) + 1;
+          const needed = 20 + 14 + (progLines * 14) + 10 + 14 + (notesLines * 14) + 28;
+          if (ny + needed > 780) {
+            footer(doc, client.name || clientName);
+            newPage(doc);
+            doc.fontSize(9).fillColor(SILVER).font('Helvetica-Bold').text('COACHING GUIDE', 40, 50);
+            doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold')
+              .text('COACHING NOTES — ' + (session.name || '').toUpperCase(), 40, 64);
+            doc.moveTo(40, 100).lineTo(W - 40, 100).strokeColor(ACCENT).lineWidth(0.5).stroke();
+            ny = 120;
+          }
+
+          doc.fontSize(11).fillColor(SILVER).font('Helvetica-Bold').text((ex.name || '').toUpperCase(), 40, ny);
+          ny += 20;
+
+          doc.fontSize(8).fillColor(SILVER).font('Helvetica-Bold').text('PROGRESSION', 40, ny);
+          ny += 14;
+          doc.fontSize(9).fillColor(WHITE).font('Helvetica').text(ex.progression || '', 40, ny, { width: W - 80, lineGap: 3 });
+          ny = doc.y + 10;
+
+          doc.fontSize(8).fillColor(SILVER).font('Helvetica-Bold').text('CUES', 40, ny);
+          ny += 14;
+          doc.fontSize(9).fillColor(WHITE).font('Helvetica').text(ex.notes || '', 40, ny, { width: W - 80, lineGap: 3 });
+          ny = doc.y + 28;
+        });
+
+        footer(doc, client.name || clientName);
+      });
+    }
 
     doc.end();
   });
@@ -419,10 +422,13 @@ ${JSON.stringify(intakeData, null, 2)}` }]
       console.log('Plan parsed for:', planData.client && planData.client.name);
 
       const clientName = (planData.client && planData.client.name) || intakeData.name || 'Client';
-      const pdfBuffer = await generatePDF(planData, clientName);
-      console.log('PDF generated, size:', pdfBuffer.length);
+      const [planBuffer, coachingBuffer] = await Promise.all([
+        generatePlanPDF(planData, clientName),
+        generateCoachingPDF(planData, clientName),
+      ]);
+      console.log('Plan PDF size:', planBuffer.length, '— Coaching PDF size:', coachingBuffer.length);
 
-      const pdfBase64 = pdfBuffer.toString('base64');
+      const safeName = clientName.replace(/\s+/g, '');
 
       const emailResponse = await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -436,21 +442,28 @@ ${JSON.stringify(intakeData, null, 2)}` }]
           subject: 'Your Plus 4 Performance Plan is Ready, ' + clientName,
           html: '<div style="background:#0d0d0d;color:#F5F3EE;padding:40px;font-family:sans-serif;max-width:600px;margin:0 auto;">' +
             '<h1 style="font-size:28px;margin-bottom:8px;">Your plan is ready, ' + clientName + '.</h1>' +
-            '<p style="color:#C8C8C8;margin-bottom:24px;">Your personalised 12 week plan is attached. Here\'s what\'s inside:</p>' +
+            '<p style="color:#C8C8C8;margin-bottom:24px;">Your plan and coaching guide are both attached below. Here\'s what\'s inside:</p>' +
             '<ul style="color:#C8C8C8;line-height:2;">' +
             '<li>Your personal summary and targets</li>' +
             '<li>Full training programme with exercises, sets and reps</li>' +
             '<li>Nutrition plan with daily macro targets</li>' +
             '<li>7 day meal plan and grocery list</li>' +
             '<li>Supplement recommendations</li>' +
+            '<li>Coaching guide with progression and cues for every exercise</li>' +
             '</ul>' +
             '<p style="color:#C8C8C8;margin-top:24px;">Start on week 1 by finding your working weights. Do not chase heavy weight in week 1 — get the movements right first.</p>' +
             '<p style="margin-top:32px;color:#787878;font-size:12px;">Plus 4 Performance · hello@plus4performance.com</p>' +
             '</div>',
-          attachments: [{
-            filename: 'Plus4Performance_' + clientName + '_12WeekPlan.pdf',
-            content: pdfBase64
-          }]
+          attachments: [
+            {
+              filename: 'Plus4Performance_' + safeName + 'Plan.pdf',
+              content: planBuffer.toString('base64')
+            },
+            {
+              filename: 'Plus4Performance_' + safeName + '_CoachingGuide.pdf',
+              content: coachingBuffer.toString('base64')
+            }
+          ]
         })
       });
 
