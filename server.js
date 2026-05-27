@@ -45,6 +45,30 @@ function generatePDF(planData, clientName) {
     const W = 595;
     const H = 842;
 
+    // ── COVER PAGE ────────────────────────────────────────────────────────
+    newPage(doc);
+
+    if (fs.existsSync(logoPath)) {
+      doc.image(logoPath, 40, 40, { width: 60 });
+    }
+
+    const planTitle = '12 WEEK ' + (client.goal || 'TRAINING PLAN').toUpperCase();
+    const coverNameY = H / 2 - 80;
+    doc.fontSize(64).fillColor(WHITE).font('Helvetica-Bold')
+      .text((client.name || clientName).toUpperCase(), 40, coverNameY, { width: W - 80, align: 'center' });
+
+    const dividerY = doc.y + 16;
+    doc.moveTo(40, dividerY).lineTo(W - 40, dividerY).strokeColor(SILVER).lineWidth(0.5).stroke();
+
+    doc.fontSize(28).fillColor(SILVER).font('Helvetica-Bold')
+      .text(planTitle, 40, dividerY + 20, { width: W - 80, align: 'center' });
+
+    doc.fontSize(12).fillColor(ACCENT).font('Helvetica')
+      .text((client.plan_start || '') + '  —  ' + (client.plan_end || ''), 40, doc.y + 12, { width: W - 80, align: 'center' });
+
+    doc.fontSize(9).fillColor(SILVER).font('Helvetica')
+      .text('plus4performance.com', 40, H - 40, { width: W - 80, align: 'center' });
+
     // ── PAGE 1: Personal Summary ──────────────────────────────────────────
     newPage(doc);
 
