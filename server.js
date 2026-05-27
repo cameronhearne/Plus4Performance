@@ -118,6 +118,11 @@ function generatePDF(planData, clientName) {
 
     // Personal note
     if (planData.personal_note) {
+      if (sy >= 650) {
+        footer(doc, client.name || clientName);
+        newPage(doc);
+        sy = 60;
+      }
       doc.moveTo(40, sy).lineTo(W - 40, sy).strokeColor(ACCENT).lineWidth(0.5).stroke();
       sy += 16;
       doc.fontSize(10).fillColor(WHITE).font('Helvetica-Oblique')
@@ -137,20 +142,19 @@ function generatePDF(planData, clientName) {
     // ── TRAINING PAGES ────────────────────────────────────────────────────
     if (planData.sessions && planData.sessions.length) {
       planData.sessions.forEach(session => {
+        // Exercise table page
         newPage(doc);
         doc.fontSize(9).fillColor(SILVER).font('Helvetica-Bold').text('TRAINING', 40, 50);
         doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold').text((session.name || '').toUpperCase(), 40, 64);
         doc.moveTo(40, 100).lineTo(W - 40, 100).strokeColor(ACCENT).lineWidth(0.5).stroke();
 
-        const cols = { ex: 40, sets: 230, reps: 278, rest: 326, prog: 374, notes: 490 };
+        const cols = { ex: 40, sets: 295, reps: 355, rest: 430 };
         let ty = 118;
         doc.fontSize(8).fillColor(SILVER).font('Helvetica-Bold');
         doc.text('EXERCISE', cols.ex, ty);
         doc.text('SETS', cols.sets, ty);
         doc.text('REPS', cols.reps, ty);
         doc.text('REST', cols.rest, ty);
-        doc.text('PROGRESSION', cols.prog, ty);
-        doc.text('NOTES', cols.notes, ty);
         ty += 16;
         doc.moveTo(40, ty).lineTo(W - 40, ty).strokeColor(ACCENT).lineWidth(0.3).stroke();
         ty += 8;
@@ -159,13 +163,50 @@ function generatePDF(planData, clientName) {
           const rowBg = i % 2 === 0 ? '#141414' : '#0d0d0d';
           doc.rect(40, ty - 3, W - 80, 22).fill(rowBg);
           doc.fontSize(9).fillColor(WHITE).font('Helvetica');
-          doc.text(ex.name || '', cols.ex, ty, { width: 182 });
+          doc.text(ex.name || '', cols.ex, ty, { width: 250 });
           doc.text(String(ex.sets || ''), cols.sets, ty);
           doc.text(String(ex.reps || ''), cols.reps, ty);
           doc.text(String(ex.rest || ''), cols.rest, ty);
-          doc.text(String(ex.progression || ''), cols.prog, ty, { width: 110 });
-          doc.text(String(ex.notes || ''), cols.notes, ty, { width: 100 });
           ty += 22;
+        });
+
+        footer(doc, client.name || clientName);
+
+        // Coaching notes page(s) for this session
+        newPage(doc);
+        doc.fontSize(9).fillColor(SILVER).font('Helvetica-Bold').text('TRAINING', 40, 50);
+        doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold')
+          .text('COACHING NOTES — ' + (session.name || '').toUpperCase(), 40, 64);
+        doc.moveTo(40, 100).lineTo(W - 40, 100).strokeColor(ACCENT).lineWidth(0.5).stroke();
+
+        let ny = 120;
+        (session.exercises || []).forEach(ex => {
+          // Estimate space needed: name + label + ~3 lines each field + gap
+          const progLines = Math.ceil((String(ex.progression || '').length) / 80) + 1;
+          const notesLines = Math.ceil((String(ex.notes || '').length) / 80) + 1;
+          const needed = 20 + 14 + (progLines * 14) + 10 + 14 + (notesLines * 14) + 28;
+          if (ny + needed > 780) {
+            footer(doc, client.name || clientName);
+            newPage(doc);
+            doc.fontSize(9).fillColor(SILVER).font('Helvetica-Bold').text('TRAINING', 40, 50);
+            doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold')
+              .text('COACHING NOTES — ' + (session.name || '').toUpperCase(), 40, 64);
+            doc.moveTo(40, 100).lineTo(W - 40, 100).strokeColor(ACCENT).lineWidth(0.5).stroke();
+            ny = 120;
+          }
+
+          doc.fontSize(11).fillColor(SILVER).font('Helvetica-Bold').text((ex.name || '').toUpperCase(), 40, ny);
+          ny += 20;
+
+          doc.fontSize(8).fillColor(SILVER).font('Helvetica-Bold').text('PROGRESSION', 40, ny);
+          ny += 14;
+          doc.fontSize(9).fillColor(WHITE).font('Helvetica').text(ex.progression || '', 40, ny, { width: W - 80, lineGap: 3 });
+          ny = doc.y + 10;
+
+          doc.fontSize(8).fillColor(SILVER).font('Helvetica-Bold').text('CUES', 40, ny);
+          ny += 14;
+          doc.fontSize(9).fillColor(WHITE).font('Helvetica').text(ex.notes || '', 40, ny, { width: W - 80, lineGap: 3 });
+          ny = doc.y + 28;
         });
 
         footer(doc, client.name || clientName);
@@ -251,16 +292,17 @@ function generatePDF(planData, clientName) {
     doc.fontSize(11).fillColor(WHITE).font('Helvetica')
       .text(planData.what_happens_next || '', 40, 116, { width: W - 80, lineGap: 6 });
 
-    let finalY = doc.y + 40;
+    const finalY = doc.y + 40;
     doc.fontSize(9).fillColor(SILVER)
       .text('Video library: plus4performance.com/videos', 40, finalY);
     doc.text('Progress tracker: plus4performance.com/tracker', 40, finalY + 14);
     doc.text('Support: hello@plus4performance.com', 40, finalY + 28);
 
+    const logoY = finalY + 60;
     if (fs.existsSync(logoPath)) {
-      doc.image(logoPath, 40, finalY + 60, { width: 36 });
+      doc.image(logoPath, 40, logoY, { width: 36 });
     }
-    doc.fontSize(9).fillColor(SILVER).text('PLUS 4 PERFORMANCE', 86, finalY + 68);
+    doc.fontSize(9).fillColor(SILVER).text('PLUS 4 PERFORMANCE', 86, logoY + 8);
 
     footer(doc, client.name || clientName);
 
@@ -317,7 +359,7 @@ const server = http.createServer(async (req, res) => {
         system: systemPrompt,
         messages: [{ role: 'user', content: `You are building a complete, detailed 12-week personalised training and nutrition plan. This is a paid product — the client expects professional, specific, substantive output. Generic responses are unacceptable.
 
-TRAINING REQUIREMENTS: Build one entry per session type (e.g. Push Day, Pull Day, Leg Day). Do not repeat sessions for each week. For each exercise include coaching cues and common mistakes in the notes field. In the progression field describe exactly how sets, reps and load change across the 12 weeks in plain English — for example: Weeks 1-4: 3x10 at a moderate weight. Weeks 5-8: 4x8, increase weight by 2.5kg. Weeks 9-12: 4x6, push to near failure. Select exercises from the exercise library using priority ratings.
+TRAINING REQUIREMENTS: Build one entry per session type (e.g. Push Day, Pull Day, Leg Day). Do not repeat sessions for each week. For each exercise include coaching cues and common mistakes in the notes field. In the progression field describe exactly how sets, reps and load change across the 12 weeks in plain English — for example: Weeks 1-4: 3x10 at a moderate weight. Weeks 5-8: 4x8, increase weight by 2.5kg. Weeks 9-12: 4x6, push to near failure. Select exercises from the exercise library using priority ratings. For PPL splits include Push A and Push B as separate sessions with different exercise selections to provide variety across the two push sessions per 5-day cycle. Do the same for Pull A and Pull B.
 
 NUTRITION REQUIREMENTS:
 - Calculate calories and macros using Mifflin St Jeor exactly as described in Section 7. Show your working in the personal_note field.
