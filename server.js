@@ -135,53 +135,40 @@ function generatePDF(planData, clientName) {
     footer(doc, client.name || clientName);
 
     // ── TRAINING PAGES ────────────────────────────────────────────────────
-    if (planData.weeks && planData.weeks.length) {
-      planData.weeks.forEach(week => {
-        // Week header page
+    if (planData.sessions && planData.sessions.length) {
+      planData.sessions.forEach(session => {
         newPage(doc);
         doc.fontSize(9).fillColor(SILVER).font('Helvetica-Bold').text('TRAINING', 40, 50);
-        doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold').text(`WEEK ${week.week_number}`, 40, 64);
+        doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold').text((session.name || '').toUpperCase(), 40, 64);
         doc.moveTo(40, 100).lineTo(W - 40, 100).strokeColor(ACCENT).lineWidth(0.5).stroke();
-        if (week.progressive_overload_note) {
-          doc.fontSize(11).fillColor(SILVER).font('Helvetica-Bold').text('PROGRESSIVE OVERLOAD', 40, 120);
-          doc.fontSize(10).fillColor(WHITE).font('Helvetica').text(week.progressive_overload_note, 40, 140, { width: W - 80, lineGap: 4 });
-        }
-        footer(doc, client.name || clientName);
 
-        // Session pages
-        (week.sessions || []).forEach(session => {
-          newPage(doc);
-          doc.fontSize(9).fillColor(SILVER).font('Helvetica-Bold').text(`WEEK ${week.week_number} — TRAINING`, 40, 50);
-          const sessionTitle = [session.day, session.name].filter(Boolean).join(' — ').toUpperCase();
-          doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold').text(sessionTitle, 40, 64);
-          doc.moveTo(40, 100).lineTo(W - 40, 100).strokeColor(ACCENT).lineWidth(0.5).stroke();
+        const cols = { ex: 40, sets: 230, reps: 278, rest: 326, prog: 374, notes: 490 };
+        let ty = 118;
+        doc.fontSize(8).fillColor(SILVER).font('Helvetica-Bold');
+        doc.text('EXERCISE', cols.ex, ty);
+        doc.text('SETS', cols.sets, ty);
+        doc.text('REPS', cols.reps, ty);
+        doc.text('REST', cols.rest, ty);
+        doc.text('PROGRESSION', cols.prog, ty);
+        doc.text('NOTES', cols.notes, ty);
+        ty += 16;
+        doc.moveTo(40, ty).lineTo(W - 40, ty).strokeColor(ACCENT).lineWidth(0.3).stroke();
+        ty += 8;
 
-          const cols = { ex: 40, sets: 250, reps: 300, rest: 360, notes: 415 };
-          let ty = 118;
-          doc.fontSize(8).fillColor(SILVER).font('Helvetica-Bold');
-          doc.text('EXERCISE', cols.ex, ty);
-          doc.text('SETS', cols.sets, ty);
-          doc.text('REPS', cols.reps, ty);
-          doc.text('REST', cols.rest, ty);
-          doc.text('NOTES', cols.notes, ty);
-          ty += 16;
-          doc.moveTo(40, ty).lineTo(W - 40, ty).strokeColor(ACCENT).lineWidth(0.3).stroke();
-          ty += 8;
-
-          (session.exercises || []).forEach((ex, i) => {
-            const rowBg = i % 2 === 0 ? '#141414' : '#0d0d0d';
-            doc.rect(40, ty - 3, W - 80, 22).fill(rowBg);
-            doc.fontSize(9).fillColor(WHITE).font('Helvetica');
-            doc.text(ex.name || '', cols.ex, ty, { width: 200 });
-            doc.text(String(ex.sets || ''), cols.sets, ty);
-            doc.text(String(ex.reps || ''), cols.reps, ty);
-            doc.text(String(ex.rest || ''), cols.rest, ty);
-            doc.text(String(ex.notes || ''), cols.notes, ty, { width: 140 });
-            ty += 22;
-          });
-
-          footer(doc, client.name || clientName);
+        (session.exercises || []).forEach((ex, i) => {
+          const rowBg = i % 2 === 0 ? '#141414' : '#0d0d0d';
+          doc.rect(40, ty - 3, W - 80, 22).fill(rowBg);
+          doc.fontSize(9).fillColor(WHITE).font('Helvetica');
+          doc.text(ex.name || '', cols.ex, ty, { width: 182 });
+          doc.text(String(ex.sets || ''), cols.sets, ty);
+          doc.text(String(ex.reps || ''), cols.reps, ty);
+          doc.text(String(ex.rest || ''), cols.rest, ty);
+          doc.text(String(ex.progression || ''), cols.prog, ty, { width: 110 });
+          doc.text(String(ex.notes || ''), cols.notes, ty, { width: 100 });
+          ty += 22;
         });
+
+        footer(doc, client.name || clientName);
       });
     }
 
@@ -322,7 +309,7 @@ const server = http.createServer(async (req, res) => {
     try {
       const intakeData = JSON.parse(body);
 
-      const systemPrompt = coachingBible + '\n\nCRITICAL INSTRUCTION: You must respond with ONLY a valid JSON object. No text before or after the JSON. No markdown. No code blocks. The JSON must exactly follow this structure:\n{\n  "client": {\n    "name": string,\n    "goal": string,\n    "age": number,\n    "height": number,\n    "current_weight": number,\n    "target_weight": number,\n    "bmr": number,\n    "tdee": number,\n    "plan_start": string,\n    "plan_end": string,\n    "experience": string,\n    "training_days": number,\n    "split": string\n  },\n  "personal_note": string,\n  "how_to_use": string,\n  "weeks": [{"week_number": number, "progressive_overload_note": string, "sessions": [{"name": string, "day": string, "exercises": [{"name": string, "sets": number, "reps": string, "rest": string, "notes": string}]}]}],\n  "nutrition": {"daily_calories": number, "protein": number, "carbs": number, "fats": number, "training_day_calories": number, "rest_day_calories": number, "meal_plan": [{"meal": string, "foods": [string]}]},\n  "grocery_list": {"proteins": [string], "carbs": [string], "fruits_veg": [string], "fats": [string], "supplements": [string]},\n  "supplements": [string],\n  "what_happens_next": string\n}';
+      const systemPrompt = coachingBible + '\n\nCRITICAL INSTRUCTION: You must respond with ONLY a valid JSON object. No text before or after the JSON. No markdown. No code blocks. The JSON must exactly follow this structure:\n{\n  "client": {\n    "name": string,\n    "goal": string,\n    "age": number,\n    "height": number,\n    "current_weight": number,\n    "target_weight": number,\n    "bmr": number,\n    "tdee": number,\n    "plan_start": string,\n    "plan_end": string,\n    "experience": string,\n    "training_days": number,\n    "split": string\n  },\n  "personal_note": string,\n  "how_to_use": string,\n  "sessions": [{"name": string, "exercises": [{"name": string, "sets": number, "reps": string, "rest": string, "progression": string, "notes": string}]}],\n  "nutrition": {"daily_calories": number, "protein": number, "carbs": number, "fats": number, "training_day_calories": number, "rest_day_calories": number, "meal_plan": [{"meal": string, "foods": [string]}]},\n  "grocery_list": {"proteins": [string], "carbs": [string], "fruits_veg": [string], "fats": [string], "supplements": [string]},\n  "supplements": [string],\n  "what_happens_next": string\n}';
 
       const message = await anthropic.messages.stream({
         model: 'claude-sonnet-4-6',
@@ -331,10 +318,11 @@ const server = http.createServer(async (req, res) => {
         messages: [{ role: 'user', content: `You are building a complete, detailed 12-week personalised training and nutrition plan. This is a paid product — the client expects professional, specific, substantive output. Generic responses are unacceptable.
 
 TRAINING REQUIREMENTS:
-- Build every single training session for all 12 weeks. Do not summarise or say "repeat week 1". Write out each session in full.
+- Build one entry per session type (e.g. Push Day, Pull Day, Leg Day, Upper Day, Lower Day) — do NOT repeat sessions week by week.
 - Select exercises from the exercise library in the coaching bible. Use the priority ratings — prioritise Tier 1 exercises, use Tier 2 for variety, avoid Tier 3 unless justified.
-- Apply progressive overload week by week exactly as described in Section 3 of the coaching bible. Sets, reps, and load must progress.
-- Include the full coaching cues and common mistakes from the exercise library for every exercise in the notes field.
+- For every exercise, populate the progression field with a plain-English description of how sets, reps and load change across the 12 weeks — for example: "3x10 weeks 1-4, 4x8 weeks 5-8, 4x6 weeks 9-12 — add weight each time the reps feel easy". This is how the client knows how to progress; make it specific and actionable.
+- The sets and reps fields should reflect the starting values (weeks 1-4).
+- Include coaching cues and common mistakes from the exercise library in the notes field.
 - Respect all injury contraindications the client has flagged. Apply the relevant protocol from Section 9.
 - Session structure must follow Section 2 exactly — warm up, working sets, cool down, correct rest periods.
 
