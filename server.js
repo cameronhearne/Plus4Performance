@@ -323,11 +323,11 @@ function generateCoachingPDF(planData, clientName) {
       planData.sessions.forEach(session => {
         newPage(doc);
         doc.fontSize(9).fillColor(SILVER).font('Helvetica-Bold').text('COACHING GUIDE', 40, 50);
-        doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold')
+        doc.fontSize(18).fillColor(WHITE).font('Helvetica-Bold')
           .text('COACHING NOTES — ' + (session.name || '').toUpperCase(), 40, 64);
-        doc.moveTo(40, 100).lineTo(W - 40, 100).strokeColor(ACCENT).lineWidth(0.5).stroke();
+        doc.moveTo(40, 90).lineTo(W - 40, 90).strokeColor(ACCENT).lineWidth(0.5).stroke();
 
-        let ny = 120;
+        let ny = 130;
         (session.exercises || []).forEach(ex => {
           const progLines = Math.ceil((String(ex.progression || '').length) / 80) + 1;
           const notesLines = Math.ceil((String(ex.notes || '').length) / 80) + 1;
@@ -336,10 +336,10 @@ function generateCoachingPDF(planData, clientName) {
             footer(doc, client.name || clientName);
             newPage(doc);
             doc.fontSize(9).fillColor(SILVER).font('Helvetica-Bold').text('COACHING GUIDE', 40, 50);
-            doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold')
+            doc.fontSize(18).fillColor(WHITE).font('Helvetica-Bold')
               .text('COACHING NOTES — ' + (session.name || '').toUpperCase(), 40, 64);
-            doc.moveTo(40, 100).lineTo(W - 40, 100).strokeColor(ACCENT).lineWidth(0.5).stroke();
-            ny = 120;
+            doc.moveTo(40, 90).lineTo(W - 40, 90).strokeColor(ACCENT).lineWidth(0.5).stroke();
+            ny = 130;
           }
 
           doc.fontSize(11).fillColor(SILVER).font('Helvetica-Bold').text((ex.name || '').toUpperCase(), 40, ny);
