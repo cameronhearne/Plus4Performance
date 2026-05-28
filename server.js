@@ -33,6 +33,38 @@ function divider(doc) {
   doc.y += 24;
 }
 
+function renderTextWithOverflow(doc, text, startY, fontSize, font, color, footerName, lineGap) {
+  lineGap = lineGap || 4;
+  const W = doc.page.width;
+  const lineHeight = fontSize + lineGap;
+  const lines = doc.font(font).fontSize(fontSize).heightOfString(text, { width: W - 80 });
+  doc.fontSize(fontSize).fillColor(color).font(font);
+
+  let y = startY;
+  const words = text.split('\n');
+  words.forEach(paragraph => {
+    const paraLines = paragraph === ''
+      ? ['']
+      : doc.font(font).fontSize(fontSize)
+          .heightOfString(paragraph, { width: W - 80 }) / lineHeight;
+    const estimatedLines = Math.ceil(paraLines);
+    const needed = estimatedLines * lineHeight;
+
+    if (y + needed > 750 && paragraph !== '') {
+      footer(doc, footerName);
+      newPage(doc);
+      doc.rect(0, 0, W, doc.page.height).fill(DARK);
+      y = 60;
+    }
+
+    doc.fontSize(fontSize).fillColor(color).font(font)
+      .text(paragraph, 40, y, { width: W - 80, lineGap });
+    y = doc.y + (paragraph === '' ? lineHeight * 0.5 : 6);
+  });
+
+  return y;
+}
+
 function makeCoverPage(doc, client, clientName, title, W, H) {
   newPage(doc);
   if (fs.existsSync(logoPath)) {
@@ -162,8 +194,7 @@ function generatePlanPDF(planData, clientName) {
       newPage(doc);
       doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold').text('HOW TO USE THIS PLAN', 40, 60);
       doc.moveTo(40, 96).lineTo(W - 40, 96).strokeColor(ACCENT).lineWidth(0.5).stroke();
-      doc.fontSize(10).fillColor(WHITE).font('Helvetica')
-        .text(planData.how_to_use, 40, 116, { width: W - 80, lineGap: 4 });
+      renderTextWithOverflow(doc, planData.how_to_use, 116, 10, 'Helvetica', WHITE, client.name || clientName, 4);
       footer(doc, client.name || clientName);
     }
 
@@ -288,10 +319,9 @@ function generatePlanPDF(planData, clientName) {
       newPage(doc);
       doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold').text('WHAT HAPPENS NEXT', 40, 60);
       doc.moveTo(40, 96).lineTo(W - 40, 96).strokeColor(ACCENT).lineWidth(0.5).stroke();
-      doc.fontSize(11).fillColor(WHITE).font('Helvetica')
-        .text(planData.what_happens_next, 40, 116, { width: W - 80, lineGap: 6 });
+      const finalTextEnd = renderTextWithOverflow(doc, planData.what_happens_next, 116, 11, 'Helvetica', WHITE, client.name || clientName, 6);
 
-      const logoY = doc.y + 40;
+      const logoY = finalTextEnd + 40;
       if (fs.existsSync(logoPath)) {
         doc.image(logoPath, 40, logoY, { width: 36 });
       }
