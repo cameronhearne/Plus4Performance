@@ -132,7 +132,7 @@ function generatePlanPDF(planData, clientName) {
     }
 
     if (planData.personal_note) {
-      if (sy > 480) {
+      if (sy > 380) {
         footer(doc, client.name || clientName);
         newPage(doc);
         sy = 80;
@@ -160,11 +160,11 @@ function generatePlanPDF(planData, clientName) {
       planData.sessions.forEach(session => {
         newPage(doc);
         doc.fontSize(9).fillColor(SILVER).font('Helvetica-Bold').text('TRAINING', 40, 50);
-        doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold').text((session.name || '').toUpperCase(), 40, 64);
-        doc.moveTo(40, 100).lineTo(W - 40, 100).strokeColor(ACCENT).lineWidth(0.5).stroke();
+        doc.fontSize(22).fillColor(WHITE).font('Helvetica-Bold').text((session.name || '').toUpperCase(), 40, 58);
+        doc.moveTo(40, 92).lineTo(W - 40, 92).strokeColor(ACCENT).lineWidth(0.5).stroke();
 
         const cols = { ex: 40, sets: 295, reps: 355, rest: 430 };
-        let ty = 118;
+        let ty = 110;
         doc.fontSize(8).fillColor(SILVER).font('Helvetica-Bold');
         doc.text('EXERCISE', cols.ex, ty);
         doc.text('SETS', cols.sets, ty);
@@ -218,6 +218,14 @@ function generatePlanPDF(planData, clientName) {
         doc.fontSize(11).fillColor(SILVER).font('Helvetica-Bold').text('MEAL PLAN', 40, ny);
         ny += 20;
         nut.meal_plan.forEach(meal => {
+          if (ny > 750) {
+            footer(doc, client.name || clientName);
+            newPage(doc);
+            doc.fontSize(9).fillColor(SILVER).font('Helvetica-Bold').text('NUTRITION', 40, 50);
+            doc.fontSize(22).fillColor(WHITE).font('Helvetica-Bold').text('YOUR NUTRITION PLAN', 40, 64);
+            doc.moveTo(40, 92).lineTo(W - 40, 92).strokeColor(ACCENT).lineWidth(0.5).stroke();
+            ny = 120;
+          }
           doc.fontSize(10).fillColor(WHITE).font('Helvetica-Bold').text((meal.meal || '').toUpperCase(), 40, ny);
           ny += 16;
           (meal.foods || []).forEach(food => {
@@ -269,16 +277,15 @@ function generatePlanPDF(planData, clientName) {
     doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold').text('PROGRESS TRACKER', 40, 64);
     doc.moveTo(40, 100).lineTo(W - 40, 100).strokeColor(ACCENT).lineWidth(0.5).stroke();
 
-    const tcols = { week: 40, date: 80, bw: 148, lift1: 210, lift2: 320, lift3: 430, notes: 510 };
+    const keyLifts = (planData.key_lifts || ['LIFT 1', 'LIFT 2', 'LIFT 3']).map(l => String(l).toUpperCase());
+    const tcols = { week: 40, bw: 90, lift1: 183, lift2: 320, lift3: 437 };
     let tty = 118;
     doc.fontSize(7).fillColor(SILVER).font('Helvetica-Bold');
     doc.text('WEEK', tcols.week, tty);
-    doc.text('DATE', tcols.date, tty);
-    doc.text('BODYWEIGHT', tcols.bw, tty);
-    doc.text('KEY LIFT 1', tcols.lift1, tty);
-    doc.text('KEY LIFT 2', tcols.lift2, tty);
-    doc.text('KEY LIFT 3', tcols.lift3, tty);
-    doc.text('NOTES', tcols.notes, tty);
+    doc.text('BODYWEIGHT (kg)', tcols.bw, tty);
+    doc.text(keyLifts[0], tcols.lift1, tty, { width: 130 });
+    doc.text(keyLifts[1], tcols.lift2, tty, { width: 110 });
+    doc.text(keyLifts[2], tcols.lift3, tty, { width: 110 });
     tty += 14;
     doc.moveTo(40, tty).lineTo(W - 40, tty).strokeColor(ACCENT).lineWidth(0.3).stroke();
     tty += 6;
@@ -288,12 +295,10 @@ function generatePlanPDF(planData, clientName) {
       doc.rect(40, tty - 2, W - 80, 26).fill(rowBg);
       doc.fontSize(9).fillColor(WHITE).font('Helvetica');
       doc.text(String(w), tcols.week, tty + 4);
-      doc.text('', tcols.date, tty + 4);
       doc.text('', tcols.bw, tty + 4);
       doc.text('', tcols.lift1, tty + 4);
       doc.text('', tcols.lift2, tty + 4);
       doc.text('', tcols.lift3, tty + 4);
-      doc.text('', tcols.notes, tty + 4);
       tty += 26;
     }
 
@@ -421,7 +426,7 @@ const server = http.createServer(async (req, res) => {
     try {
       const intakeData = JSON.parse(body);
 
-      const systemPrompt = coachingBible + '\n\nCRITICAL INSTRUCTION: You must respond with ONLY a valid JSON object. No text before or after the JSON. No markdown. No code blocks. The JSON must exactly follow this structure:\n{\n  "client": {\n    "name": string,\n    "goal": string,\n    "age": number,\n    "height": number,\n    "current_weight": number,\n    "target_weight": number,\n    "bmr": number,\n    "tdee": number,\n    "plan_start": string,\n    "plan_end": string,\n    "experience": string,\n    "training_days": number,\n    "split": string\n  },\n  "personal_note": string,\n  "how_to_use": string,\n  "sessions": [{"name": string, "exercises": [{"name": string, "sets": string, "reps": string, "rest": string, "notes": string, "progression": string}]}],\n  "nutrition": {"daily_calories": number, "protein": number, "carbs": number, "fats": number, "training_day_calories": number, "rest_day_calories": number, "meal_plan": [{"meal": string, "foods": [string]}]},\n  "grocery_list": {"proteins": [string], "carbs": [string], "fruits_veg": [string], "fats": [string], "supplements": [string]},\n  "supplements": [string],\n  "what_happens_next": string\n}';
+      const systemPrompt = coachingBible + '\n\nCRITICAL INSTRUCTION: You must respond with ONLY a valid JSON object. No text before or after the JSON. No markdown. No code blocks. The JSON must exactly follow this structure:\n{\n  "client": {\n    "name": string,\n    "goal": string,\n    "age": number,\n    "height": number,\n    "current_weight": number,\n    "target_weight": number,\n    "bmr": number,\n    "tdee": number,\n    "plan_start": string,\n    "plan_end": string,\n    "experience": string,\n    "training_days": number,\n    "split": string\n  },\n  "personal_note": string,\n  "how_to_use": string,\n  "sessions": [{"name": string, "exercises": [{"name": string, "sets": string, "reps": string, "rest": string, "notes": string, "progression": string}]}],\n  "nutrition": {"daily_calories": number, "protein": number, "carbs": number, "fats": number, "training_day_calories": number, "rest_day_calories": number, "meal_plan": [{"meal": string, "foods": [string]}]},\n  "grocery_list": {"proteins": [string], "carbs": [string], "fruits_veg": [string], "fats": [string], "supplements": [string]},\n  "supplements": [string],\n  "key_lifts": [string, string, string],\n  "what_happens_next": string\n}';
 
       const message = await anthropic.messages.stream({
         model: 'claude-sonnet-4-6',
@@ -442,6 +447,10 @@ NUTRITION REQUIREMENTS:
 
 PERSONAL NOTE:
 - Reference the client's specific goal, stats, experience level and any injuries directly. This must feel like it was written for this individual, not a template.
+- Keep the personal_note field to a maximum of 150 words. Be direct and punchy — no long paragraphs. Cover: their specific stats and goal, the split they are getting and why, and one motivating closing line. Nothing else.
+
+KEY LIFTS:
+- In key_lifts provide exactly 3 exercise names that are the primary compound lifts in this plan — the ones the client should track week by week as their main strength benchmarks.
 
 STANDARDS:
 - Every field must be fully populated. No placeholders. No "see coaching bible". No summaries.
