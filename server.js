@@ -33,33 +33,32 @@ function divider(doc) {
   doc.y += 24;
 }
 
-function renderTextWithOverflow(doc, text, startY, fontSize, font, color, footerName, lineGap) {
-  lineGap = lineGap || 4;
-  const W = doc.page.width;
+function safeText(doc, text, x, y, opts) {
+  const fontSize = opts.fontSize || 10;
+  const font = opts.font || 'Helvetica';
+  const color = opts.color || WHITE;
+  const lineGap = opts.lineGap || 4;
+  const width = opts.width || (doc.page.width - x - 40);
+  const footerName = opts.footerName || '';
+
+  doc.fontSize(fontSize).font(font);
   const lineHeight = fontSize + lineGap;
-  const lines = doc.font(font).fontSize(fontSize).heightOfString(text, { width: W - 80 });
-  doc.fontSize(fontSize).fillColor(color).font(font);
 
-  let y = startY;
-  const words = text.split('\n');
-  words.forEach(paragraph => {
-    const paraLines = paragraph === ''
-      ? ['']
-      : doc.font(font).fontSize(fontSize)
-          .heightOfString(paragraph, { width: W - 80 }) / lineHeight;
-    const estimatedLines = Math.ceil(paraLines);
-    const needed = estimatedLines * lineHeight;
+  const paragraphs = String(text || '').split('\n');
+  paragraphs.forEach(para => {
+    const h = para.length
+      ? doc.heightOfString(para, { width, lineGap })
+      : lineHeight * 0.5;
 
-    if (y + needed > 750 && paragraph !== '') {
-      footer(doc, footerName);
+    if (y + h > 750) {
+      if (footerName) footer(doc, footerName);
       newPage(doc);
-      doc.rect(0, 0, W, doc.page.height).fill(DARK);
       y = 60;
     }
 
     doc.fontSize(fontSize).fillColor(color).font(font)
-      .text(paragraph, 40, y, { width: W - 80, lineGap });
-    y = doc.y + (paragraph === '' ? lineHeight * 0.5 : 6);
+      .text(para.length ? para : ' ', x, y, { width, lineGap });
+    y = doc.y + 4;
   });
 
   return y;
@@ -157,8 +156,7 @@ function generatePlanPDF(planData, clientName) {
       doc.fontSize(9).fillColor(SILVER).font('Helvetica-Bold').text('SUPPLEMENTS', 40, sy);
       sy += 16;
       planData.supplements.forEach(s => {
-        doc.fontSize(9).fillColor(WHITE).font('Helvetica').text('· ' + s, 40, sy);
-        sy += 14;
+        sy = safeText(doc, '· ' + s, 40, sy, { fontSize: 9, font: 'Helvetica', color: WHITE, lineGap: 3, footerName: client.name || clientName });
       });
       sy += 8;
     }
@@ -183,8 +181,7 @@ function generatePlanPDF(planData, clientName) {
     sy += 20;
 
     if (planData.personal_note) {
-      doc.fontSize(10).fillColor(WHITE).font('Helvetica')
-        .text(planData.personal_note, 40, sy, { width: W - 80 });
+      safeText(doc, planData.personal_note, 40, sy, { fontSize: 10, font: 'Helvetica', color: WHITE, lineGap: 4, footerName: client.name || clientName });
     }
 
     footer(doc, client.name || clientName);
@@ -194,7 +191,7 @@ function generatePlanPDF(planData, clientName) {
       newPage(doc);
       doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold').text('HOW TO USE THIS PLAN', 40, 60);
       doc.moveTo(40, 96).lineTo(W - 40, 96).strokeColor(ACCENT).lineWidth(0.5).stroke();
-      renderTextWithOverflow(doc, planData.how_to_use, 116, 10, 'Helvetica', WHITE, client.name || clientName, 4);
+      safeText(doc, planData.how_to_use, 40, 116, { fontSize: 10, font: 'Helvetica', color: WHITE, lineGap: 4, footerName: client.name || clientName });
       footer(doc, client.name || clientName);
     }
 
@@ -261,19 +258,9 @@ function generatePlanPDF(planData, clientName) {
         doc.fontSize(11).fillColor(SILVER).font('Helvetica-Bold').text('MEAL PLAN', 40, ny);
         ny += 20;
         nut.meal_plan.forEach(meal => {
-          if (ny > 750) {
-            footer(doc, client.name || clientName);
-            newPage(doc);
-            doc.fontSize(9).fillColor(SILVER).font('Helvetica-Bold').text('NUTRITION', 40, 50);
-            doc.fontSize(22).fillColor(WHITE).font('Helvetica-Bold').text('YOUR NUTRITION PLAN', 40, 64);
-            doc.moveTo(40, 92).lineTo(W - 40, 92).strokeColor(ACCENT).lineWidth(0.5).stroke();
-            ny = 120;
-          }
-          doc.fontSize(10).fillColor(WHITE).font('Helvetica-Bold').text((meal.meal || '').toUpperCase(), 40, ny);
-          ny += 16;
+          ny = safeText(doc, (meal.meal || '').toUpperCase(), 40, ny, { fontSize: 10, font: 'Helvetica-Bold', color: WHITE, lineGap: 4, footerName: client.name || clientName });
           (meal.foods || []).forEach(food => {
-            doc.fontSize(9).fillColor(ACCENT).font('Helvetica').text('· ' + food, 55, ny);
-            ny += 14;
+            ny = safeText(doc, '· ' + food, 55, ny, { fontSize: 9, font: 'Helvetica', color: ACCENT, lineGap: 3, footerName: client.name || clientName });
           });
           ny += 8;
         });
@@ -304,8 +291,7 @@ function generatePlanPDF(planData, clientName) {
           doc.fontSize(10).fillColor(SILVER).font('Helvetica-Bold').text(cat, 40, gy);
           gy += 18;
           items.forEach(item => {
-            doc.fontSize(9).fillColor(WHITE).font('Helvetica').text('· ' + item, 55, gy);
-            gy += 14;
+            gy = safeText(doc, '· ' + item, 55, gy, { fontSize: 9, font: 'Helvetica', color: WHITE, lineGap: 3, footerName: client.name || clientName });
           });
           gy += 10;
         });
@@ -319,7 +305,7 @@ function generatePlanPDF(planData, clientName) {
       newPage(doc);
       doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold').text('WHAT HAPPENS NEXT', 40, 60);
       doc.moveTo(40, 96).lineTo(W - 40, 96).strokeColor(ACCENT).lineWidth(0.5).stroke();
-      const finalTextEnd = renderTextWithOverflow(doc, planData.what_happens_next, 116, 11, 'Helvetica', WHITE, client.name || clientName, 6);
+      const finalTextEnd = safeText(doc, planData.what_happens_next, 40, 116, { fontSize: 11, font: 'Helvetica', color: WHITE, lineGap: 6, footerName: client.name || clientName });
 
       const logoY = finalTextEnd + 40;
       if (fs.existsSync(logoPath)) {
@@ -359,10 +345,7 @@ function generateCoachingPDF(planData, clientName) {
 
         let ny = 130;
         (session.exercises || []).forEach(ex => {
-          const progLines = Math.ceil((String(ex.progression || '').length) / 80) + 1;
-          const notesLines = Math.ceil((String(ex.notes || '').length) / 80) + 1;
-          const needed = 20 + 14 + (progLines * 14) + 10 + 14 + (notesLines * 14) + 28;
-          if (ny + needed > 780) {
+          if (ny > 750) {
             footer(doc, client.name || clientName);
             newPage(doc);
             doc.fontSize(9).fillColor(SILVER).font('Helvetica-Bold').text('COACHING GUIDE', 40, 50);
@@ -377,13 +360,13 @@ function generateCoachingPDF(planData, clientName) {
 
           doc.fontSize(8).fillColor(SILVER).font('Helvetica-Bold').text('PROGRESSION', 40, ny);
           ny += 14;
-          doc.fontSize(9).fillColor(WHITE).font('Helvetica').text(ex.progression || '', 40, ny, { width: W - 80, lineGap: 3 });
-          ny = doc.y + 10;
+          ny = safeText(doc, ex.progression || '', 40, ny, { fontSize: 9, font: 'Helvetica', color: WHITE, lineGap: 3, footerName: client.name || clientName });
+          ny += 6;
 
           doc.fontSize(8).fillColor(SILVER).font('Helvetica-Bold').text('CUES', 40, ny);
           ny += 14;
-          doc.fontSize(9).fillColor(WHITE).font('Helvetica').text(ex.notes || '', 40, ny, { width: W - 80, lineGap: 3 });
-          ny = doc.y + 28;
+          ny = safeText(doc, ex.notes || '', 40, ny, { fontSize: 9, font: 'Helvetica', color: WHITE, lineGap: 3, footerName: client.name || clientName });
+          ny += 22;
         });
 
         footer(doc, client.name || clientName);
