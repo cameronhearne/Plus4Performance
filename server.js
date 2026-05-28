@@ -131,15 +131,27 @@ function generatePlanPDF(planData, clientName) {
       sy += 8;
     }
 
+    if (sy > 380) {
+      footer(doc, client.name || clientName);
+      newPage(doc);
+      sy = 80;
+    }
+    doc.moveTo(40, sy).lineTo(W - 40, sy).strokeColor(ACCENT).lineWidth(0.5).stroke();
+    sy += 16;
+
+    const bmr = client.bmr || '';
+    const tdee = client.tdee || '';
+    const dailyCals = (planData.nutrition && planData.nutrition.daily_calories) || '';
+    doc.fontSize(9).fillColor(SILVER).font('Helvetica')
+      .text('BMR: ' + bmr + ' kcal', 40, sy);
+    sy += 14;
+    doc.text('TDEE: ' + tdee + ' kcal', 40, sy);
+    sy += 14;
+    doc.text('Daily calorie target: ' + dailyCals + ' kcal', 40, sy);
+    sy += 20;
+
     if (planData.personal_note) {
-      if (sy > 380) {
-        footer(doc, client.name || clientName);
-        newPage(doc);
-        sy = 80;
-      }
-      doc.moveTo(40, sy).lineTo(W - 40, sy).strokeColor(ACCENT).lineWidth(0.5).stroke();
-      sy += 16;
-      doc.fontSize(10).fillColor(WHITE).font('Helvetica-Oblique')
+      doc.fontSize(10).fillColor(WHITE).font('Helvetica')
         .text(planData.personal_note, 40, sy, { width: W - 80 });
     }
 
@@ -270,39 +282,6 @@ function generatePlanPDF(planData, clientName) {
         footer(doc, client.name || clientName);
       }
     }
-
-    // ── PROGRESS TRACKER ─────────────────────────────────────────────────
-    newPage(doc);
-    doc.fontSize(9).fillColor(SILVER).font('Helvetica-Bold').text('TRACKING', 40, 50);
-    doc.fontSize(28).fillColor(WHITE).font('Helvetica-Bold').text('PROGRESS TRACKER', 40, 64);
-    doc.moveTo(40, 100).lineTo(W - 40, 100).strokeColor(ACCENT).lineWidth(0.5).stroke();
-
-    const keyLifts = (planData.key_lifts || ['LIFT 1', 'LIFT 2', 'LIFT 3']).map(l => String(l).toUpperCase());
-    const tcols = { week: 40, bw: 90, lift1: 183, lift2: 320, lift3: 437 };
-    let tty = 118;
-    doc.fontSize(7).fillColor(SILVER).font('Helvetica-Bold');
-    doc.text('WEEK', tcols.week, tty);
-    doc.text('BODYWEIGHT (kg)', tcols.bw, tty);
-    doc.text(keyLifts[0], tcols.lift1, tty, { width: 130 });
-    doc.text(keyLifts[1], tcols.lift2, tty, { width: 110 });
-    doc.text(keyLifts[2], tcols.lift3, tty, { width: 110 });
-    tty += 14;
-    doc.moveTo(40, tty).lineTo(W - 40, tty).strokeColor(ACCENT).lineWidth(0.3).stroke();
-    tty += 6;
-
-    for (let w = 1; w <= 12; w++) {
-      const rowBg = w % 2 === 0 ? '#141414' : '#0d0d0d';
-      doc.rect(40, tty - 2, W - 80, 26).fill(rowBg);
-      doc.fontSize(9).fillColor(WHITE).font('Helvetica');
-      doc.text(String(w), tcols.week, tty + 4);
-      doc.text('', tcols.bw, tty + 4);
-      doc.text('', tcols.lift1, tty + 4);
-      doc.text('', tcols.lift2, tty + 4);
-      doc.text('', tcols.lift3, tty + 4);
-      tty += 26;
-    }
-
-    footer(doc, client.name || clientName);
 
     // ── WHAT HAPPENS NEXT ─────────────────────────────────────────────────
     if (planData.what_happens_next) {
@@ -443,11 +422,13 @@ NUTRITION REQUIREMENTS:
 - The grocery list must reflect the meal plan exactly. No generic entries.
 - Apply dietary preference adjustments from Section 7 based on the client's stated preferences.
 - In the grocery list supplements section, always give a specific weekly quantity for every supplement — for example Creatine monohydrate 35g (5g x 7 days). Never write check your supply.
+- List a maximum of 5 supplements only. Each supplement entry must be one line maximum — name, dose, timing. No explanations or justifications.
 - Double check every meal entry before finalising. Each meal must list only one entry per food item with no contradictions or duplicates. Quantities must be consistent throughout.
 
 PERSONAL NOTE:
 - Reference the client's specific goal, stats, experience level and any injuries directly. This must feel like it was written for this individual, not a template.
-- Keep the personal_note field to a maximum of 150 words. Be direct and punchy — no long paragraphs. Cover: their specific stats and goal, the split they are getting and why, and one motivating closing line. Nothing else.
+- Keep the personal_note field to a maximum of 150 words. Be direct and punchy — no long paragraphs. Cover: the split they are getting and why it suits them, and one closing motivating sentence. Nothing else.
+- In personal_note do not include any calorie calculations or numbers — those will be shown separately.
 
 KEY LIFTS:
 - In key_lifts provide exactly 3 exercise names that are the primary compound lifts in this plan — the ones the client should track week by week as their main strength benchmarks.
