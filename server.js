@@ -424,50 +424,46 @@ const server = http.createServer(async (req, res) => {
         model: 'claude-sonnet-4-6',
         max_tokens: 32000,
         system: systemPrompt,
-        messages: [{ role: 'user', content: `You are generating a fully individualised 12-week training and nutrition plan. Every field must be populated with specific, client-accurate content drawn directly from the coaching bible and the client data below. Generic output is a failure. This is a paid product.
+        messages: [{ role: 'user', content: `You are generating a fully individualised training and nutrition plan. Every field must be populated with specific, client-accurate content drawn directly from the coaching bible and the client data below. Generic output is a failure. This is a paid product.
 
 STEP 1 — READ THE CLIENT DATA CAREFULLY.
-Before writing anything, extract: name, age, sex, height (cm), current weight (kg), goal, experience level, training days per week, preferred split, session length, equipment, injuries, dietary preferences. You will reference every one of these in your output.
+Extract and use: name, age, sex, height (cm), current weight (kg), goal, experience level, training days per week, preferred split, session length, equipment, injuries, dietary preferences. Every one of these must influence the output.
 
-STEP 2 — CALCULATE NUTRITION USING MIFFLIN ST JEOR (mandatory, show all working in personal_note).
+STEP 2 — CALCULATE NUTRITION USING MIFFLIN ST JEOR.
 Male: BMR = (10 × weight) + (6.25 × height) - (5 × age) + 5
 Female: BMR = (10 × weight) + (6.25 × height) - (5 × age) - 161
-Multiply BMR by the client's activity multiplier to get TDEE. Apply the goal adjustment from Section 7 to get daily_calories. Set protein, carbs and fats using the macro split from Section 7. Set training_day_calories and rest_day_calories using the training/rest day split from Section 7. Store BMR and TDEE in the client object.
+Multiply BMR by the client's activity multiplier to get TDEE. Apply the goal adjustment from Section 7 to get daily_calories. Set macros using the split from Section 7. Set training_day_calories and rest_day_calories per Section 7. Store BMR and TDEE in the client object.
 
 STEP 3 — BUILD THE TRAINING SESSIONS.
-The client trains ${intakeData.trainingDays || 'N'} days per week. Build one session entry per session type — the exact sessions the client will rotate through. Do not generate week-by-week repetitions.
-- Select exercises exclusively from the exercise library in the coaching bible. Use Tier 1 exercises as the foundation. Use Tier 2 for variety. Avoid Tier 3 unless specifically justified.
-- For PPL splits: generate Push A and Push B as separate sessions with different exercise selections. Do the same for Pull A and Pull B.
-- The notes field on every single exercise must contain three things: (1) the single most important coaching cue for that exercise, (2) the most common mistake to avoid, (3) a specific starting weight target or bodyweight reference appropriate for the client's experience level. Do not leave notes generic.
-- The progression field on every exercise must describe exactly how sets, reps and load change across 12 weeks in plain English with specific numbers — for example: Weeks 1-4: 3x10 at 60kg. Weeks 5-8: 4x8 at 65kg. Weeks 9-12: 4x6 at 70kg. Never write vague phrases like "increase weight when comfortable".
-- Apply all injury contraindications from Section 9 based on the client's stated injuries.
+Generate ONE complete week of training — every session written out in full. The client repeats this week with progressive overload. Do not generate 12 separate weeks of sessions. Do not summarise. Do not use "repeat week 1".
+- The sessions array must contain one entry per session in the week — for example a 4-day Upper/Lower split produces 4 session entries: Upper A, Lower A, Upper B, Lower B.
+- Select exercises from the exercise library in the coaching bible. Tier 1 as foundation, Tier 2 for variety.
+- For PPL splits: generate Push A and Push B as separate sessions with different exercise selections. Same for Pull A and Pull B.
+- Apply all injury contraindications from Section 9 for any injuries the client has stated.
+- The notes field on every exercise must contain exactly three things, in this order: (1) The primary coaching cue — one sentence on how to execute the movement correctly. (2) The most common mistake — one sentence on what to avoid. (3) The progression instruction — specific sets, reps and load targets for weeks 1-4, weeks 5-8 and weeks 9-12 with actual numbers, e.g. "Weeks 1-4: 3×10 at 60kg. Weeks 5-8: 4×8 at 65kg. Weeks 9-12: 4×6 at 70kg." Never write vague phrases like "add weight when comfortable".
 
 STEP 4 — BUILD THE MEAL PLAN.
-- Use only specific foods with gram amounts from the food library in Section 8. No generic descriptions like "lean protein" or "complex carbs". Every food entry must be a named food with a gram amount — for example "Chicken breast 180g" or "White rice 200g cooked".
-- Label meals as M1, M2, M3, M4, M5, M6. M4 must always be labelled "M4 — POST WORKOUT". Do not specify times for any other meal.
-- Apply all dietary preference adjustments from Section 7 based on the client's stated preferences.
-- Every meal must sum to approximately the correct macro split. Double-check for duplicate food entries within the same meal before finalising.
-- The grocery list must contain exactly the foods used in the meal plan. No generic entries. In the supplements section include a specific weekly quantity for each item — for example "Creatine monohydrate 35g (5g x 7 days)". Never write "check your supply".
-
-STEP 5 — WRITE THE PERSONAL NOTE.
-Write minimum 150 words. This must be written as if you know this client personally. Include:
-- Their full Mifflin St Jeor calculation with actual numbers (e.g. "BMR = (10 × 82) + (6.25 × 178) - (5 × 31) + 5 = 1,892 kcal. TDEE at your activity level = 2,932 kcal.")
-- Their specific goal, current weight, target weight and what the plan is designed to do
-- Why the specific split they are receiving suits their training days, experience level and goal
-- Any injuries and how the plan has accounted for them
-- One closing sentence that is direct and motivating — not a cliché
-Do not be vague. Do not write a template. Do not repeat information the client already knows without adding coaching context.
-
-SUPPLEMENTS:
+- Every food entry must be a named food with a gram amount taken from the food library in Section 8 — for example "Chicken breast 180g" or "White rice 200g cooked". Never write "lean protein", "complex carbs", or any other generic description.
+- Label meals M1, M2, M3, M4, M5, M6. M4 must be labelled "M4 — POST WORKOUT". No times on any other meal.
+- Apply dietary preference adjustments from Section 7.
+- The grocery list must reflect exactly the foods in the meal plan. In the supplements section give a specific weekly quantity per item — e.g. "Creatine monohydrate 35g (5g × 7 days)". Never write "check your supply".
 - Maximum 5 supplements. One line each: name, dose, timing. No explanations.
 
+STEP 5 — WRITE THE PERSONAL NOTE.
+Minimum 150 words. Written directly to the client. Must include:
+- The full Mifflin St Jeor calculation with their actual numbers shown — e.g. "BMR = (10 × 82) + (6.25 × 178) − (5 × 31) + 5 = 1,892 kcal. TDEE = 1,892 × 1.55 = 2,932 kcal."
+- Their specific goal, current weight, target weight and what the calorie target is designed to achieve
+- Why the specific split suits their training days, experience level and goal
+- How any stated injuries have been accounted for in the plan
+- One direct, motivating closing sentence — not a cliché
+
 KEY LIFTS:
-- Provide exactly 3 exercise names — the primary compound lifts the client should track as weekly strength benchmarks.
+- Exactly 3 exercise names — the primary compound lifts to track as weekly strength benchmarks.
 
 STANDARDS:
-- Every field fully populated. No placeholders. No cross-references to the coaching bible.
-- All dates formatted as DD Month YYYY — for example 29 May 2026. Never use hyphens or ISO format.
-- Respond with ONLY the JSON object. No markdown, no code fences, no commentary before or after.
+- All fields fully populated. No placeholders. No references to the coaching bible in output text.
+- All dates formatted as DD Month YYYY. Never use hyphens or ISO format.
+- Respond with ONLY the JSON object. No markdown, no code fences, no commentary.
 
 Client data:
 ${JSON.stringify(intakeData, null, 2)}` }]
