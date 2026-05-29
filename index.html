@@ -142,8 +142,42 @@ footer{background:var(--dark-2);border-top:1px solid rgba(200,200,200,0.1);paddi
 .footer-copy{font-size:11px;color:var(--silver-deep);}
 
 /* ANIMATIONS */
-.fade-up{opacity:0;transform:translateY(24px);transition:opacity 0.65s ease,transform 0.65s ease;}
+.fade-up{opacity:0;transform:translateY(28px);transition:opacity 0.7s cubic-bezier(0.22,1,0.36,1),transform 0.7s cubic-bezier(0.22,1,0.36,1);}
 .fade-up.visible{opacity:1;transform:translateY(0);}
+
+/* Hero entrance */
+.hero-eyebrow{opacity:0;transform:translateY(16px);animation:heroIn 0.7s cubic-bezier(0.22,1,0.36,1) 0.1s forwards;}
+.hero-headline .line1{opacity:0;transform:translateY(20px);animation:heroIn 0.7s cubic-bezier(0.22,1,0.36,1) 0.2s forwards;}
+.hero-headline .line2{opacity:0;transform:translateY(20px);animation:heroIn 0.7s cubic-bezier(0.22,1,0.36,1) 0.32s forwards;}
+.hero-headline .line3{opacity:0;transform:translateY(20px);animation:heroIn 0.7s cubic-bezier(0.22,1,0.36,1) 0.44s forwards;}
+.hero-sub{opacity:0;transform:translateY(16px);animation:heroIn 0.7s cubic-bezier(0.22,1,0.36,1) 0.56s forwards;}
+.hero-actions{opacity:0;transform:translateY(16px);animation:heroIn 0.7s cubic-bezier(0.22,1,0.36,1) 0.68s forwards;}
+.hero-right{opacity:0;animation:heroIn 0.9s cubic-bezier(0.22,1,0.36,1) 0.3s forwards;}
+@keyframes heroIn{to{opacity:1;transform:translateY(0);}}
+
+/* Hero ambient glow */
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 60% at 70% 50%, rgba(200,200,200,0.04) 0%, transparent 70%);pointer-events:none;animation:glowPulse 6s ease-in-out infinite alternate;}
+@keyframes glowPulse{from{opacity:0.6;}to{opacity:1;}}
+
+/* Button polish */
+.btn-primary{transition:background 0.2s,transform 0.18s cubic-bezier(0.22,1,0.36,1),box-shadow 0.2s;}
+.btn-primary:hover{background:var(--silver-bright);transform:translate(-3px,-3px);box-shadow:3px 3px 0 var(--silver-deep);}
+.btn-ghost{transition:border-color 0.2s,color 0.2s,background 0.2s;}
+.btn-ghost:hover{border-color:var(--silver);color:var(--silver);background:rgba(200,200,200,0.05);}
+.nav-cta{transition:background 0.2s,transform 0.18s cubic-bezier(0.22,1,0.36,1);}
+.nav-cta:hover{background:var(--silver-bright);transform:translateY(-2px);}
+
+/* Pillar hover */
+.pillar{transition:border-color 0.25s,transform 0.25s cubic-bezier(0.22,1,0.36,1);}
+.pillar:hover{transform:translateY(-4px);}
+
+/* Coach card hover */
+.coach-card{transition:border-color 0.25s,transform 0.25s cubic-bezier(0.22,1,0.36,1);}
+.coach-card:hover{transform:translateY(-4px);}
+
+/* Pricing card hover */
+.pricing-card{transition:border-color 0.25s,transform 0.25s cubic-bezier(0.22,1,0.36,1),box-shadow 0.25s;}
+.pricing-card:hover{transform:translateY(-4px);box-shadow:0 20px 60px rgba(0,0,0,0.5);}
 
 /* ── MOBILE ── */
 @media(max-width:768px){

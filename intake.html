@@ -42,12 +42,45 @@
         }
         .progress-fill {
             height: 100%;
-            background: #c0c0c0;
+            background: linear-gradient(90deg, #888, #c0c0c0);
             width: 0%;
-            transition: width 0.3s ease;
+            transition: width 0.4s cubic-bezier(0.22,1,0.36,1);
+            border-radius: 2px;
         }
-        .section { display: none; }
-        .section.active { display: block; }
+        .section {
+            display: none;
+            opacity: 0;
+            transform: translateY(12px);
+        }
+        .section.active {
+            display: block;
+            animation: sectionIn 0.38s cubic-bezier(0.22,1,0.36,1) forwards;
+        }
+        .section.leaving {
+            animation: sectionOut 0.22s ease forwards;
+        }
+        @keyframes sectionIn {
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes sectionOut {
+            to { opacity: 0; transform: translateY(-8px); }
+        }
+        .section.active .form-group {
+            opacity: 0;
+            transform: translateY(10px);
+            animation: fieldIn 0.35s cubic-bezier(0.22,1,0.36,1) forwards;
+        }
+        .section.active .form-group:nth-child(1) { animation-delay: 0.05s; }
+        .section.active .form-group:nth-child(2) { animation-delay: 0.11s; }
+        .section.active .form-group:nth-child(3) { animation-delay: 0.17s; }
+        .section.active .form-group:nth-child(4) { animation-delay: 0.23s; }
+        .section.active .form-group:nth-child(5) { animation-delay: 0.29s; }
+        .section.active .form-group:nth-child(6) { animation-delay: 0.35s; }
+        .section.active .form-group:nth-child(7) { animation-delay: 0.41s; }
+        .section.active .form-group:nth-child(8) { animation-delay: 0.47s; }
+        @keyframes fieldIn {
+            to { opacity: 1; transform: translateY(0); }
+        }
         .form-group { margin-bottom: 20px; }
         label { display: block; margin-bottom: 8px; font-size: 13px; font-weight: 600; color: #e0e0e0; text-transform: uppercase; letter-spacing: 0.3px; }
         input[type="text"], input[type="email"], input[type="number"], input[type="date"], select, textarea {
@@ -174,6 +207,10 @@
         <div class="header">
             <h1>BUILD YOUR PLAN</h1>
             <p>Complete your intake form. Your personalised 12-week plan will be delivered to your email within 24 hours.</p>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <span style="font-size:11px;color:#666;text-transform:uppercase;letter-spacing:0.5px;">Progress</span>
+            <span id="progressLabel" style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.5px;">Step 1 of 5</span>
         </div>
         <div class="progress-bar">
             <div class="progress-fill" id="progressFill"></div>
@@ -473,11 +510,24 @@
         function updateProgress() {
             const progress = (currentSection / totalSections) * 100;
             document.getElementById('progressFill').style.width = progress + '%';
+            const label = document.getElementById('progressLabel');
+            if (label) label.textContent = 'Step ' + currentSection + ' of ' + totalSections;
         }
 
         function showSection(section) {
-            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-            document.getElementById('section' + section).classList.add('active');
+            const current = document.querySelector('.section.active');
+            const next = document.getElementById('section' + section);
+            if (current && current !== next) {
+                current.classList.add('leaving');
+                setTimeout(() => {
+                    current.classList.remove('active', 'leaving');
+                    next.classList.add('active');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }, 200);
+            } else {
+                document.querySelectorAll('.section').forEach(s => s.classList.remove('active', 'leaving'));
+                next.classList.add('active');
+            }
             updateProgress();
         }
 

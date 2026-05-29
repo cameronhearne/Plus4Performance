@@ -329,6 +329,77 @@
             border-color: #c0c0c0;
             color: #c0c0c0;
         }
+
+        /* Field stagger fade-in on page load */
+        @keyframes fieldIn {
+            from { opacity: 0; transform: translateY(14px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        #step1 .form-group {
+            opacity: 0;
+            animation: fieldIn 0.5s cubic-bezier(0.22,1,0.36,1) forwards;
+        }
+        #step1 .form-group:nth-child(1) { animation-delay: 0.05s; }
+        #step1 .form-group:nth-child(2) { animation-delay: 0.12s; }
+        #step1 .form-group:nth-child(3) { animation-delay: 0.19s; }
+        #step1 .form-group:nth-child(4) { animation-delay: 0.26s; }
+        #step1 .form-group:nth-child(5) { animation-delay: 0.33s; }
+        #step1 .form-group:nth-child(6) { animation-delay: 0.40s; }
+        #step1 .form-group:nth-child(7) { animation-delay: 0.47s; }
+        #step1 button { opacity: 0; animation: fieldIn 0.5s cubic-bezier(0.22,1,0.36,1) 0.54s forwards; }
+
+        /* Step transition */
+        .step { animation: stepIn 0.45s cubic-bezier(0.22,1,0.36,1); }
+        @keyframes stepIn {
+            from { opacity: 0; transform: translateY(18px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Loading spinner */
+        .calc-loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            padding: 40px 0;
+        }
+        .calc-spinner {
+            width: 36px;
+            height: 36px;
+            border: 2px solid #333;
+            border-top-color: #c0c0c0;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .calc-loading p {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 13px;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: #787878;
+        }
+
+        /* Result cards stagger */
+        @keyframes cardIn {
+            from { opacity: 0; transform: translateY(18px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .result-card {
+            opacity: 0;
+            animation: cardIn 0.5s cubic-bezier(0.22,1,0.36,1) forwards;
+            transition: transform 0.22s cubic-bezier(0.22,1,0.36,1), box-shadow 0.22s;
+        }
+        .result-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 36px rgba(0,0,0,0.5);
+        }
+        button, .cta-button {
+            transition: background 0.2s, transform 0.18s cubic-bezier(0.22,1,0.36,1), color 0.2s !important;
+        }
+        button:hover, .cta-button:hover {
+            transform: translateY(-2px);
+        }
     </style>
 </head>
 <body>
@@ -816,8 +887,17 @@ var resultsHTML =
                 e.preventDefault();
                 if (validateEmailStep()) {
                     sendKlaviyoSubscription(formData.email, formData.firstName);
-                    calculateResults();
+                    // Show loading state
+                    var step3 = document.getElementById('step3');
+                    step3.innerHTML = '<div class="calc-loading"><div class="calc-spinner"></div><p>Calculating your results&hellip;</p></div>';
                     showStep(3);
+                    setTimeout(function() {
+                        calculateResults();
+                        // Stagger result card animations
+                        document.querySelectorAll('.result-card').forEach(function(card, i) {
+                            card.style.animationDelay = (i * 0.09) + 's';
+                        });
+                    }, 900);
                 }
             });
         }
