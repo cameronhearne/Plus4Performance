@@ -215,14 +215,16 @@ function generatePlanPDF(planData, clientName) {
         ty += 8;
 
         (session.exercises || []).forEach((ex, i) => {
+          const nameHeight = doc.fontSize(9).font('Helvetica').heightOfString(ex.name || '', { width: 248 });
+          const rowH = Math.max(22, nameHeight + 8);
           const rowBg = i % 2 === 0 ? '#141414' : '#0d0d0d';
-          doc.rect(40, ty - 3, W - 80, 22).fill(rowBg);
+          doc.rect(40, ty - 3, W - 80, rowH).fill(rowBg);
           doc.fontSize(9).fillColor(WHITE).font('Helvetica');
-          doc.text(ex.name || '', cols.ex, ty, { width: 250 });
-          doc.text(String(ex.sets || ''), cols.sets, ty);
-          doc.text(String(ex.reps || ''), cols.reps, ty);
-          doc.text(String(ex.rest || ''), cols.rest, ty);
-          ty += 22;
+          doc.text(ex.name || '', cols.ex, ty, { width: 248, lineGap: 2 });
+          doc.text(String(ex.sets || ''), cols.sets, ty, { width: 54, lineBreak: false });
+          doc.text(String(ex.reps || ''), cols.reps, ty, { width: 68, lineBreak: false });
+          doc.text(String(ex.rest || ''), cols.rest, ty, { width: 115, lineBreak: false });
+          ty += rowH;
         });
 
         footer(doc, client.name || clientName);
@@ -456,6 +458,7 @@ Minimum 150 words. Written directly to the client. Must include:
 - Why the specific split suits their training days, experience level and goal
 - How any stated injuries have been accounted for in the plan
 - One direct, motivating closing sentence — not a cliché
+Write the personal_note as 3-4 short paragraphs separated by line breaks (\\n\\n). Do not write it as one continuous block of text.
 
 KEY LIFTS:
 - Exactly 3 exercise names — the primary compound lifts to track as weekly strength benchmarks.
