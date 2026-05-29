@@ -142,8 +142,12 @@ footer{background:var(--dark-2);border-top:1px solid rgba(200,200,200,0.1);paddi
 .footer-copy{font-size:11px;color:var(--silver-deep);}
 
 /* ANIMATIONS */
-.fade-up{opacity:0;transform:translateY(28px);transition:opacity 0.7s cubic-bezier(0.22,1,0.36,1),transform 0.7s cubic-bezier(0.22,1,0.36,1);}
+.fade-up{opacity:0;transform:translateY(32px);transition:opacity 0.75s cubic-bezier(0.22,1,0.36,1),transform 0.75s cubic-bezier(0.22,1,0.36,1);}
 .fade-up.visible{opacity:1;transform:translateY(0);}
+
+/* Slide from left */
+.slide-left{opacity:0;transform:translateX(-48px);transition:opacity 0.8s cubic-bezier(0.22,1,0.36,1),transform 0.8s cubic-bezier(0.22,1,0.36,1);}
+.slide-left.visible{opacity:1;transform:translateX(0);}
 
 /* Hero entrance */
 .hero-eyebrow{opacity:0;transform:translateY(16px);animation:heroIn 0.7s cubic-bezier(0.22,1,0.36,1) 0.1s forwards;}
@@ -155,29 +159,38 @@ footer{background:var(--dark-2);border-top:1px solid rgba(200,200,200,0.1);paddi
 .hero-right{opacity:0;animation:heroIn 0.9s cubic-bezier(0.22,1,0.36,1) 0.3s forwards;}
 @keyframes heroIn{to{opacity:1;transform:translateY(0);}}
 
-/* Hero ambient glow */
-.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 60% at 70% 50%, rgba(200,200,200,0.04) 0%, transparent 70%);pointer-events:none;animation:glowPulse 6s ease-in-out infinite alternate;}
-@keyframes glowPulse{from{opacity:0.6;}to{opacity:1;}}
+/* Hero animated gradient background */
+.hero::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(180,180,180,0.06) 0%,transparent 40%,rgba(120,120,120,0.04) 60%,rgba(200,200,200,0.08) 100%);background-size:400% 400%;animation:heroGrad 8s ease infinite;pointer-events:none;}
+@keyframes heroGrad{0%{background-position:0% 50%;}50%{background-position:100% 50%;}100%{background-position:0% 50%;}}
 
-/* Button polish */
-.btn-primary{transition:background 0.2s,transform 0.18s cubic-bezier(0.22,1,0.36,1),box-shadow 0.2s;}
-.btn-primary:hover{background:var(--silver-bright);transform:translate(-3px,-3px);box-shadow:3px 3px 0 var(--silver-deep);}
+/* Hero ambient glow */
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 70% 70% at 60% 50%, rgba(200,200,200,0.07) 0%, transparent 65%);pointer-events:none;animation:glowPulse 5s ease-in-out infinite alternate;}
+@keyframes glowPulse{from{opacity:0.5;transform:scale(0.97);}to{opacity:1;transform:scale(1.03);}}
+
+/* CTA button pulse glow */
+.btn-primary{transition:background 0.2s,transform 0.18s cubic-bezier(0.22,1,0.36,1),box-shadow 0.2s;animation:ctaPulse 2.8s ease-in-out 1.4s infinite;}
+@keyframes ctaPulse{0%,100%{box-shadow:0 0 0 0 rgba(200,200,200,0);}50%{box-shadow:0 0 0 10px rgba(200,200,200,0.18),0 0 28px 4px rgba(200,200,200,0.1);}}
+.btn-primary:hover{background:var(--silver-bright);transform:translate(-3px,-3px);box-shadow:3px 3px 0 var(--silver-deep);animation:none;}
 .btn-ghost{transition:border-color 0.2s,color 0.2s,background 0.2s;}
 .btn-ghost:hover{border-color:var(--silver);color:var(--silver);background:rgba(200,200,200,0.05);}
 .nav-cta{transition:background 0.2s,transform 0.18s cubic-bezier(0.22,1,0.36,1);}
 .nav-cta:hover{background:var(--silver-bright);transform:translateY(-2px);}
 
 /* Pillar hover */
-.pillar{transition:border-color 0.25s,transform 0.25s cubic-bezier(0.22,1,0.36,1);}
-.pillar:hover{transform:translateY(-4px);}
+.pillar{transition:border-color 0.25s,transform 0.25s cubic-bezier(0.22,1,0.36,1),box-shadow 0.25s;}
+.pillar:hover{transform:translateY(-6px);box-shadow:0 16px 48px rgba(0,0,0,0.5);}
 
 /* Coach card hover */
-.coach-card{transition:border-color 0.25s,transform 0.25s cubic-bezier(0.22,1,0.36,1);}
-.coach-card:hover{transform:translateY(-4px);}
+.coach-card{transition:border-color 0.25s,transform 0.25s cubic-bezier(0.22,1,0.36,1),box-shadow 0.25s;}
+.coach-card:hover{transform:translateY(-6px);box-shadow:0 16px 48px rgba(0,0,0,0.5);}
 
 /* Pricing card hover */
 .pricing-card{transition:border-color 0.25s,transform 0.25s cubic-bezier(0.22,1,0.36,1),box-shadow 0.25s;}
 .pricing-card:hover{transform:translateY(-4px);box-shadow:0 20px 60px rgba(0,0,0,0.5);}
+
+/* Typewriter cursor */
+.typewriter-cursor{display:inline-block;width:3px;background:var(--silver);margin-left:4px;animation:blink 0.85s step-end infinite;vertical-align:bottom;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0;}}
 
 /* ── MOBILE ── */
 @media(max-width:768px){
@@ -295,7 +308,7 @@ footer{background:var(--dark-2);border-top:1px solid rgba(200,200,200,0.1);paddi
 
 <section class="problem">
   <div class="problem-grid">
-    <div class="problem-text fade-up">
+    <div class="problem-text slide-left">
       <div class="section-eyebrow">The Problem</div>
       <h2 class="section-heading">YOU'RE NOT<br>AVERAGE.<br>YOUR SYSTEM IS.</h2>
       <p>You show up. You put in the reps. But without precise structure, dialled-in nutrition, and someone holding you to a real standard — <strong>you plateau. Every time.</strong></p>
@@ -318,8 +331,8 @@ footer{background:var(--dark-2);border-top:1px solid rgba(200,200,200,0.1);paddi
   <div class="offer-inner">
     <div class="offer-header">
       <div>
-        <div class="section-eyebrow fade-up">The System</div>
-        <h2 class="section-heading fade-up">EVERYTHING<br>YOU NEED.<br>NOTHING<br>YOU DON'T.</h2>
+        <div class="section-eyebrow slide-left">The System</div>
+        <h2 class="section-heading slide-left" style="transition-delay:0.08s;">EVERYTHING<br>YOU NEED.<br>NOTHING<br>YOU DON'T.</h2>
       </div>
       <p class="fade-up">All coaching is delivered through the Plus 4 Performance app. No scattered spreadsheets, no generic plans, no guesswork. One elite system, built around you.</p>
     </div>
@@ -338,8 +351,8 @@ footer{background:var(--dark-2);border-top:1px solid rgba(200,200,200,0.1);paddi
   <div class="coaches-inner">
     <div class="coaches-header">
       <div>
-        <div class="section-eyebrow fade-up">Your Coaches</div>
-        <h2 class="section-heading fade-up">COACHED BY<br>ATHLETES.<br>NOT SUITS.</h2>
+        <div class="section-eyebrow slide-left">Your Coaches</div>
+        <h2 class="section-heading slide-left" style="transition-delay:0.08s;">COACHED BY<br>ATHLETES.<br>NOT SUITS.</h2>
       </div>
       <div class="fade-up" style="text-align:right;">
         <div class="coaches-meta-num">10+</div>
@@ -432,10 +445,39 @@ footer{background:var(--dark-2);border-top:1px solid rgba(200,200,200,0.1);paddi
 </footer>
 
 <script>
+// Scroll reveal — fade-up and slide-left
 const obs = new IntersectionObserver(entries => {
   entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
-}, {threshold: 0.1});
-document.querySelectorAll('.fade-up').forEach(el => obs.observe(el));
+}, {threshold: 0.12});
+document.querySelectorAll('.fade-up, .slide-left').forEach(el => obs.observe(el));
+
+// Typewriter effect on hero headline
+(function() {
+  const lines = document.querySelectorAll('.hero-headline .line1, .hero-headline .line3');
+  if (!lines.length) return;
+  // Run typewriter on line3 (most impactful last line)
+  const target = document.querySelector('.hero-headline .line3');
+  if (!target) return;
+  const fullText = target.textContent;
+  target.textContent = '';
+  const cursor = document.createElement('span');
+  cursor.className = 'typewriter-cursor';
+  cursor.style.height = '0.8em';
+  target.appendChild(cursor);
+  let i = 0;
+  const speed = 55;
+  // Wait for the line's heroIn animation delay (~0.44s) to finish before typing
+  setTimeout(function type() {
+    if (i < fullText.length) {
+      target.insertBefore(document.createTextNode(fullText[i]), cursor);
+      i++;
+      setTimeout(type, speed);
+    } else {
+      // Remove cursor after 3s
+      setTimeout(() => cursor.remove(), 3000);
+    }
+  }, 1100);
+})();
 </script>
 </body>
 </html>
