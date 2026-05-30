@@ -396,7 +396,7 @@ export default function Intake() {
       };
 
       await submitSnapshot(intakePayload, session.access_token);
-      navigate('/dashboard');
+      navigate('/snapshot');
     } catch (err) {
       setError(err.message || 'Something went wrong. Please try again.');
     } finally {

@@ -42,7 +42,10 @@ export default function Login() {
             <input type="email" value={form.email} onChange={set('email')} required />
           </div>
           <div className="form-group">
-            <label>Password</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
+              <label style={{ margin: 0 }}>Password</label>
+              <Link to="/forgot-password" style={{ fontSize: 12, color: '#787878', textDecoration: 'underline' }}>Forgot password?</Link>
+            </div>
             <input type="password" value={form.password} onChange={set('password')} required />
           </div>
 

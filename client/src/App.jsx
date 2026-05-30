@@ -4,7 +4,10 @@ import { supabase } from './lib/supabase';
 import Signup from './pages/Signup';
 import Login from './pages/Login';
 import Intake from './pages/Intake';
+import SnapshotResult from './pages/SnapshotResult';
 import Dashboard from './pages/Dashboard';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 function RequireAuth({ children }) {
   const [session, setSession] = useState(undefined);
@@ -25,8 +28,13 @@ export default function App() {
     <Routes>
       <Route path="/signup" element={<Signup />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/intake" element={
         <RequireAuth><Intake /></RequireAuth>
+      } />
+      <Route path="/snapshot" element={
+        <RequireAuth><SnapshotResult /></RequireAuth>
       } />
       <Route path="/dashboard" element={
         <RequireAuth><Dashboard /></RequireAuth>

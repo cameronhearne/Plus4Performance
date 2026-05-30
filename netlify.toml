@@ -29,7 +29,22 @@
   status = 200
 
 [[redirects]]
+  from = "/forgot-password"
+  to = "/app.html"
+  status = 200
+
+[[redirects]]
+  from = "/reset-password"
+  to = "/app.html"
+  status = 200
+
+[[redirects]]
   from = "/intake"
+  to = "/app.html"
+  status = 200
+
+[[redirects]]
+  from = "/snapshot"
   to = "/app.html"
   status = 200
 

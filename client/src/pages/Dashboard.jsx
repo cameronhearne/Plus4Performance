@@ -340,7 +340,7 @@ export default function Dashboard() {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
       if (snap) setSnapshot(snap);
 
       // Check subscription
@@ -350,7 +350,7 @@ export default function Dashboard() {
         .eq('user_id', user.id)
         .eq('status', 'active')
         .limit(1)
-        .single();
+        .maybeSingle();
 
       const subscribed = sub && (!sub.current_period_end || new Date(sub.current_period_end) > new Date());
       setIsUnlocked(!!subscribed);
@@ -362,7 +362,7 @@ export default function Dashboard() {
           .eq('user_id', user.id)
           .order('generated_at', { ascending: false })
           .limit(1)
-          .single();
+          .maybeSingle();
         if (planRow) setPlan(planRow.plan_data);
       }
     }
@@ -383,12 +383,12 @@ export default function Dashboard() {
           .eq('user_id', user.id)
           .eq('status', 'active')
           .limit(1)
-          .single();
+          .maybeSingle();
         if (sub) {
           setIsUnlocked(true);
           clearInterval(poll);
           // Load plan
-          const { data: planRow } = await supabase.from('plans').select('plan_data').eq('user_id', user.id).order('generated_at', { ascending: false }).limit(1).single();
+          const { data: planRow } = await supabase.from('plans').select('plan_data').eq('user_id', user.id).order('generated_at', { ascending: false }).limit(1).maybeSingle();
           if (planRow) setPlan(planRow.plan_data);
         }
         if (++attempts >= 20) clearInterval(poll);
