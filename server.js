@@ -243,8 +243,20 @@ async function handleSnapshot(req, res) {
   const { intakeData } = parsed;
   if (!intakeData) return json(res, 400, { error: 'intakeData required' });
 
+  // Ensure profile exists (handles users who signed up before the trigger was in place)
+  const { data: { user: authUser } } = await supabase.auth.admin.getUserById(userId);
+  if (authUser) {
+    await supabase.from('profiles').upsert({
+      id: userId,
+      email: authUser.email,
+      first_name: authUser.user_metadata?.first_name || '',
+      last_name: authUser.user_metadata?.last_name || '',
+    }, { onConflict: 'id', ignoreDuplicates: true });
+  }
+
   // Save intake submission
-  await supabase.from('intake_submissions').insert({ user_id: userId, data: intakeData });
+  const { error: intakeErr } = await supabase.from('intake_submissions').insert({ user_id: userId, data: intakeData });
+  if (intakeErr) console.error('Intake insert error:', intakeErr.message, intakeErr.details);
 
   // Generate snapshot via Anthropic
   let snapshot;
@@ -274,8 +286,8 @@ async function handleSnapshot(req, res) {
   });
 
   if (insertErr) {
-    console.error('Snapshot insert error:', insertErr);
-    return json(res, 500, { error: 'Failed to save snapshot' });
+    console.error('Snapshot insert error:', insertErr.message, insertErr.details, insertErr.hint);
+    return json(res, 500, { error: 'Failed to save snapshot: ' + insertErr.message });
   }
 
   // Send welcome email (non-blocking)
