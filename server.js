@@ -8,10 +8,35 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const anthropic = new Anthropic();
 const coachingBible = fs.readFileSync(path.join(__dirname, 'coaching_bible.txt'), 'utf8');
 
-const supabase = createClient(
+// Two separate clients:
+// - supabaseAdmin: service role key, bypasses RLS, used for all DB writes
+// - supabaseAuth: anon key, used only to verify user JWTs (avoids contaminating admin client auth state)
+const supabaseAdmin = createClient(
   process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
+  { auth: { autoRefreshToken: false, persistSession: false } }
 );
+
+const supabaseAuth = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_ANON_KEY,
+  { auth: { autoRefreshToken: false, persistSession: false } }
+);
+
+// Startup key validation
+(function validateEnv() {
+  const required = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_ANON_KEY', 'ANTHROPIC_API_KEY'];
+  required.forEach(k => {
+    if (!process.env[k]) console.error(`MISSING ENV VAR: ${k}`);
+  });
+  const roleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+  try {
+    const payload = JSON.parse(Buffer.from(roleKey.split('.')[1], 'base64').toString());
+    console.log('Supabase service key role:', payload.role); // should print "service_role"
+  } catch {
+    console.error('SUPABASE_SERVICE_ROLE_KEY does not look like a valid JWT');
+  }
+})();
 
 // ─── PROMPT TEMPLATES ────────────────────────────────────────────────────────
 
@@ -191,7 +216,7 @@ function readBody(req) {
 async function getUserIdFromToken(authHeader) {
   if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
   const token = authHeader.slice(7);
-  const { data, error } = await supabase.auth.getUser(token);
+  const { data, error } = await supabaseAuth.auth.getUser(token);
   if (error || !data.user) return null;
   return data.user.id;
 }
@@ -244,9 +269,9 @@ async function handleSnapshot(req, res) {
   if (!intakeData) return json(res, 400, { error: 'intakeData required' });
 
   // Ensure profile exists (handles users who signed up before the trigger was in place)
-  const { data: { user: authUser } } = await supabase.auth.admin.getUserById(userId);
+  const { data: { user: authUser } } = await supabaseAdmin.auth.admin.getUserById(userId);
   if (authUser) {
-    await supabase.from('profiles').upsert({
+    await supabaseAdmin.from('profiles').upsert({
       id: userId,
       email: authUser.email,
       first_name: authUser.user_metadata?.first_name || '',
@@ -255,7 +280,7 @@ async function handleSnapshot(req, res) {
   }
 
   // Save intake submission
-  const { error: intakeErr } = await supabase.from('intake_submissions').insert({ user_id: userId, data: intakeData });
+  const { error: intakeErr } = await supabaseAdmin.from('intake_submissions').insert({ user_id: userId, data: intakeData });
   if (intakeErr) console.error('Intake insert error:', intakeErr.message, intakeErr.details);
 
   // Generate snapshot via Anthropic
@@ -276,7 +301,7 @@ async function handleSnapshot(req, res) {
   }
 
   // Persist snapshot to Supabase
-  const { error: insertErr } = await supabase.from('snapshots').insert({
+  const { error: insertErr } = await supabaseAdmin.from('snapshots').insert({
     user_id: userId,
     split_recommendation: snapshot.split_recommendation,
     calorie_target: snapshot.calorie_target,
@@ -320,7 +345,7 @@ async function handleGeneratePlan(userId, intakeData) {
     throw err;
   }
 
-  const { error } = await supabase.from('plans').insert({
+  const { error } = await supabaseAdmin.from('plans').insert({
     user_id: userId,
     plan_data: planData,
   });
@@ -361,7 +386,7 @@ async function handleStripeWebhook(req, res) {
         if (!userId) { console.error('No user_id in session metadata'); return; }
 
         // Upsert subscription record
-        await supabase.from('subscriptions').upsert({
+        await supabaseAdmin.from('subscriptions').upsert({
           user_id: userId,
           stripe_customer_id: customerId,
           stripe_subscription_id: subscriptionId,
@@ -386,7 +411,7 @@ async function handleStripeWebhook(req, res) {
 
       } else if (event.type === 'customer.subscription.updated') {
         const sub = event.data.object;
-        await supabase.from('subscriptions')
+        await supabaseAdmin.from('subscriptions')
           .update({
             status: sub.status,
             current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
@@ -396,7 +421,7 @@ async function handleStripeWebhook(req, res) {
 
       } else if (event.type === 'customer.subscription.deleted') {
         const sub = event.data.object;
-        await supabase.from('subscriptions')
+        await supabaseAdmin.from('subscriptions')
           .update({ status: 'canceled', updated_at: new Date().toISOString() })
           .eq('stripe_subscription_id', sub.id);
       }
