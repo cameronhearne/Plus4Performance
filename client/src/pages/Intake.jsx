@@ -73,7 +73,7 @@ function Section1({ data, onChange }) {
           onChange={e => onChange(weightUnit === 'kg' ? 'weightKg' : 'weightLbs', e.target.value)} />
       </div>
       <div className="form-group">
-        <label>Target weight (kg)</label>
+        <label>Target weight ({weightUnit})</label>
         <input type="number" value={data.targetWeight || ''} onChange={e => onChange('targetWeight', e.target.value)} required />
         <p style={styles.hint}>We'll build your plan around a safe, sustainable target — up to 1 kg per week over 12 weeks.</p>
       </div>
