@@ -1,5 +1,44 @@
 [build]
-  functions = "netlify/functions"
+  # Build the React app, then copy static marketing pages into dist so they're served alongside it.
+  # client/app.html (not index.html) is the React entry — so copying index.html here doesn't conflict.
+  command = """
+    cd client && npm install && npm run build &&
+    cp ../index.html dist/index.html &&
+    cp ../faq.html dist/faq.html &&
+    cp ../calculator.html dist/calculator.html &&
+    cp ../privacy.html dist/privacy.html &&
+    cp ../terms.html dist/terms.html &&
+    cp ../plan.html dist/plan.html 2>/dev/null || true &&
+    cp ../intake.html dist/intake-legacy.html 2>/dev/null || true
+  """
+  publish = "client/dist"
 
-[[plugins]]
-  package = "@netlify/plugin-functions-install-core"
+[build.environment]
+  NODE_VERSION = "20"
+
+# React SPA routes — rewrite to app.html (the React entry) so client-side routing works.
+# Marketing pages (/, /faq.html etc.) are served as static files and NOT rewritten.
+[[redirects]]
+  from = "/signup"
+  to = "/app.html"
+  status = 200
+
+[[redirects]]
+  from = "/login"
+  to = "/app.html"
+  status = 200
+
+[[redirects]]
+  from = "/intake"
+  to = "/app.html"
+  status = 200
+
+[[redirects]]
+  from = "/dashboard"
+  to = "/app.html"
+  status = 200
+
+[[redirects]]
+  from = "/dashboard/*"
+  to = "/app.html"
+  status = 200

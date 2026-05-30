@@ -1,15 +1,18 @@
 # macOS
 .DS_Store
 
-# Netlify functions dependencies
-netlify/functions/node_modules/
-
-# OS generated files
-*.log
-
-# Optional local env
-.env
-
-# npm package lock if root package is not intended
-package-lock.json
+# Dependencies
 node_modules/
+netlify/functions/node_modules/
+client/node_modules/
+
+# Build output
+client/dist/
+
+# Env files
+.env
+.env.local
+client/.env.local
+
+# Logs
+*.log
