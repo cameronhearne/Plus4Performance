@@ -416,7 +416,7 @@ async function handleStripeWebhook(req, res) {
         await supabaseAdmin.from('subscriptions')
           .update({
             status: sub.status,
-            current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
+            ...(sub.current_period_end != null && { current_period_end: new Date(sub.current_period_end * 1000).toISOString() }),
             updated_at: new Date().toISOString(),
           })
           .eq('stripe_subscription_id', sub.id);
