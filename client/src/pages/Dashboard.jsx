@@ -358,15 +358,8 @@ export default function Dashboard() {
       const { data: { user }, error: userErr } = await supabase.auth.getUser();
       if (userErr) console.error('[Dashboard] getUser error:', userErr);
       if (!user) { navigate('/login'); return; }
-      console.log('[Dashboard] user.id:', user.id);
       setUser(user);
 
-      // Confirm session + JWT are present for table queries
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log('[Dashboard] session present:', !!session);
-      console.log('[Dashboard] access_token prefix:', session?.access_token?.slice(0, 40) ?? 'MISSING');
-
-      // Load snapshot
       const { data: snap, error: snapErr } = await supabase
         .from('snapshots')
         .select('*')
@@ -375,25 +368,8 @@ export default function Dashboard() {
         .limit(1)
         .maybeSingle();
       if (snapErr) console.error('[Dashboard] snapshots error:', snapErr);
-      console.log('[Dashboard] snapshot:', snap);
       if (snap) setSnapshot(snap);
 
-      // Raw fetch to subscriptions — bypasses the client library to confirm
-      // whether the JWT is being sent and what the server actually returns.
-      const rawRes = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${user.id}&status=eq.active&select=status,current_period_end&limit=1`,
-        {
-          headers: {
-            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${session?.access_token ?? ''}`,
-          },
-        }
-      );
-      console.log('[Dashboard] raw subscriptions fetch status:', rawRes.status);
-      const rawJson = await rawRes.json();
-      console.log('[Dashboard] raw subscriptions response:', rawJson);
-
-      // Check subscription via client (compare against raw fetch result above)
       const { data: sub, error: subErr } = await supabase
         .from('subscriptions')
         .select('status, current_period_end')
@@ -402,10 +378,8 @@ export default function Dashboard() {
         .limit(1)
         .maybeSingle();
       if (subErr) console.error('[Dashboard] subscriptions error:', subErr);
-      console.log('[Dashboard] subscription row:', sub);
 
       const subscribed = sub && (!sub.current_period_end || new Date(sub.current_period_end) > new Date());
-      console.log('[Dashboard] subscribed:', subscribed);
       setIsUnlocked(!!subscribed);
 
       if (subscribed) {
@@ -416,10 +390,7 @@ export default function Dashboard() {
           .order('generated_at', { ascending: false })
           .limit(1)
           .maybeSingle();
-        console.error('[Dashboard] plans error:', planErr);
-        console.log('[Dashboard] plans raw row:', planRow);
-        console.log('[Dashboard] plans plan_data type:', typeof planRow?.plan_data);
-        console.log('[Dashboard] plan loaded:', !!planRow);
+        if (planErr) console.error('[Dashboard] plans error:', planErr);
         if (planRow) setPlan(planRow.plan_data);
       }
     }
