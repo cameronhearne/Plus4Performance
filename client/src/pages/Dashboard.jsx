@@ -355,40 +355,49 @@ export default function Dashboard() {
 
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user }, error: userErr } = await supabase.auth.getUser();
+      if (userErr) console.error('[Dashboard] getUser error:', userErr);
       if (!user) { navigate('/login'); return; }
+      console.log('[Dashboard] user.id:', user.id);
       setUser(user);
 
       // Load snapshot
-      const { data: snap } = await supabase
+      const { data: snap, error: snapErr } = await supabase
         .from('snapshots')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
+      if (snapErr) console.error('[Dashboard] snapshots error:', snapErr);
+      console.log('[Dashboard] snapshot:', snap);
       if (snap) setSnapshot(snap);
 
       // Check subscription
-      const { data: sub } = await supabase
+      const { data: sub, error: subErr } = await supabase
         .from('subscriptions')
         .select('status, current_period_end')
         .eq('user_id', user.id)
         .eq('status', 'active')
         .limit(1)
         .maybeSingle();
+      if (subErr) console.error('[Dashboard] subscriptions error:', subErr);
+      console.log('[Dashboard] subscription row:', sub);
 
       const subscribed = sub && (!sub.current_period_end || new Date(sub.current_period_end) > new Date());
+      console.log('[Dashboard] subscribed:', subscribed);
       setIsUnlocked(!!subscribed);
 
       if (subscribed) {
-        const { data: planRow } = await supabase
+        const { data: planRow, error: planErr } = await supabase
           .from('plans')
           .select('plan_data')
           .eq('user_id', user.id)
-          .order('generated_at', { ascending: false })
+          .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle();
+        if (planErr) console.error('[Dashboard] plans error:', planErr);
+        console.log('[Dashboard] plan loaded:', !!planRow);
         if (planRow) setPlan(planRow.plan_data);
       }
     }
