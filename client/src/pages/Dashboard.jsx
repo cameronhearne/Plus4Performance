@@ -45,7 +45,8 @@ function BlurredCard({ children, onUnlock }) {
 // ─── TAB CONTENT ─────────────────────────────────────────────────────────────
 
 function TabToday({ snapshot, plan, isUnlocked, onUnlock }) {
-  const todaySession = plan?.weeks?.[0]?.sessions?.[0];
+  const todaySession = plan?.phases?.[0]?.sessions?.[0];
+  const library = plan?.exercise_library || {};
 
   return (
     <div>
@@ -74,7 +75,7 @@ function TabToday({ snapshot, plan, isUnlocked, onUnlock }) {
 
       <div style={styles.sectionHead}>Today's Session</div>
       {isUnlocked && todaySession ? (
-        <SessionCard session={todaySession} />
+        <SessionCard session={todaySession} library={library} />
       ) : (
         <BlurredCard onUnlock={onUnlock}>
           <div style={styles.mockCard}>
@@ -104,13 +105,13 @@ function TabToday({ snapshot, plan, isUnlocked, onUnlock }) {
 }
 
 function TabPlan({ plan, isUnlocked, onUnlock }) {
-  const [selectedWeek, setSelectedWeek] = useState(1);
+  const [selectedPhase, setSelectedPhase] = useState(0);
   if (!isUnlocked) return (
     <div>
       <LockedOverlay onUnlock={onUnlock} />
       <BlurredCard onUnlock={onUnlock}>
         <div style={styles.mockCard}>
-          <div style={styles.mockTitle}>Week 1 — Foundation Phase</div>
+          <div style={styles.mockTitle}>Phase 1 — Foundation (Weeks 1–4)</div>
           {['Upper A', 'Lower A', 'Upper B', 'Lower B'].map(s => (
             <div key={s} style={styles.mockRow}><span>{s}</span><span>6 exercises</span></div>
           ))}
@@ -119,25 +120,26 @@ function TabPlan({ plan, isUnlocked, onUnlock }) {
     </div>
   );
 
-  const weeks = plan?.weeks || [];
-  const week = weeks.find(w => w.week === selectedWeek) || weeks[0];
+  const phases = plan?.phases || [];
+  const library = plan?.exercise_library || {};
+  const phase = phases[selectedPhase];
 
   return (
     <div>
       <div style={styles.weekNav}>
-        {weeks.map(w => (
-          <button key={w.week} type="button"
-            style={selectedWeek === w.week ? styles.weekBtnActive : styles.weekBtn}
-            onClick={() => setSelectedWeek(w.week)}>
-            W{w.week}
+        {phases.map((p, i) => (
+          <button key={i} type="button"
+            style={selectedPhase === i ? styles.weekBtnActive : styles.weekBtn}
+            onClick={() => setSelectedPhase(i)}>
+            Phase {p.phase}
           </button>
         ))}
       </div>
-      {week && (
+      {phase && (
         <div>
-          <div style={styles.phaseTag}>{week.phase}</div>
-          {(week.sessions || []).map((s, i) => (
-            <SessionCard key={i} session={s} defaultOpen={i === 0} />
+          <div style={styles.phaseTag}>{phase.label} — Weeks {phase.weeks}</div>
+          {(phase.sessions || []).map((s, i) => (
+            <SessionCard key={i} session={s} library={library} defaultOpen={i === 0} />
           ))}
         </div>
       )}
@@ -168,12 +170,15 @@ function TabNutrition({ plan, isUnlocked, onUnlock }) {
           <MacroCard title="Rest Day" data={nut.rest_day} accent="#787878" />
         </div>
       )}
-      {plan?.meal_plan?.days?.[0] && (
+      {plan?.meal_plan && (
         <div>
-          <div style={styles.sectionHead}>7-Day Meal Plan</div>
-          {plan.meal_plan.days.map((day, i) => (
-            <MealDayCard key={i} day={day} />
-          ))}
+          <div style={styles.sectionHead}>Meal Templates</div>
+          {plan.meal_plan.training_day?.length > 0 && (
+            <MealTemplateCard label="Training Day" meals={plan.meal_plan.training_day} />
+          )}
+          {plan.meal_plan.rest_day?.length > 0 && (
+            <MealTemplateCard label="Rest Day" meals={plan.meal_plan.rest_day} />
+          )}
         </div>
       )}
       {plan?.grocery_list && (
@@ -208,8 +213,9 @@ function TabAchievements() {
 
 // ─── SUB-COMPONENTS ──────────────────────────────────────────────────────────
 
-function SessionCard({ session, defaultOpen = false }) {
+function SessionCard({ session, library = {}, defaultOpen = false }) {
   const [open, setOpen] = useState(defaultOpen);
+  const [expandedEx, setExpandedEx] = useState(null);
   return (
     <div style={styles.sessionCard}>
       <button type="button" style={styles.sessionHeader} onClick={() => setOpen(o => !o)}>
@@ -227,14 +233,34 @@ function SessionCard({ session, defaultOpen = false }) {
               </tr>
             </thead>
             <tbody>
-              {(session.exercises || []).map((ex, i) => (
-                <tr key={i} style={{ background: i % 2 === 0 ? '#111' : '#0d0d0d' }}>
-                  <td style={styles.td}>{ex.name}</td>
-                  <td style={styles.tdCenter}>{ex.sets}</td>
-                  <td style={styles.tdCenter}>{ex.reps}</td>
-                  <td style={styles.tdCenter}>{ex.rest}</td>
-                </tr>
-              ))}
+              {(session.exercises || []).map((ex, i) => {
+                const info = library[ex.ex] || {};
+                const name = info.name || ex.ex;
+                const isOpen = expandedEx === i;
+                return (
+                  <React.Fragment key={i}>
+                    <tr style={{ background: i % 2 === 0 ? '#111' : '#0d0d0d', cursor: info.cues ? 'pointer' : 'default' }}
+                      onClick={() => info.cues && setExpandedEx(isOpen ? null : i)}>
+                      <td style={styles.td}>
+                        {name}
+                        {info.cues && <span style={{ color: '#555', fontSize: 11, marginLeft: 6 }}>{isOpen ? '▲' : '▼'}</span>}
+                      </td>
+                      <td style={styles.tdCenter}>{ex.sets}</td>
+                      <td style={styles.tdCenter}>{ex.reps}</td>
+                      <td style={styles.tdCenter}>{ex.rest}</td>
+                    </tr>
+                    {isOpen && info.cues && (
+                      <tr style={{ background: '#0a0a0a' }}>
+                        <td colSpan={4} style={{ padding: '10px 0 14px', fontSize: 12, color: '#CDCDC8', lineHeight: 1.6 }}>
+                          <div style={{ marginBottom: 4 }}><span style={{ color: '#787878', fontWeight: 700 }}>Cue: </span>{info.cues}</div>
+                          {info.common_mistakes && <div style={{ marginBottom: 4 }}><span style={{ color: '#787878', fontWeight: 700 }}>Avoid: </span>{info.common_mistakes}</div>}
+                          {info.injury_modifications && <div><span style={{ color: '#787878', fontWeight: 700 }}>Modification: </span>{info.injury_modifications}</div>}
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -266,17 +292,17 @@ function MacroCard({ title, data, accent }) {
   );
 }
 
-function MealDayCard({ day }) {
+function MealTemplateCard({ label, meals }) {
   const [open, setOpen] = useState(false);
   return (
     <div style={{ ...styles.sessionCard, marginBottom: 8 }}>
       <button type="button" style={styles.sessionHeader} onClick={() => setOpen(o => !o)}>
-        <span style={styles.sessionName}>{day.day} <span style={{ color: '#787878', fontSize: 12, fontWeight: 400 }}>({day.type})</span></span>
+        <span style={styles.sessionName}>{label}</span>
         <span style={{ color: '#787878', fontSize: 20 }}>{open ? '−' : '+'}</span>
       </button>
       {open && (
         <div style={{ padding: '0 20px 20px' }}>
-          {(day.meals || []).map((meal, i) => (
+          {(meals || []).map((meal, i) => (
             <div key={i} style={{ marginBottom: 16 }}>
               <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, fontWeight: 700, color: '#C8C8C8', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>{meal.name}</div>
               {(meal.foods || []).map((food, j) => (

@@ -45,7 +45,6 @@ const FULL_PLAN_SCHEMA = `{
     "name": string,
     "goal": string,
     "split": string,
-    "start_date": string,
     "calorie_target": number,
     "protein_g": number,
     "carb_g": number,
@@ -56,28 +55,26 @@ const FULL_PLAN_SCHEMA = `{
     "experience": string
   },
   "personal_note": string,
-  "how_to_use": string,
-  "weeks": [
+  "exercise_library": {
+    "<snake_case_id>": {
+      "name": string,
+      "cues": string,
+      "common_mistakes": string,
+      "injury_modifications": string
+    }
+  },
+  "phases": [
     {
-      "week": number,
-      "phase": string,
-      "training_calorie_target": number,
-      "rest_calorie_target": number,
+      "phase": number,
+      "label": string,
+      "weeks": string,
+      "training_calories": number,
+      "rest_calories": number,
       "sessions": [
         {
-          "day": number,
           "name": string,
           "exercises": [
-            {
-              "name": string,
-              "sets": number,
-              "reps": string,
-              "rest": string,
-              "cues": string,
-              "common_mistakes": string,
-              "progression": string,
-              "injury_modifications": string
-            }
+            { "ex": string, "sets": number, "reps": string, "rest": string }
           ]
         }
       ]
@@ -85,22 +82,14 @@ const FULL_PLAN_SCHEMA = `{
   ],
   "nutrition": {
     "training_day": { "calories": number, "protein": number, "carbs": number, "fat": number },
-    "rest_day": { "calories": number, "protein": number, "carbs": number, "fat": number },
-    "weekly_progression": [{ "week": number, "training_calories": number, "rest_calories": number }]
+    "rest_day": { "calories": number, "protein": number, "carbs": number, "fat": number }
   },
   "meal_plan": {
-    "days": [
-      {
-        "day": string,
-        "type": "training" | "rest",
-        "meals": [
-          {
-            "name": string,
-            "foods": [{ "name": string, "amount": string, "cal": number, "p": number, "c": number, "f": number }],
-            "totals": { "cal": number, "p": number, "c": number, "f": number }
-          }
-        ]
-      }
+    "training_day": [
+      { "name": string, "foods": [{ "name": string, "amount": string, "cal": number, "p": number, "c": number, "f": number }] }
+    ],
+    "rest_day": [
+      { "name": string, "foods": [{ "name": string, "amount": string, "cal": number, "p": number, "c": number, "f": number }] }
     ]
   },
   "grocery_list": {
@@ -123,46 +112,42 @@ ${FULL_PLAN_SCHEMA}`;
 }
 
 function buildFullPlanUserPrompt(intakeData) {
-  return `You are generating a fully individualised 12-week training and nutrition plan. Every field must be populated with specific, client-accurate content drawn directly from the coaching bible and the client data below. Generic output is a failure. This is a paid product.
+  return `Generate a fully individualised 12-week training and nutrition plan for the client below. Be specific — generic output is a failure. Respond with ONLY a valid JSON object matching the schema exactly. No markdown, no code fences.
 
-STEP 1 — READ THE CLIENT DATA CAREFULLY.
-Extract and use: name, age, sex, height (cm), current weight (kg), goal, experience level, training days per week, preferred split, session length, equipment, injuries, dietary preferences. Every one of these must influence the output.
+STEP 1 — NUTRITION (Mifflin St Jeor)
+Male BMR = (10×weight) + (6.25×height) − (5×age) + 5. Female: same −161.
+Multiply by activity multiplier → TDEE. Apply goal adjustment from Section 7 → calorie_target. Set macros per Section 7 split. Store bmr and tdee in user_summary.
 
-STEP 2 — CALCULATE NUTRITION USING MIFFLIN ST JEOR.
-Male: BMR = (10 × weight) + (6.25 × height) - (5 × age) + 5
-Female: BMR = (10 × weight) + (6.25 × height) - (5 × age) - 161
-Multiply BMR by the client's activity multiplier to get TDEE. Apply the goal adjustment from Section 7 to get calorie_target. Set macros using the split from Section 7. Store BMR and TDEE in user_summary.
+STEP 2 — EXERCISE LIBRARY
+Build exercise_library first. Include every exercise used across all sessions — each keyed by snake_case ID (e.g. "barbell_bench_press"). Each entry has:
+- name: full exercise name
+- cues: one sentence on correct execution
+- common_mistakes: one sentence on what to avoid
+- injury_modifications: specific alternative if client has a relevant injury, else ""
+Select exercises from the coaching bible (Tier 1 as foundation, Tier 2 for variety). For PPL: Push A and Push B must have different exercise selections. Same for Pull A and Pull B. Apply all injury contraindications from Section 9.
 
-STEP 3 — BUILD 12 WEEKS OF TRAINING.
-Generate all 12 weeks in the weeks array. Each week contains the full session list for that week with progressive overload applied — increasing sets, reps, or load vs the previous week. Do not write "repeat week 1". Every session must be fully written out.
-- Select exercises from the exercise library in the coaching bible. Tier 1 as foundation, Tier 2 for variety.
-- For PPL splits: generate Push A and Push B as separate sessions with different exercise selections. Same for Pull A and Pull B.
-- Apply all injury contraindications from Section 9 for any injuries the client has stated.
-- cues: one sentence on how to execute the movement correctly.
-- common_mistakes: one sentence on what to avoid.
-- progression: specific load/rep targets for weeks 1-4, 5-8, and 9-12 with actual numbers. Never write vague phrases like "add weight when comfortable".
-- injury_modifications: specific alternative if injury applies, else empty string.
+STEP 3 — PHASES (3 phases, 4 weeks each)
+Build 3 phases. Each phase contains the SAME sessions but with progressive overload applied — reps/sets change between phases to show progression. Use specific numbers (e.g. phase 1: 3×8, phase 2: 4×6, phase 3: 5×5). Never write vague progressions.
+- phase 1: label "Foundation", weeks "1–4"
+- phase 2: label "Accumulation", weeks "5–8"
+- phase 3: label "Intensification", weeks "9–12"
+Each session: { name, exercises: [{ ex: "<library_id>", sets, reps, rest }] }
+training_calories and rest_calories increase slightly each phase as progressive overload demand rises.
 
-STEP 4 — BUILD THE MEAL PLAN.
-- Every food must be a named food with a gram amount — e.g. "Chicken breast 180g", "White rice 200g cooked". Never write "lean protein" or "complex carbs".
-- Label meals M1–M6. M4 must be "M4 — POST WORKOUT". No times on other meals.
-- The grocery_list must reflect exactly the foods in the meal plan.
+STEP 4 — MEAL PLAN (2 templates only)
+Build one training_day template and one rest_day template — not 7 separate days.
+- Each template is an array of meals (M1–M5). M3 must be "M3 — Post Workout" on training days.
+- Every food: named with gram amount (e.g. "Chicken breast 180g"). Never "lean protein" or "complex carbs".
+- grocery_list reflects exactly the foods used.
 - Maximum 5 supplements. One line each: name, dose, timing.
 
-STEP 5 — WRITE THE PERSONAL NOTE.
-Minimum 150 words. Written directly to the client. Must include:
-- The full Mifflin St Jeor calculation with their actual numbers — e.g. "BMR = (10 × 82) + (6.25 × 178) − (5 × 31) + 5 = 1,892 kcal. TDEE = 1,892 × 1.55 = 2,932 kcal."
-- Their specific goal, current weight, target weight and what the calorie target is designed to achieve.
-- Why the specific split suits their training days, experience and goal.
-- How any stated injuries have been accounted for.
-- One direct, motivating closing sentence — not a cliché.
-Write as 3-4 short paragraphs separated by \\n\\n.
+STEP 5 — PERSONAL NOTE
+3 short paragraphs written directly to the client. Include:
+- Full Mifflin St Jeor calculation with their actual numbers.
+- Their goal, current weight, target weight, what the calorie target achieves.
+- Why the split suits their days/experience/goal and how injuries are handled.
 
-STANDARDS:
-- All fields fully populated. No placeholders.
-- All dates as DD Month YYYY — never ISO format.
-- key_lifts: exactly 3 compound exercise names to track as strength benchmarks.
-- Respond with ONLY the JSON object. No markdown, no code fences, no commentary.
+STANDARDS: key_lifts = exactly 3 compound exercise names. All fields populated. No placeholders.
 
 Client data:
 ${JSON.stringify(intakeData, null, 2)}`;
@@ -338,7 +323,7 @@ async function handleGeneratePlan(userId, intakeData) {
       console.log(`Plan generation attempt ${attempt}/${maxAttempts} for user:`, userId);
       const message = await anthropic.messages.stream({
         model: 'claude-sonnet-4-6',
-        max_tokens: 32000,
+        max_tokens: 8000,
         system: buildFullPlanSystemPrompt(),
         messages: [{ role: 'user', content: buildFullPlanUserPrompt(intakeData) }]
       }).finalMessage();
