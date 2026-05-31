@@ -332,19 +332,24 @@ async function handleGeneratePlan(userId, intakeData) {
   console.log('Generating full plan for user:', userId);
 
   let planData;
-  try {
-    const message = await anthropic.messages.stream({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 32000,
-      system: buildFullPlanSystemPrompt(),
-      messages: [{ role: 'user', content: buildFullPlanUserPrompt(intakeData) }]
-    }).finalMessage();
+  const maxAttempts = 3;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      console.log(`Plan generation attempt ${attempt}/${maxAttempts} for user:`, userId);
+      const message = await anthropic.messages.stream({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 32000,
+        system: buildFullPlanSystemPrompt(),
+        messages: [{ role: 'user', content: buildFullPlanUserPrompt(intakeData) }]
+      }).finalMessage();
 
-    const raw = message.content[0].text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
-    planData = JSON.parse(raw);
-  } catch (err) {
-    console.error('Plan generation error:', err);
-    throw err;
+      const raw = message.content[0].text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+      planData = JSON.parse(raw);
+      break; // success
+    } catch (err) {
+      console.error(`Plan generation attempt ${attempt} failed:`, err.message);
+      if (attempt === maxAttempts) throw err;
+    }
   }
 
   const { error } = await supabaseAdmin.from('plans').insert({
