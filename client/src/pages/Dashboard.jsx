@@ -361,6 +361,11 @@ export default function Dashboard() {
       console.log('[Dashboard] user.id:', user.id);
       setUser(user);
 
+      // Confirm session + JWT are present for table queries
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('[Dashboard] session present:', !!session);
+      console.log('[Dashboard] access_token prefix:', session?.access_token?.slice(0, 40) ?? 'MISSING');
+
       // Load snapshot
       const { data: snap, error: snapErr } = await supabase
         .from('snapshots')
@@ -373,7 +378,22 @@ export default function Dashboard() {
       console.log('[Dashboard] snapshot:', snap);
       if (snap) setSnapshot(snap);
 
-      // Check subscription
+      // Raw fetch to subscriptions — bypasses the client library to confirm
+      // whether the JWT is being sent and what the server actually returns.
+      const rawRes = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${user.id}&status=eq.active&select=status,current_period_end&limit=1`,
+        {
+          headers: {
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${session?.access_token ?? ''}`,
+          },
+        }
+      );
+      console.log('[Dashboard] raw subscriptions fetch status:', rawRes.status);
+      const rawJson = await rawRes.json();
+      console.log('[Dashboard] raw subscriptions response:', rawJson);
+
+      // Check subscription via client (compare against raw fetch result above)
       const { data: sub, error: subErr } = await supabase
         .from('subscriptions')
         .select('status, current_period_end')
