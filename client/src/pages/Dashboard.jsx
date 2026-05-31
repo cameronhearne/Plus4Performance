@@ -416,7 +416,9 @@ export default function Dashboard() {
           .order('generated_at', { ascending: false })
           .limit(1)
           .maybeSingle();
-        if (planErr) console.error('[Dashboard] plans error:', planErr);
+        console.error('[Dashboard] plans error:', planErr);
+        console.log('[Dashboard] plans raw row:', planRow);
+        console.log('[Dashboard] plans plan_data type:', typeof planRow?.plan_data);
         console.log('[Dashboard] plan loaded:', !!planRow);
         if (planRow) setPlan(planRow.plan_data);
       }
