@@ -323,7 +323,7 @@ async function handleGeneratePlan(userId, intakeData) {
       console.log(`Plan generation attempt ${attempt}/${maxAttempts} for user:`, userId);
       const message = await anthropic.messages.stream({
         model: 'claude-sonnet-4-6',
-        max_tokens: 8000,
+        max_tokens: 16000,
         system: buildFullPlanSystemPrompt(),
         messages: [{ role: 'user', content: buildFullPlanUserPrompt(intakeData) }]
       }).finalMessage();
