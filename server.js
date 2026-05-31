@@ -484,13 +484,17 @@ async function handleAdminGeneratePlan(req, res) {
   if (intakeErr) return json(res, 500, { error: 'Failed to fetch intake: ' + intakeErr.message });
   if (!intakeRows || !intakeRows.length) return json(res, 404, { error: 'No intake data found for user' });
 
-  try {
-    await handleGeneratePlan(user_id, intakeRows[0].data);
-    return json(res, 200, { ok: true, message: `Plan generated for user ${user_id}` });
-  } catch (err) {
-    console.error('Admin plan generation error:', err);
-    return json(res, 500, { error: 'Plan generation failed: ' + err.message });
-  }
+  // Respond immediately — generation runs async in background (same pattern as webhook)
+  json(res, 202, { ok: true, message: `Plan generation started for user ${user_id}. Check Railway logs for completion.` });
+
+  setImmediate(async () => {
+    try {
+      await handleGeneratePlan(user_id, intakeRows[0].data);
+      console.log(`Admin plan generation complete for user ${user_id}`);
+    } catch (err) {
+      console.error(`Admin plan generation failed for user ${user_id}:`, err.message);
+    }
+  });
 }
 
 // ─── HTTP SERVER ──────────────────────────────────────────────────────────────
