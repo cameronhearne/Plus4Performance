@@ -457,6 +457,49 @@ async function handleCreateCheckout(req, res) {
   }
 }
 
+// POST /admin/activate-subscription
+// Upserts a subscription row to active for a user — use to recover after webhook failure.
+// Requires: Authorization: Bearer <ADMIN_SECRET>
+// Body: { user_id: string }
+async function handleAdminActivateSubscription(req, res) {
+  const secret = process.env.ADMIN_SECRET;
+  if (!secret) return json(res, 500, { error: 'ADMIN_SECRET not configured' });
+  const authHeader = req.headers['authorization'] || '';
+  if (authHeader !== `Bearer ${secret}`) return json(res, 401, { error: 'Unauthorized' });
+
+  const body = await readBody(req);
+  let parsed;
+  try { parsed = JSON.parse(body); } catch { return json(res, 400, { error: 'Invalid JSON' }); }
+
+  const { user_id } = parsed;
+  if (!user_id) return json(res, 400, { error: 'user_id required' });
+
+  // Check current state
+  const { data: existing } = await supabaseAdmin
+    .from('subscriptions')
+    .select('*')
+    .eq('user_id', user_id)
+    .maybeSingle();
+
+  console.log(`[admin] subscription row for ${user_id}:`, JSON.stringify(existing));
+
+  let error;
+  if (existing) {
+    ({ error } = await supabaseAdmin
+      .from('subscriptions')
+      .update({ status: 'active', stripe_price_id: process.env.STRIPE_PRICE_ID })
+      .eq('id', existing.id));
+  } else {
+    ({ error } = await supabaseAdmin
+      .from('subscriptions')
+      .insert({ user_id, stripe_price_id: process.env.STRIPE_PRICE_ID, status: 'active' }));
+  }
+
+  if (error) return json(res, 500, { error: 'Database error: ' + error.message });
+
+  return json(res, 200, { ok: true, was: existing?.status || 'missing', message: `Subscription activated for user ${user_id}` });
+}
+
 // POST /admin/generate-plan
 // Manually re-trigger plan generation for a user (e.g. after a failed webhook).
 // Requires: Authorization: Bearer <ADMIN_SECRET>
@@ -521,6 +564,10 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'POST' && url === '/create-checkout-session') {
       return await handleCreateCheckout(req, res);
+    }
+
+    if (req.method === 'POST' && url === '/admin/activate-subscription') {
+      return await handleAdminActivateSubscription(req, res);
     }
 
     if (req.method === 'POST' && url === '/admin/generate-plan') {
