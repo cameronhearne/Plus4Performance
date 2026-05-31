@@ -467,6 +467,42 @@ async function handleCreateCheckout(req, res) {
   }
 }
 
+// POST /admin/generate-plan
+// Manually re-trigger plan generation for a user (e.g. after a failed webhook).
+// Requires: Authorization: Bearer <ADMIN_SECRET>
+async function handleAdminGeneratePlan(req, res) {
+  const secret = process.env.ADMIN_SECRET;
+  if (!secret) return json(res, 500, { error: 'ADMIN_SECRET not configured' });
+
+  const authHeader = req.headers['authorization'] || '';
+  if (authHeader !== `Bearer ${secret}`) return json(res, 401, { error: 'Unauthorized' });
+
+  const body = await readBody(req);
+  let parsed;
+  try { parsed = JSON.parse(body); } catch { return json(res, 400, { error: 'Invalid JSON' }); }
+
+  const { user_id } = parsed;
+  if (!user_id) return json(res, 400, { error: 'user_id required' });
+
+  const { data: intakeRows, error: intakeErr } = await supabaseAdmin
+    .from('intake_submissions')
+    .select('data')
+    .eq('user_id', user_id)
+    .order('created_at', { ascending: false })
+    .limit(1);
+
+  if (intakeErr) return json(res, 500, { error: 'Failed to fetch intake: ' + intakeErr.message });
+  if (!intakeRows || !intakeRows.length) return json(res, 404, { error: 'No intake data found for user' });
+
+  try {
+    await handleGeneratePlan(user_id, intakeRows[0].data);
+    return json(res, 200, { ok: true, message: `Plan generated for user ${user_id}` });
+  } catch (err) {
+    console.error('Admin plan generation error:', err);
+    return json(res, 500, { error: 'Plan generation failed: ' + err.message });
+  }
+}
+
 // ─── HTTP SERVER ──────────────────────────────────────────────────────────────
 
 const server = http.createServer(async (req, res) => {
@@ -491,6 +527,10 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'POST' && url === '/create-checkout-session') {
       return await handleCreateCheckout(req, res);
+    }
+
+    if (req.method === 'POST' && url === '/admin/generate-plan') {
+      return await handleAdminGeneratePlan(req, res);
     }
 
     json(res, 404, { error: 'Not found' });
