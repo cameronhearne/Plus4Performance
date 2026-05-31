@@ -25,7 +25,7 @@ const supabaseAuth = createClient(
 
 // Startup key validation
 (function validateEnv() {
-  const required = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_ANON_KEY', 'ANTHROPIC_API_KEY'];
+  const required = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_ANON_KEY', 'ANTHROPIC_API_KEY', 'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'STRIPE_PRICE_ID'];
   required.forEach(k => {
     if (!process.env[k]) console.error(`MISSING ENV VAR: ${k}`);
   });
@@ -315,6 +315,8 @@ async function handleSnapshot(req, res) {
     return json(res, 500, { error: 'Failed to save snapshot: ' + insertErr.message });
   }
 
+  console.log(`Snapshot saved for user ${userId}:`, JSON.stringify(snapshot));
+
   // Send welcome email (non-blocking)
   const firstName = intakeData.firstName || intakeData.first_name || '';
   const email = intakeData.email || '';
@@ -379,7 +381,7 @@ async function handleStripeWebhook(req, res) {
     try {
       if (event.type === 'checkout.session.completed') {
         const session = event.data.object;
-        const userId = session.metadata.user_id;
+        const userId = session.client_reference_id || session.metadata?.user_id;
         const customerId = session.customer;
         const subscriptionId = session.subscription;
 
@@ -395,7 +397,7 @@ async function handleStripeWebhook(req, res) {
         }, { onConflict: 'stripe_subscription_id' });
 
         // Fetch the user's intake data to generate plan
-        const { data: intakeRows } = await supabase
+        const { data: intakeRows } = await supabaseAdmin
           .from('intake_submissions')
           .select('data')
           .eq('user_id', userId)
@@ -452,8 +454,9 @@ async function handleCreateCheckout(req, res) {
       payment_method_types: ['card'],
       customer_email: email,
       line_items: [{ price: process.env.STRIPE_PRICE_ID, quantity: 1 }],
+      client_reference_id: userId,
       success_url: `${origin}/dashboard?payment=success`,
-      cancel_url: `${origin}/dashboard?payment=cancelled`,
+      cancel_url: `${origin}/dashboard`,
       metadata: { user_id: userId },
     });
 
