@@ -127,6 +127,9 @@ export default function ProgressTab({ userId }) {
   }, []);
 
   const fetchLogs = useCallback(async () => {
+    const { data: { session: debugSession } } = await supabase.auth.getSession();
+    console.log('DEBUG SESSION:', debugSession);
+    console.log('DEBUG USER ID:', debugSession?.user?.id);
     if (!session?.user?.id) return;
     const { data, error: err } = await supabase
       .from('weight_logs')
@@ -197,6 +200,9 @@ export default function ProgressTab({ userId }) {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    const { data: { session: debugSession } } = await supabase.auth.getSession();
+    console.log('DEBUG SESSION:', debugSession);
+    console.log('DEBUG USER ID:', debugSession?.user?.id);
     if (!session?.user?.id) { setError('Not authenticated. Please refresh.'); return; }
     const kg = parseFloat(inputVal);
     if (!kg || kg < 20 || kg > 400) {
