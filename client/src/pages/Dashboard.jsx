@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { createCheckoutSession } from '../lib/api';
+import AchievementsTab from './AchievementsTab';
 
 const TABS = [
   { id: 'today', label: 'Today' },
@@ -201,15 +202,6 @@ function TabProgress() {
   );
 }
 
-function TabAchievements() {
-  return (
-    <div style={styles.comingSoon}>
-      <div style={styles.comingSoonIcon}>🏆</div>
-      <h3 style={styles.comingSoonTitle}>Achievements</h3>
-      <p style={styles.comingSoonDesc}>Milestones and badges unlock as you progress. Coming soon.</p>
-    </div>
-  );
-}
 
 // ─── SUB-COMPONENTS ──────────────────────────────────────────────────────────
 
@@ -493,7 +485,7 @@ export default function Dashboard() {
           {activeTab === 'plan' && <TabPlan plan={plan} isUnlocked={isUnlocked} onUnlock={handleUnlock} />}
           {activeTab === 'nutrition' && <TabNutrition plan={plan} isUnlocked={isUnlocked} onUnlock={handleUnlock} />}
           {activeTab === 'progress' && <TabProgress />}
-          {activeTab === 'achievements' && <TabAchievements />}
+          {activeTab === 'achievements' && <AchievementsTab userId={user?.id} />}
         </div>
       </div>
     </div>

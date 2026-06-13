@@ -395,8 +395,8 @@ export default function Intake() {
           : Number(data.weightLbs || 0) / 2.205,
       };
 
-      await submitSnapshot(intakePayload, session.access_token);
-      navigate('/snapshot');
+      const result = await submitSnapshot(intakePayload, session.access_token);
+      navigate('/snapshot', { state: { snapshot: result.snapshot } });
     } catch (err) {
       setError(err.message || 'Something went wrong. Please try again.');
     } finally {

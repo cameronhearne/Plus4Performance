@@ -1,18 +1,31 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
 export default function SnapshotResult() {
   const navigate = useNavigate();
-  const [snapshot, setSnapshot] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const location = useLocation();
+  // Primary source: snapshot passed through navigation state from Intake
+  const [snapshot, setSnapshot] = useState(location.state?.snapshot || null);
+  const [loading, setLoading] = useState(!location.state?.snapshot);
 
   useEffect(() => {
-    async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { navigate('/login'); return; }
+    // If we already have the snapshot from navigation state, skip the fetch
+    if (snapshot) {
+      console.log('[SnapshotResult] snapshot from navigation state:', snapshot);
+      setLoading(false);
+      return;
+    }
 
-      const { data } = await supabase
+    // Fallback: fetch from Supabase (handles page refresh or direct navigation)
+    async function load() {
+      console.log('[SnapshotResult] no state snapshot — fetching from Supabase');
+      const { data: { user }, error: userErr } = await supabase.auth.getUser();
+      if (userErr) { console.error('[SnapshotResult] auth error:', userErr); }
+      if (!user) { navigate('/login'); return; }
+      console.log('[SnapshotResult] querying snapshots for user_id:', user.id);
+
+      const { data, error } = await supabase
         .from('snapshots')
         .select('*')
         .eq('user_id', user.id)
@@ -20,15 +33,20 @@ export default function SnapshotResult() {
         .limit(1)
         .maybeSingle();
 
+      if (error) console.error('[SnapshotResult] Supabase select error:', error);
+      console.log('[SnapshotResult] snapshot from Supabase:', data);
       setSnapshot(data);
       setLoading(false);
     }
     load();
-  }, [navigate]);
+  }, [navigate, snapshot]);
 
   if (loading) return (
     <div style={styles.page}>
-      <div style={styles.spinner} />
+      <div style={styles.spinnerWrap}>
+        <div style={styles.spinner} />
+        <p style={styles.spinnerLabel}>Loading your snapshot…</p>
+      </div>
     </div>
   );
 
@@ -79,8 +97,12 @@ export default function SnapshotResult() {
           </>
         ) : (
           <div style={{ textAlign: 'center', padding: '40px 0' }}>
-            <p style={{ color: '#787878', marginBottom: 24 }}>No snapshot found. Please complete the intake form first.</p>
-            <button className="btn-primary" onClick={() => navigate('/intake')}>Go to intake form</button>
+            <p style={{ color: '#787878', marginBottom: 24 }}>
+              No snapshot found. Please complete the intake form first.
+            </p>
+            <button className="btn-primary" onClick={() => navigate('/intake')}>
+              Go to intake form
+            </button>
           </div>
         )}
       </div>
@@ -97,13 +119,26 @@ const styles = {
     padding: '60px 20px 80px',
     background: 'radial-gradient(ellipse at center, #111 0%, #080808 100%)',
   },
+  spinnerWrap: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 20,
+    marginTop: '40vh',
+  },
   spinner: {
     width: 40, height: 40,
     border: '2px solid #222',
     borderTopColor: '#C8C8C8',
     borderRadius: '50%',
     animation: 'spin 0.75s linear infinite',
-    margin: '40vh auto',
+  },
+  spinnerLabel: {
+    fontFamily: "'Barlow Condensed', sans-serif",
+    fontSize: 13,
+    letterSpacing: '0.2em',
+    textTransform: 'uppercase',
+    color: '#787878',
   },
   card: {
     width: '100%',
@@ -127,9 +162,6 @@ const styles = {
     textTransform: 'uppercase',
     color: '#787878',
     marginBottom: 12,
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
   },
   heading: {
     fontFamily: "'Bebas Neue', sans-serif",
@@ -182,9 +214,7 @@ const styles = {
     background: 'rgba(200,200,200,0.1)',
     marginBottom: 32,
   },
-  ctaBlock: {
-    textAlign: 'center',
-  },
+  ctaBlock: { textAlign: 'center' },
   ctaText: {
     fontSize: 14,
     color: '#787878',
