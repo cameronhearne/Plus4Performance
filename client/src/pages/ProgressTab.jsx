@@ -186,6 +186,7 @@ export default function ProgressTab({ userId }) {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (!userId) { setError('Not authenticated. Please refresh.'); return; }
     const kg = parseFloat(inputVal);
     if (!kg || kg < 20 || kg > 400) {
       setError('Enter a valid weight (20–400 kg).');
@@ -198,7 +199,8 @@ export default function ProgressTab({ userId }) {
         const { error: err } = await supabase
           .from('weight_logs')
           .update({ weight_kg: kg })
-          .eq('id', todayLog.id);
+          .eq('id', todayLog.id)
+          .eq('user_id', userId);
         if (err) throw err;
       } else {
         const { error: err } = await supabase
