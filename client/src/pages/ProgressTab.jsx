@@ -106,60 +106,49 @@ function StatCard({ label, value, sub, highlight }) {
 // ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
 
 export default function ProgressTab({ userId }) {
-  const [session, setSession]     = useState(null);
-  const [logs, setLogs]           = useState([]);
+  const [logs, setLogs]               = useState([]);
   const [loadingLogs, setLoadingLogs] = useState(true);
   const [targetWeight, setTargetWeight] = useState(null);
 
-  const [inputVal, setInputVal]   = useState('');
-  const [saving, setSaving]       = useState(false);
-  const [saved, setSaved]         = useState(false);
-  const [editing, setEditing]     = useState(false);
-  const [error, setError]         = useState('');
-
-  // Own session management — ensures the JWT is present on every request
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-    return () => listener.subscription.unsubscribe();
-  }, []);
+  const [inputVal, setInputVal] = useState('');
+  const [saving, setSaving]     = useState(false);
+  const [saved, setSaved]       = useState(false);
+  const [editing, setEditing]   = useState(false);
+  const [error, setError]       = useState('');
 
   const fetchLogs = useCallback(async () => {
-    const { data: { session: debugSession } } = await supabase.auth.getSession();
-    console.log('DEBUG SESSION:', debugSession);
-    console.log('DEBUG USER ID:', debugSession?.user?.id);
-    if (!session?.user?.id) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setLoadingLogs(false); return; }
     const { data, error: err } = await supabase
       .from('weight_logs')
       .select('id, weight_kg, logged_at')
-      .eq('user_id', session.user.id)
+      .eq('user_id', user.id)
       .order('logged_at', { ascending: true });
     if (err) console.error('[ProgressTab] weight_logs:', err);
     setLogs(data || []);
     setLoadingLogs(false);
-  }, [session]);
+  }, []);
 
-  // Fetch logs + target weight from intake_submissions
+  // Fetch logs + target weight on mount
   useEffect(() => {
-    if (!session?.user?.id) { setLoadingLogs(false); return; }
-    setLoadingLogs(true);
     fetchLogs();
 
-    supabase
-      .from('intake_submissions')
-      .select('data')
-      .eq('user_id', session.user.id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data?.data?.targetWeight) {
-          setTargetWeight(Number(data.data.targetWeight));
-        }
-      });
-  }, [session, fetchLogs]);
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+      supabase
+        .from('intake_submissions')
+        .select('data')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data?.data?.targetWeight) {
+            setTargetWeight(Number(data.data.targetWeight));
+          }
+        });
+    });
+  }, [fetchLogs]);
 
   // ── Derived values ───────────────────────────────────────────────────────
 
@@ -200,10 +189,8 @@ export default function ProgressTab({ userId }) {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    const { data: { session: debugSession } } = await supabase.auth.getSession();
-    console.log('DEBUG SESSION:', debugSession);
-    console.log('DEBUG USER ID:', debugSession?.user?.id);
-    if (!session?.user?.id) { setError('Not authenticated. Please refresh.'); return; }
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setError('Not authenticated. Please refresh.'); return; }
     const kg = parseFloat(inputVal);
     if (!kg || kg < 20 || kg > 400) {
       setError('Enter a valid weight (20–400 kg).');
@@ -217,12 +204,12 @@ export default function ProgressTab({ userId }) {
           .from('weight_logs')
           .update({ weight_kg: kg })
           .eq('id', todayLog.id)
-          .eq('user_id', session.user.id);
+          .eq('user_id', user.id);
         if (err) throw err;
       } else {
         const { error: err } = await supabase
           .from('weight_logs')
-          .insert({ user_id: session.user.id, weight_kg: kg, logged_at: new Date().toISOString() });
+          .insert({ user_id: user.id, weight_kg: kg, logged_at: new Date().toISOString() });
         if (err) throw err;
       }
       await fetchLogs();
