@@ -106,6 +106,7 @@ function StatCard({ label, value, sub, highlight }) {
 // ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
 
 export default function ProgressTab({ userId }) {
+  const [session, setSession]     = useState(null);
   const [logs, setLogs]           = useState([]);
   const [loadingLogs, setLoadingLogs] = useState(true);
   const [targetWeight, setTargetWeight] = useState(null);
@@ -116,27 +117,37 @@ export default function ProgressTab({ userId }) {
   const [editing, setEditing]     = useState(false);
   const [error, setError]         = useState('');
 
+  // Own session management — ensures the JWT is present on every request
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
   const fetchLogs = useCallback(async () => {
-    if (!userId) return;
+    if (!session?.user?.id) return;
     const { data, error: err } = await supabase
       .from('weight_logs')
       .select('id, weight_kg, logged_at')
-      .eq('user_id', userId)
+      .eq('user_id', session.user.id)
       .order('logged_at', { ascending: true });
     if (err) console.error('[ProgressTab] weight_logs:', err);
     setLogs(data || []);
     setLoadingLogs(false);
-  }, [userId]);
+  }, [session]);
 
   // Fetch logs + target weight from intake_submissions
   useEffect(() => {
-    if (!userId) { setLoadingLogs(false); return; }
+    if (!session?.user?.id) { setLoadingLogs(false); return; }
+    setLoadingLogs(true);
     fetchLogs();
 
     supabase
       .from('intake_submissions')
       .select('data')
-      .eq('user_id', userId)
+      .eq('user_id', session.user.id)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
@@ -145,7 +156,7 @@ export default function ProgressTab({ userId }) {
           setTargetWeight(Number(data.data.targetWeight));
         }
       });
-  }, [userId, fetchLogs]);
+  }, [session, fetchLogs]);
 
   // ── Derived values ───────────────────────────────────────────────────────
 
@@ -186,7 +197,7 @@ export default function ProgressTab({ userId }) {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!userId) { setError('Not authenticated. Please refresh.'); return; }
+    if (!session?.user?.id) { setError('Not authenticated. Please refresh.'); return; }
     const kg = parseFloat(inputVal);
     if (!kg || kg < 20 || kg > 400) {
       setError('Enter a valid weight (20–400 kg).');
@@ -200,12 +211,12 @@ export default function ProgressTab({ userId }) {
           .from('weight_logs')
           .update({ weight_kg: kg })
           .eq('id', todayLog.id)
-          .eq('user_id', userId);
+          .eq('user_id', session.user.id);
         if (err) throw err;
       } else {
         const { error: err } = await supabase
           .from('weight_logs')
-          .insert({ user_id: userId, weight_kg: kg, logged_at: new Date().toISOString() });
+          .insert({ user_id: session.user.id, weight_kg: kg, logged_at: new Date().toISOString() });
         if (err) throw err;
       }
       await fetchLogs();
