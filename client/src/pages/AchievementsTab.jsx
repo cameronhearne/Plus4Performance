@@ -18,11 +18,11 @@ const LEVELS = [
 ];
 
 const XP_ACTIONS = [
-  { action: 'Complete a session',   xp: 50 },
-  { action: 'Hit protein target',   xp: 20 },
-  { action: 'Log weight',           xp: 10 },
+  { action: 'Complete a session',    xp: 50 },
+  { action: 'Hit protein target',    xp: 20 },
+  { action: 'Log weight',            xp: 10 },
   { action: 'Unlock an achievement', xp: 100 },
-  { action: 'Complete a full week', xp: 150 },
+  { action: 'Complete a full week',  xp: 150 },
   { action: 'Log a personal record', xp: 200 },
 ];
 
@@ -61,11 +61,19 @@ const PROGRESS_BADGES = [
 ];
 
 const LEGACY_BADGES = [
-  { id: 'the_p4',          name: 'The P4',         xp: 1000, icon: null, isP4: true },
-  { id: 'coaches_pick',    name: "Coach's Pick",   xp: 500,  icon: Shield },
-  { id: 'founding_member', name: 'Founding Member',xp: 500,  icon: Crown },
-  { id: 'refer_friend',    name: 'Refer a Friend', xp: 200,  icon: Users },
+  { id: 'the_p4',          name: 'The P4',          xp: 1000, icon: null, isP4: true },
+  { id: 'coaches_pick',    name: "Coach's Pick",    xp: 500,  icon: Shield },
+  { id: 'founding_member', name: 'Founding Member', xp: 500,  icon: Crown },
+  { id: 'refer_friend',    name: 'Refer a Friend',  xp: 200,  icon: Users },
 ];
+
+// Darkened fills for unlocked state — rich but not garish
+const DARK_FILLS = {
+  '#C0392B': '#8B1A10',
+  '#1E7A3E': '#0F4D26',
+  '#1A4E7A': '#0D2E4A',
+  '#B8860B': '#6B4E00',
+};
 
 const CATEGORIES = [
   { key: 'training',  label: 'Training',  color: '#C0392B', badges: TRAINING_BADGES },
@@ -96,26 +104,57 @@ function hexPoly(w) {
 function HexBadge({ badge, color, unlocked }) {
   const { icon: Icon, name, xp, isP4 } = badge;
   const { points, w, h, cx, cy } = hexPoly(72);
-  const fill = unlocked ? color : '#1a1a1a';
-  const iconColor = unlocked ? '#ffffff' : '#333333';
+  const gradId = `lk-${badge.id}`;
+  const darkFill = DARK_FILLS[color] || color;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7 }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 7,
+        maxWidth: 100,
+        opacity: unlocked ? 1 : 0.65,
+      }}
+    >
       <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ display: 'block', overflow: 'visible' }}>
+        <defs>
+          {!unlocked && (
+            <linearGradient id={gradId} x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#1a1a1a" />
+              <stop offset="100%" stopColor="#111111" />
+            </linearGradient>
+          )}
+        </defs>
+
+        {/* Outer glow — unlocked only: larger hex at category colour, 20% opacity */}
+        {unlocked && (
+          <polygon
+            points={points}
+            fill={color}
+            opacity={0.2}
+            transform={`translate(${cx},${cy}) scale(1.14) translate(${-cx},${-cy})`}
+          />
+        )}
+
+        {/* Main hex body */}
         <polygon
           points={points}
-          fill={fill}
-          stroke={unlocked ? color : 'none'}
-          strokeWidth={unlocked ? 1.5 : 0}
+          fill={unlocked ? darkFill : `url(#${gradId})`}
+          stroke={unlocked ? color : '#2a2a2a'}
+          strokeWidth={unlocked ? 2 : 0.5}
         />
 
+        {/* Icon */}
         {isP4 ? (
           <text
             x={cx}
             y={cy}
             textAnchor="middle"
             dominantBaseline="middle"
-            fill={unlocked ? '#ffffff' : '#333333'}
+            fill="#ffffff"
+            opacity={unlocked ? 1 : 0.2}
             fontFamily="'Bebas Neue', sans-serif"
             fontSize={28}
             fontWeight="bold"
@@ -133,14 +172,16 @@ function HexBadge({ badge, color, unlocked }) {
                 height: `${h}px`,
               }}
             >
-              <Icon size={22} color={iconColor} strokeWidth={1.5} />
+              <div style={{ opacity: unlocked ? 1 : 0.2 }}>
+                <Icon size={26} color="#ffffff" strokeWidth={1.5} />
+              </div>
             </div>
           </foreignObject>
         ) : null}
 
-        {/* Lock overlay at bottom-centre for locked badges */}
+        {/* Lock icon at dead centre — locked only */}
         {!unlocked && (
-          <foreignObject x={cx - 8} y={h - 22} width={16} height={16}>
+          <foreignObject x={cx - 8} y={cy - 8} width={16} height={16}>
             <div
               style={{
                 display: 'flex',
@@ -150,7 +191,7 @@ function HexBadge({ badge, color, unlocked }) {
                 height: '16px',
               }}
             >
-              <Lock size={13} color="#555" strokeWidth={2} />
+              <Lock size={16} color="#3a3a3a" strokeWidth={2} />
             </div>
           </foreignObject>
         )}
@@ -159,14 +200,14 @@ function HexBadge({ badge, color, unlocked }) {
       <div
         style={{
           fontFamily: "'Barlow Condensed', sans-serif",
-          fontSize: 10,
+          fontSize: 11,
           fontWeight: 700,
           letterSpacing: '0.1em',
           textTransform: 'uppercase',
           color: unlocked ? '#ffffff' : '#444444',
           textAlign: 'center',
           lineHeight: 1.3,
-          maxWidth: 76,
+          maxWidth: 100,
         }}
       >
         {name}
@@ -192,15 +233,15 @@ function CategorySection({ category, unlockedIds }) {
   const unlockedCount = category.badges.filter(b => unlockedIds.has(b.id)).length;
 
   return (
-    <div style={{ marginTop: 40 }}>
+    <div style={{ marginTop: 56 }}>
       {/* Section header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 22 }}>
         <span
           style={{
             fontFamily: "'Barlow Condensed', sans-serif",
-            fontSize: 12,
+            fontSize: 11,
             fontWeight: 700,
-            letterSpacing: '0.24em',
+            letterSpacing: '0.3em',
             textTransform: 'uppercase',
             color: category.color,
             whiteSpace: 'nowrap',
@@ -208,12 +249,12 @@ function CategorySection({ category, unlockedIds }) {
         >
           {category.label}
         </span>
-        <div style={{ flex: 1, height: 1, background: category.color, opacity: 0.3 }} />
+        <div style={{ flex: 1, height: '0.5px', background: category.color, opacity: 0.4 }} />
         <span
           style={{
             fontFamily: "'Barlow Condensed', sans-serif",
             fontSize: 11,
-            color: '#555',
+            color: '#444',
             letterSpacing: '0.1em',
             whiteSpace: 'nowrap',
           }}
@@ -250,18 +291,21 @@ function XpSection({ currentXp }) {
   const pipHex = hexPoly(34);
 
   return (
-    <div
-      style={{
-        background: '#0d0d0d',
-        border: '1px solid rgba(200,200,200,0.1)',
-        padding: '32px 28px 28px',
-        marginBottom: 8,
-      }}
-    >
+    <div style={{ background: '#0a0a0a', padding: '32px 28px 28px', marginBottom: 8 }}>
       {/* Current level large hex + name */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginBottom: 24 }}>
-        <svg width={bigHex.w} height={bigHex.h} viewBox={`0 0 ${bigHex.w} ${bigHex.h}`}>
-          <polygon points={bigHex.points} fill="#C0392B" />
+        <svg
+          width={bigHex.w}
+          height={bigHex.h}
+          viewBox={`0 0 ${bigHex.w} ${bigHex.h}`}
+          style={{ overflow: 'visible' }}
+        >
+          <polygon
+            points={bigHex.points}
+            fill="#6B0F0A"
+            stroke="#C0392B"
+            strokeWidth={2}
+          />
           <text
             x={bigHex.cx}
             y={bigHex.cy}
@@ -281,7 +325,7 @@ function XpSection({ currentXp }) {
             fontWeight: 700,
             letterSpacing: '0.24em',
             textTransform: 'uppercase',
-            color: '#ffffff',
+            color: '#888888',
           }}
         >
           {currentLevel.name}
@@ -330,18 +374,15 @@ function XpSection({ currentXp }) {
         {LEVELS.map(lvl => {
           const isUnlocked = currentXp >= lvl.xpRequired;
           const isCurrent = lvl.level === currentLevel.level;
-          const pipFill = isCurrent ? '#C0392B' : isUnlocked ? '#2a0a0a' : '#111111';
-          const pipStroke = isUnlocked && !isCurrent ? '#C0392B' : 'none';
-          const pipTextColor = isCurrent ? '#ffffff' : isUnlocked ? '#C0392B' : '#333333';
+
+          const pipFill   = isCurrent ? '#6B0F0A'  : isUnlocked ? '#2a0a0a' : '#0d0d0d';
+          const pipStroke = isCurrent ? '#C0392B'  : isUnlocked ? '#C0392B' : '#1a1a1a';
+          const pipNum    = isCurrent ? '#ffffff'  : isUnlocked ? '#C0392B' : '#2a2a2a';
+          const labelCol  = isCurrent ? '#666666'  : '#444444';
 
           return (
             <div key={lvl.level} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
-              <svg
-                width={pipHex.w}
-                height={pipHex.h}
-                viewBox={`0 0 ${pipHex.w} ${pipHex.h}`}
-                style={{ opacity: isUnlocked ? 1 : 0.55 }}
-              >
+              <svg width={pipHex.w} height={pipHex.h} viewBox={`0 0 ${pipHex.w} ${pipHex.h}`}>
                 <polygon
                   points={pipHex.points}
                   fill={pipFill}
@@ -353,7 +394,7 @@ function XpSection({ currentXp }) {
                   y={pipHex.cy}
                   textAnchor="middle"
                   dominantBaseline="middle"
-                  fill={pipTextColor}
+                  fill={pipNum}
                   fontFamily="'Bebas Neue', sans-serif"
                   fontSize={14}
                 >
@@ -363,14 +404,14 @@ function XpSection({ currentXp }) {
               <div
                 style={{
                   fontFamily: "'Barlow Condensed', sans-serif",
-                  fontSize: 8,
+                  fontSize: 9,
                   letterSpacing: '0.12em',
                   textTransform: 'uppercase',
-                  color: isCurrent ? '#787878' : '#2a2a2a',
+                  color: labelCol,
                   textAlign: 'center',
                 }}
               >
-                {lvl.name.replace(' ', ' ')}
+                {lvl.name.split(' ')[0]}
               </div>
             </div>
           );
@@ -400,8 +441,8 @@ function XpGuide() {
       </div>
       <div
         style={{
-          background: '#0d0d0d',
-          border: '1px solid rgba(200,200,200,0.1)',
+          background: '#0a0a0a',
+          border: '0.5px solid #1e1e1e',
           padding: '18px 20px',
           display: 'grid',
           gridTemplateColumns: '1fr 1fr',
@@ -420,7 +461,7 @@ function XpGuide() {
               borderBottom: '1px solid #141414',
             }}
           >
-            <span style={{ color: '#787878' }}>{action}</span>
+            <span style={{ color: '#666' }}>{action}</span>
             <span
               style={{
                 fontFamily: "'Barlow Condensed', sans-serif",
@@ -444,9 +485,15 @@ function XpGuide() {
 // ─── MAIN EXPORT ─────────────────────────────────────────────────────────────
 
 export default function AchievementsTab({ userId }) {
+  // ?preview=true renders all badges unlocked for design review
+  const isPreview =
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('preview') === 'true';
+
   // currentXp and unlockedIds will be populated from Supabase when unlock logic is wired
   const currentXp = 0;
-  const unlockedIds = new Set();
+  const allIds = CATEGORIES.flatMap(c => c.badges.map(b => b.id));
+  const unlockedIds = isPreview ? new Set(allIds) : new Set();
 
   return (
     <div>
@@ -454,7 +501,7 @@ export default function AchievementsTab({ userId }) {
         .achv-badge-grid {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
-          gap: 28px 16px;
+          gap: 28px 20px;
         }
         @media (max-width: 540px) {
           .achv-badge-grid {
