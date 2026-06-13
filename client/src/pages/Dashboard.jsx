@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { createCheckoutSession } from '../lib/api';
 import AchievementsTab from './AchievementsTab';
+import ProgressTab from './ProgressTab';
 
 const TABS = [
   { id: 'today', label: 'Today' },
@@ -192,15 +193,6 @@ function TabNutrition({ plan, isUnlocked, onUnlock }) {
   );
 }
 
-function TabProgress() {
-  return (
-    <div style={styles.comingSoon}>
-      <div style={styles.comingSoonIcon}>📈</div>
-      <h3 style={styles.comingSoonTitle}>Progress Tracking</h3>
-      <p style={styles.comingSoonDesc}>Log your weight and strength each week. Coming in the next update.</p>
-    </div>
-  );
-}
 
 
 // ─── SUB-COMPONENTS ──────────────────────────────────────────────────────────
@@ -484,7 +476,7 @@ export default function Dashboard() {
           {activeTab === 'today' && <TabToday snapshot={snapshot} plan={plan} isUnlocked={isUnlocked} onUnlock={handleUnlock} />}
           {activeTab === 'plan' && <TabPlan plan={plan} isUnlocked={isUnlocked} onUnlock={handleUnlock} />}
           {activeTab === 'nutrition' && <TabNutrition plan={plan} isUnlocked={isUnlocked} onUnlock={handleUnlock} />}
-          {activeTab === 'progress' && <TabProgress />}
+          {activeTab === 'progress' && <ProgressTab userId={user?.id} />}
           {activeTab === 'achievements' && <AchievementsTab userId={user?.id} />}
         </div>
       </div>
