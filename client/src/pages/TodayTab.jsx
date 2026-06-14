@@ -640,6 +640,19 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
   const [showModal, setShowModal]         = useState(false);
   const [logSuccess, setLogSuccess]       = useState(false);
   const [intakeSchedule, setIntakeSchedule] = useState({ scheduleType: 'rolling', trainingDays: '4', preferredDays: [], goal: null });
+  // Stored as JSON { type: 'training'|'rest', session?: string } keyed to today
+  const [dayOverride, setDayOverride]     = useState(() => {
+    try {
+      const raw = localStorage.getItem(`dayOverride_${new Date().toISOString().split('T')[0]}`);
+      return raw ? (JSON.parse(raw).type ?? null) : null;
+    } catch { return null; }
+  });
+  const [overrideSession, setOverrideSession] = useState(() => {
+    try {
+      const raw = localStorage.getItem(`dayOverride_${new Date().toISOString().split('T')[0]}`);
+      return raw ? (JSON.parse(raw).session ?? null) : null;
+    } catch { return null; }
+  });
 
   useEffect(() => {
     async function load() {
@@ -704,12 +717,43 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
   const library   = plan?.exercise_library || {};
   const nutrition = plan?.nutrition;
 
-  const todayInfo      = (plan && isUnlocked)
+  const todayInfo       = (plan && isUnlocked)
     ? getSessionForToday(plan, { ...intakeSchedule, startDate })
     : { session: null, isRestDay: false, tomorrowSession: null };
-  const todaySession   = todayInfo.session;
-  const isRestDay      = todayInfo.isRestDay;
+  const todaySession    = todayInfo.session;
+  const isRestDay       = todayInfo.isRestDay;
   const tomorrowSession = todayInfo.tomorrowSession;
+
+  // Phase 1 sessions for the picker
+  const phase1Sessions = plan?.phases?.[0]?.sessions || [];
+
+  // Override logic — persists in localStorage keyed to today's date
+  const effectiveIsRestDay = dayOverride === 'rest'     ? true
+                           : dayOverride === 'training' ? false
+                           : isRestDay;
+
+  // Resolve picked session object from phase 1 by stored name
+  const pickedSession = overrideSession
+    ? (phase1Sessions.find(s => s.name === overrideSession) ?? null)
+    : null;
+
+  // pickedSession wins; training override with no pick yet → null (show picker only);
+  // otherwise fall through to the natural session
+  const effectiveSession = pickedSession
+    ?? (dayOverride === 'training' ? null : isRestDay ? null : todaySession);
+
+  function handleOverride(type, sessionName = null) {
+    const key = `dayOverride_${new Date().toISOString().split('T')[0]}`;
+    if (type === null) {
+      localStorage.removeItem(key);
+      setDayOverride(null);
+      setOverrideSession(null);
+    } else {
+      localStorage.setItem(key, JSON.stringify({ type, session: sessionName }));
+      setDayOverride(type);
+      setOverrideSession(sessionName);
+    }
+  }
 
   async function handleSessionComplete() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -746,6 +790,8 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
         .flame-pulse { animation: flamePulse 1.5s ease-in-out infinite; display:inline-flex; }
         @keyframes pulseExpand { 0%,100%{transform:scale(1);filter:drop-shadow(0 0 0px #C0392B)} 50%{transform:scale(1.2);filter:drop-shadow(0 0 6px #C0392B)} }
         .pulse-expand { display:inline-block; animation: pulseExpand 1.5s ease-in-out infinite; }
+        .override-link { background:none; border:none; color:#555; font-family:'Barlow Condensed',sans-serif; font-size:12px; letter-spacing:0.06em; cursor:pointer; padding:0; text-decoration:none; }
+        .override-link:hover { text-decoration:underline; color:#787878; }
       `}</style>
 
       {/* ── Stats row ─────────────────────────────────────────── */}
@@ -773,11 +819,50 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
           Today's Session
         </div>
         {isUnlocked ? (
-          isRestDay ? (
-            <RestDayCard tomorrowSession={tomorrowSession} />
-          ) : todaySession ? (
-            <MissionCard session={todaySession} library={library} sessionLength={sessionLength} weekNum={weekNum} onComplete={handleSessionComplete} onOpenLogbook={onOpenLogbook} />
-          ) : null
+          <>
+            {/* Session picker — shown when training override is active */}
+            {dayOverride === 'training' && phase1Sessions.length > 0 && (
+              <div style={{ marginBottom: 12, padding: '14px 16px', background: '#0d0d0d', border: '1px solid rgba(200,200,200,0.08)' }}>
+                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: '#555', marginBottom: 10 }}>
+                  Pick a session
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {phase1Sessions.map(s => {
+                    const selected = overrideSession === s.name;
+                    return (
+                      <button
+                        key={s.name}
+                        type="button"
+                        onClick={() => handleOverride('training', s.name)}
+                        style={{
+                          padding: '7px 14px',
+                          background: '#111',
+                          border: `1px solid ${selected ? '#C0392B' : '#2a2a2a'}`,
+                          color: selected ? '#C0392B' : '#787878',
+                          fontFamily: "'Barlow Condensed', sans-serif",
+                          fontSize: 12,
+                          fontWeight: 700,
+                          letterSpacing: '0.14em',
+                          textTransform: 'uppercase',
+                          cursor: 'pointer',
+                          transition: 'border-color 0.15s, color 0.15s',
+                        }}
+                      >
+                        {s.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Card */}
+            {effectiveIsRestDay ? (
+              <RestDayCard tomorrowSession={tomorrowSession} />
+            ) : effectiveSession ? (
+              <MissionCard session={effectiveSession} library={library} sessionLength={sessionLength} weekNum={weekNum} onComplete={handleSessionComplete} onOpenLogbook={onOpenLogbook} />
+            ) : null}
+          </>
         ) : (
           <div style={{ position: 'relative' }}>
             <div style={{ filter: 'blur(6px)', userSelect: 'none', pointerEvents: 'none', background: '#0d0d0d', border: '1px solid rgba(200,200,200,0.12)', padding: '20px' }}>
@@ -794,6 +879,28 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
                 Unlock — £9.99/month
               </button>
             </div>
+          </div>
+        )}
+
+        {/* ── Day override links ──────────────────────────────── */}
+        {isUnlocked && (effectiveSession || effectiveIsRestDay || dayOverride === 'training') && (
+          <div style={{ marginTop: 16, display: 'flex', gap: 20, justifyContent: 'center', flexWrap: 'wrap' }}>
+            {dayOverride === null && (
+              <button
+                type="button"
+                className="override-link"
+                onClick={() => handleOverride(effectiveIsRestDay ? 'training' : 'rest')}
+              >
+                {effectiveIsRestDay
+                  ? 'Training today anyway? Switch to training day'
+                  : 'Taking a rest day today? Switch to rest day'}
+              </button>
+            )}
+            {dayOverride !== null && (
+              <button type="button" className="override-link" onClick={() => handleOverride(null)}>
+                Reset to default
+              </button>
+            )}
           </div>
         )}
       </div>
