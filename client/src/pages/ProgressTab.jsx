@@ -72,6 +72,22 @@ import { unlockAchievement, hasConsecutiveDays } from '../lib/achievements';
     with check (auth.uid() = user_id);
   grant all on body_measurements to authenticated;
 
+  -- 1RM tracker
+  create table one_rep_maxes (
+    id uuid default gen_random_uuid() primary key,
+    user_id uuid references auth.users(id) on delete cascade,
+    lift text not null, -- 'bench_press', 'squat', 'deadlift', 'overhead_press'
+    weight_kg numeric(5,2) not null,
+    is_calculated boolean not null default false,
+    logged_at timestamptz not null default now()
+  );
+  alter table one_rep_maxes enable row level security;
+  create policy "orm_all" on one_rep_maxes
+    for all to authenticated
+    using (auth.uid() = user_id)
+    with check (auth.uid() = user_id);
+  grant all on one_rep_maxes to authenticated;
+
   ─────────────────────────────────────────────────────────────────────────────
 */
 
@@ -87,6 +103,13 @@ const MEASURE_FIELDS = [
   { key: 'right_arm_cm',   label: 'Right Arm (cm)'   },
   { key: 'left_thigh_cm',  label: 'Left Thigh (cm)'  },
   { key: 'right_thigh_cm', label: 'Right Thigh (cm)' },
+];
+
+const LIFTS = [
+  { key: 'bench_press',    name: 'Bench Press'    },
+  { key: 'squat',          name: 'Squat'          },
+  { key: 'deadlift',       name: 'Deadlift'       },
+  { key: 'overhead_press', name: 'Overhead Press' },
 ];
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
@@ -110,6 +133,25 @@ function fmtDateFull(dateStr) {
   return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-GB', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   });
+}
+
+function hasThreeConsecutiveWeekImprovement(entries) {
+  if (!entries || entries.length < 3) return false;
+  const weekBest = {};
+  entries.forEach(e => {
+    const d = new Date(e.logged_at);
+    const daysSinceMonday = (d.getDay() + 6) % 7;
+    const monday = new Date(d);
+    monday.setDate(d.getDate() - daysSinceMonday);
+    const key = monday.toISOString().split('T')[0];
+    if (!weekBest[key] || e.weight_kg > weekBest[key]) weekBest[key] = e.weight_kg;
+  });
+  const weeks = Object.entries(weekBest)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([, kg]) => kg);
+  if (weeks.length < 3) return false;
+  const last = weeks.slice(-3);
+  return last[1] > last[0] && last[2] > last[1];
 }
 
 // ─── CHART TOOLTIP ───────────────────────────────────────────────────────────
@@ -631,6 +673,263 @@ function CheckInHistory({ refreshKey }) {
   );
 }
 
+// ─── 1RM LIFT CARD ───────────────────────────────────────────────────────────
+
+function LiftCard({ liftName, liftKey }) {
+  const [entries, setEntries]       = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [maxInput, setMaxInput]     = useState('');
+  const [calcWeight, setCalcWeight] = useState('');
+  const [calcReps, setCalcReps]     = useState('');
+  const [calcResult, setCalcResult] = useState(null);
+  const [savingManual, setSavingManual] = useState(false);
+  const [savingCalc,   setSavingCalc]   = useState(false);
+  const [feedback, setFeedback]     = useState(null); // { msg, isPr }
+  const [glowing, setGlowing]       = useState(false);
+
+  useEffect(() => { fetchEntries(); }, []);
+
+  async function fetchEntries() {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setLoading(false); return; }
+    const { data } = await supabase
+      .from('one_rep_maxes')
+      .select('id, weight_kg, is_calculated, logged_at')
+      .eq('user_id', user.id)
+      .eq('lift', liftKey)
+      .order('logged_at', { ascending: true });
+    setEntries(data || []);
+    setLoading(false);
+  }
+
+  function handleCalculate() {
+    const w = parseFloat(calcWeight);
+    const r = parseInt(calcReps, 10);
+    if (!w || !r || w <= 0 || r <= 0 || r > 50) { setCalcResult(null); return; }
+    setCalcResult(Math.round(w * (1 + r / 30) * 2) / 2);
+  }
+
+  async function handleLog(kg, isCalculated) {
+    if (!kg || isNaN(kg) || kg < 1 || kg > 1000) return;
+    const setSaving = isCalculated ? setSavingCalc : setSavingManual;
+    setSaving(true);
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setSaving(false); return; }
+
+    const currentBest = entries.length > 0 ? Math.max(...entries.map(e => e.weight_kg)) : 0;
+    const isNewPr = kg > currentBest;
+
+    const { error } = await supabase.from('one_rep_maxes').insert({
+      user_id: user.id, lift: liftKey,
+      weight_kg: kg, is_calculated: isCalculated,
+      logged_at: new Date().toISOString(),
+    });
+
+    setSaving(false);
+
+    if (error) {
+      setFeedback({ msg: 'Error saving', isPr: false });
+      setTimeout(() => setFeedback(null), 3000);
+      return;
+    }
+
+    await fetchEntries();
+
+    if (isNewPr) {
+      await unlockAchievement(supabase, user.id, 'pr_hunter', 200);
+      setFeedback({ msg: 'NEW PR! 🎯', isPr: true });
+      setGlowing(true);
+      setTimeout(() => setGlowing(false), 2000);
+    } else {
+      setFeedback({ msg: '✓ Logged', isPr: false });
+    }
+    setTimeout(() => setFeedback(null), 3500);
+
+    // big_four: all four lifts have at least one entry
+    const { data: allLifts } = await supabase
+      .from('one_rep_maxes').select('lift').eq('user_id', user.id);
+    if (allLifts) {
+      const covered = new Set(allLifts.map(r => r.lift));
+      if (LIFTS.every(l => covered.has(l.key))) {
+        await unlockAchievement(supabase, user.id, 'big_four', 250);
+      }
+    }
+
+    // strength_surge: best 1RM improving across 3 consecutive calendar weeks
+    const { data: history } = await supabase
+      .from('one_rep_maxes').select('weight_kg, logged_at')
+      .eq('user_id', user.id).eq('lift', liftKey)
+      .order('logged_at', { ascending: true });
+    if (history && hasThreeConsecutiveWeekImprovement(history)) {
+      await unlockAchievement(supabase, user.id, 'strength_surge', 200);
+    }
+
+    if (isCalculated) { setCalcWeight(''); setCalcReps(''); setCalcResult(null); }
+    else { setMaxInput(''); }
+  }
+
+  const allTimeBest  = entries.length > 0 ? Math.max(...entries.map(e => e.weight_kg)) : null;
+  const mostRecent   = entries.length > 0 ? entries[entries.length - 1] : null;
+  const isPersonalBest = mostRecent && allTimeBest != null && mostRecent.weight_kg >= allTimeBest;
+  const chartData    = entries.map(e => ({
+    date: new Date(e.logged_at).toISOString().split('T')[0],
+    weight: e.weight_kg,
+  }));
+
+  return (
+    <div style={{
+      background: '#0d0d0d',
+      border: `1px solid ${glowing ? '#C0392B' : 'rgba(200,200,200,0.08)'}`,
+      boxShadow: glowing ? '0 0 18px rgba(192,57,43,0.35)' : 'none',
+      transition: 'border-color 0.3s, box-shadow 0.3s',
+      padding: '18px 16px 16px',
+      display: 'flex', flexDirection: 'column',
+    }}>
+      {/* Lift name */}
+      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.26em', textTransform: 'uppercase', color: '#555', marginBottom: 10 }}>
+        {liftName}
+      </div>
+
+      {loading ? (
+        <div style={{ color: '#444', fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", minHeight: 60 }}>Loading…</div>
+      ) : (
+        <>
+          {/* Current 1RM */}
+          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 38, color: '#F5F3EE', lineHeight: 1, marginBottom: 2 }}>
+            {mostRecent ? `${mostRecent.weight_kg} KG` : '— KG'}
+          </div>
+
+          {isPersonalBest && (
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#C0392B', marginBottom: 2 }}>
+              Personal Best
+            </div>
+          )}
+
+          {mostRecent && (
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, color: '#444', letterSpacing: '0.06em', marginBottom: 10 }}>
+              {new Date(mostRecent.logged_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+            </div>
+          )}
+
+          {/* Mini graph */}
+          {chartData.length > 1 && (
+            <div style={{ marginBottom: 10 }}>
+              <ResponsiveContainer width="100%" height={56}>
+                <LineChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -32 }}>
+                  <YAxis domain={['auto', 'auto']} tick={false} axisLine={false} tickLine={false} />
+                  <Line type="monotone" dataKey="weight" stroke="#C0392B" strokeWidth={1.5} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {/* Feedback */}
+          {feedback && (
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', color: feedback.isPr ? '#C0392B' : '#4CAF50', marginBottom: 8 }}>
+              {feedback.msg}
+            </div>
+          )}
+
+          <div style={{ borderTop: '1px solid rgba(200,200,200,0.06)', marginBottom: 12 }} />
+
+          {/* ── Two input methods ──────────────────────────────────── */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 12px' }}>
+
+            {/* Manual entry */}
+            <div>
+              <div style={stOrm.inputLabel}>Max (kg)</div>
+              <input
+                type="number" step="0.5" min="1" max="1000"
+                value={maxInput}
+                onChange={e => setMaxInput(e.target.value)}
+                placeholder="e.g. 120"
+                style={stOrm.numInput}
+              />
+              <button
+                onClick={() => !savingManual && handleLog(parseFloat(maxInput), false)}
+                disabled={savingManual || !maxInput}
+                style={{ ...stOrm.redBtn, opacity: savingManual || !maxInput ? 0.45 : 1, marginTop: 7 }}
+              >
+                {savingManual ? '…' : 'Log PR'}
+              </button>
+            </div>
+
+            {/* Epley calculator */}
+            <div>
+              <div style={stOrm.inputLabel}>Calculator</div>
+              <div style={{ display: 'flex', gap: 5 }}>
+                <input
+                  type="number" step="0.5" min="1"
+                  value={calcWeight}
+                  onChange={e => setCalcWeight(e.target.value)}
+                  placeholder="KG"
+                  style={{ ...stOrm.numInput, flex: 1 }}
+                />
+                <input
+                  type="number" step="1" min="1" max="50"
+                  value={calcReps}
+                  onChange={e => setCalcReps(e.target.value)}
+                  placeholder="Reps"
+                  style={{ ...stOrm.numInput, flex: 1 }}
+                />
+              </div>
+              <button
+                onClick={handleCalculate}
+                disabled={!calcWeight || !calcReps}
+                style={{ ...stOrm.ghostBtn, opacity: !calcWeight || !calcReps ? 0.45 : 1, marginTop: 7 }}
+              >
+                Calculate
+              </button>
+              {calcResult !== null && (
+                <>
+                  <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: '0.06em', color: '#787878', marginTop: 7 }}>
+                    Est. 1RM: <span style={{ color: '#F5F3EE', fontWeight: 700 }}>{calcResult} kg</span>
+                  </div>
+                  <button
+                    onClick={() => !savingCalc && handleLog(calcResult, true)}
+                    disabled={savingCalc}
+                    style={{ ...stOrm.redBtn, opacity: savingCalc ? 0.45 : 1, marginTop: 6 }}
+                  >
+                    {savingCalc ? '…' : 'Log Estimated'}
+                  </button>
+                </>
+              )}
+            </div>
+
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ─── 1RM TRACKER SECTION ─────────────────────────────────────────────────────
+
+function OneRmTracker() {
+  return (
+    <div style={{ marginTop: 32 }}>
+      <style>{`
+        .orm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        @media (max-width: 600px) { .orm-grid { grid-template-columns: 1fr; } }
+      `}</style>
+
+      <div style={st.sectionEyebrow}>1RM Tracker</div>
+
+      <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, color: '#444', fontStyle: 'italic', letterSpacing: '0.04em', margin: '0 0 20px' }}>
+        Always lift with a spotter or safety equipment when testing your max. When in doubt, use the calculator to estimate from your working weight — it's safer and just as useful.
+      </p>
+
+      <div className="orm-grid">
+        {LIFTS.map(l => (
+          <LiftCard key={l.key} liftName={l.name} liftKey={l.key} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
 
 export default function ProgressTab({ userId }) {
@@ -900,6 +1199,9 @@ export default function ProgressTab({ userId }) {
       {/* ── Check-In History ──────────────────────────────────────── */}
       <CheckInHistory refreshKey={historyKey} />
 
+      {/* ── 1RM Tracker ───────────────────────────────────────────── */}
+      <OneRmTracker />
+
     </div>
   );
 }
@@ -1033,5 +1335,37 @@ const st = {
     color: '#F5F3EE',
     fontFamily: "'Barlow Condensed', sans-serif",
     fontSize: 16, outline: 'none', boxSizing: 'border-box',
+  },
+};
+
+// Styles scoped to LiftCard (defined after st so OneRmTracker can reference st.sectionEyebrow)
+const stOrm = {
+  inputLabel: {
+    fontFamily: "'Barlow Condensed', sans-serif",
+    fontSize: 10, fontWeight: 700, letterSpacing: '0.16em',
+    textTransform: 'uppercase', color: '#555', marginBottom: 5,
+  },
+  numInput: {
+    width: '100%', padding: '8px 8px',
+    background: '#111', border: '1px solid rgba(200,200,200,0.15)',
+    color: '#F5F3EE',
+    fontFamily: "'Barlow Condensed', sans-serif",
+    fontSize: 14, outline: 'none', boxSizing: 'border-box',
+  },
+  redBtn: {
+    width: '100%',
+    background: '#C0392B', border: 'none', color: '#fff',
+    fontFamily: "'Barlow Condensed', sans-serif",
+    fontSize: 11, fontWeight: 700, letterSpacing: '0.14em',
+    textTransform: 'uppercase', padding: '9px 0',
+    cursor: 'pointer', minHeight: 44, display: 'block',
+  },
+  ghostBtn: {
+    width: '100%',
+    background: 'none', border: '1px solid rgba(200,200,200,0.18)', color: '#787878',
+    fontFamily: "'Barlow Condensed', sans-serif",
+    fontSize: 11, fontWeight: 700, letterSpacing: '0.14em',
+    textTransform: 'uppercase', padding: '8px 0',
+    cursor: 'pointer', minHeight: 44, display: 'block',
   },
 };
