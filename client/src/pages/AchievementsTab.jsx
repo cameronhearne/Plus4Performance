@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { unlockAchievement } from '../lib/achievements';
 import {
   Dumbbell, Flame, Zap, Trophy, Flag, Medal, Hash, RefreshCw,
   Swords, Beef, ShoppingBag, Target, Pill, Scale, ArrowDown,
@@ -554,31 +553,6 @@ export default function AchievementsTab({ userId }) {
           ))}
 
           <XpGuide />
-
-          {/* TEMPORARY — remove once pipeline confirmed working */}
-          <div style={{ textAlign: 'center', margin: '32px 0 8px' }}>
-            <button
-              onClick={async () => {
-                const { data: { user } } = await supabase.auth.getUser();
-                if (!user) { console.error('[TEST] no user'); return; }
-                try {
-                  await unlockAchievement(supabase, user.id, 'first_rep', 100);
-                  console.log('[TEST] first_rep unlock called');
-                  alert('TEST UNLOCK sent — check console and refresh Achievements tab');
-                } catch (e) {
-                  console.error('[TEST] unlock error:', e);
-                  alert('TEST UNLOCK failed — see console');
-                }
-              }}
-              style={{
-                background: '#C0392B', color: '#fff', border: 'none', cursor: 'pointer',
-                fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700,
-                letterSpacing: '0.15em', fontSize: 13, padding: '10px 24px',
-              }}
-            >
-              TEST UNLOCK
-            </button>
-          </div>
         </>
       )}
     </div>
