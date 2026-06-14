@@ -21,16 +21,12 @@ import { supabase } from '../lib/supabase';
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 
-function todayLocalRange() {
-  const start = new Date(); start.setHours(0, 0, 0, 0);
-  const end   = new Date(); end.setHours(23, 59, 59, 999);
-  return { start, end };
-}
-
-function isTodayLocal(isoString) {
-  const { start, end } = todayLocalRange();
-  const d = new Date(isoString);
-  return d >= start && d <= end;
+function isToday(timestamptz) {
+  const d = new Date(timestamptz);
+  const now = new Date();
+  return d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate();
 }
 
 function fmtDate(dateStr) {
@@ -152,7 +148,7 @@ export default function ProgressTab({ userId }) {
 
   // ── Derived values ───────────────────────────────────────────────────────
 
-  const todayLog     = logs.find(l => isTodayLocal(l.logged_at));
+  const todayLog     = logs.find(l => isToday(l.logged_at));
   const startLog     = logs[0]   || null;
   const currentLog   = logs[logs.length - 1] || null;
 
