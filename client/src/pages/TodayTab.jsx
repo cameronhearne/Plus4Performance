@@ -774,14 +774,12 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
       const newStreak = calcStreak(completions);
       setStreak(newStreak);
 
-      // first_rep — very first session ever
-      if (completions.length === 1) {
-        try {
-          await unlockAchievement(supabase, user.id, 'first_rep', 100);
-          console.log('[Achievements] unlocked: first_rep');
-        } catch (e) {
-          console.error('[Achievements] error unlocking first_rep:', e);
-        }
+      // first_rep — unlock on every session call; upsert ignoreDuplicates makes it idempotent
+      try {
+        await unlockAchievement(supabase, user.id, 'first_rep', 100);
+        console.log('[Achievements] unlocked: first_rep');
+      } catch (e) {
+        console.error('[Achievements] error unlocking first_rep:', e);
       }
 
       // on_fire — 7-day session streak
