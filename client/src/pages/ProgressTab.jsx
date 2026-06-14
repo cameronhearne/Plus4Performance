@@ -112,6 +112,22 @@ const LIFTS = [
   { key: 'overhead_press', name: 'Overhead Press' },
 ];
 
+// ─── GOAL-AWARE COLOUR HELPER ────────────────────────────────────────────────
+
+// delta = current - previous (positive = gained weight, negative = lost weight)
+function deltaColor(delta, goal) {
+  if (delta == null || Math.abs(delta) < 0.05) return '#555';
+  const gained = delta > 0;
+  if (goal === 'lean_bulk' || goal === 'muscle_building') {
+    return gained ? '#4CAF50' : '#C0392B';
+  }
+  if (goal === 'maintenance') {
+    return Math.abs(delta) <= 1 ? '#4CAF50' : '#B8860B';
+  }
+  // fat_loss or unknown default
+  return gained ? '#C0392B' : '#4CAF50';
+}
+
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 
 function isToday(timestamptz) {
@@ -172,12 +188,12 @@ function ChartTooltip({ active, payload, label }) {
 
 // ─── STAT CARD ───────────────────────────────────────────────────────────────
 
-function StatCard({ label, value, sub, highlight }) {
+function StatCard({ label, value, sub, highlight, highlightColor }) {
   return (
     <div style={{
       flex: 1,
       background: '#111',
-      border: `1px solid ${highlight ? '#C0392B' : 'rgba(200,200,200,0.1)'}`,
+      border: `1px solid ${highlight ? (highlightColor || '#C0392B') : 'rgba(200,200,200,0.1)'}`,
       padding: '20px 20px 18px',
     }}>
       <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 32, color: '#F5F3EE', lineHeight: 1, marginBottom: 6 }}>
@@ -475,7 +491,7 @@ function CheckInModal({ todayLog, onClose, onSaved }) {
 
 // ─── CHECK-IN HISTORY ────────────────────────────────────────────────────────
 
-function CheckInHistory({ refreshKey }) {
+function CheckInHistory({ refreshKey, goal }) {
   const [checkIns, setCheckIns] = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [expanded, setExpanded] = useState(new Set());
@@ -612,7 +628,7 @@ function CheckInHistory({ refreshKey }) {
                       {ci.weightDelta != null && (
                         <span style={{
                           fontFamily: "'Barlow Condensed', sans-serif", fontSize: 16, fontWeight: 700, letterSpacing: '0.06em',
-                          color: ci.weightDelta < 0 ? '#4CAF50' : ci.weightDelta > 0 ? '#C0392B' : '#555',
+                          color: deltaColor(ci.weightDelta, goal),
                         }}>
                           {ci.weightDelta > 0 ? '+' : ''}{ci.weightDelta.toFixed(1)} kg
                         </span>
@@ -932,10 +948,11 @@ function OneRmTracker() {
 
 // ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
 
-export default function ProgressTab({ userId }) {
+export default function ProgressTab({ userId, plan }) {
   const [logs, setLogs]               = useState([]);
   const [loadingLogs, setLoadingLogs] = useState(true);
   const [targetWeight, setTargetWeight] = useState(null);
+  const [goal, setGoal]               = useState(null);
 
   const [inputVal, setInputVal] = useState('');
   const [saving, setSaving]     = useState(false);
@@ -973,11 +990,16 @@ export default function ProgressTab({ userId }) {
         .maybeSingle()
         .then(({ data }) => {
           if (data?.data?.targetWeight) setTargetWeight(Number(data.data.targetWeight));
+          if (data?.data?.goal) setGoal(data.data.goal);
         });
     });
   }, [fetchLogs]);
 
   // ── Derived values ───────────────────────────────────────────────────────
+
+  // plan?.user_summary?.goal takes precedence over intake goal
+  const effectiveGoal = plan?.user_summary?.goal || goal;
+  const isBulkGoal    = effectiveGoal === 'lean_bulk' || effectiveGoal === 'muscle_building';
 
   const todayLog   = logs.find(l => isToday(l.logged_at));
   const startLog   = logs[0]   || null;
@@ -992,16 +1014,31 @@ export default function ProgressTab({ userId }) {
   const yMin = allYValues.length ? Math.floor(Math.min(...allYValues) - 3) : 60;
   const yMax = allYValues.length ? Math.ceil(Math.max(...allYValues)  + 3) : 100;
 
-  let toGoDisplay = null;
-  let toGoSub     = null;
+  let toGoDisplay      = null;
+  let toGoSub          = null;
+  let toGoHighlightCol = '#C0392B';
   if (currentLog && targetWeight != null) {
-    const diff = currentLog.weight_kg - targetWeight;
+    const diff = currentLog.weight_kg - targetWeight; // positive = above target
     if (Math.abs(diff) < 0.05) {
-      toGoDisplay = '0 kg'; toGoSub = '✓ at target';
-    } else if (diff > 0) {
-      toGoDisplay = `${diff.toFixed(1)} kg`; toGoSub = '↓ to lose';
+      toGoDisplay = '0 kg';
+      toGoSub     = '✓ at target';
+    } else if (isBulkGoal) {
+      toGoHighlightCol = '#1E7A3E';
+      if (diff < 0) {
+        // Still below bulk target — keep gaining
+        toGoDisplay = `${Math.abs(diff).toFixed(1)} kg`;
+        toGoSub     = '↑ to go';
+      } else {
+        // Exceeded bulk target
+        toGoDisplay = `${diff.toFixed(1)} kg`;
+        toGoSub     = '↑ past target';
+      }
     } else {
-      toGoDisplay = `${Math.abs(diff).toFixed(1)} kg`; toGoSub = '↑ to gain';
+      if (diff > 0) {
+        toGoDisplay = `${diff.toFixed(1)} kg`; toGoSub = '↓ to lose';
+      } else {
+        toGoDisplay = `${Math.abs(diff).toFixed(1)} kg`; toGoSub = '↑ to gain';
+      }
     }
   }
 
@@ -1192,12 +1229,13 @@ export default function ProgressTab({ userId }) {
         <div style={st.statsRow}>
           <StatCard label="Starting Weight" value={startLog ? `${startLog.weight_kg} kg` : '—'} />
           <StatCard label="Current Weight"  value={currentLog ? `${currentLog.weight_kg} kg` : '—'} highlight />
-          <StatCard label="To Go"           value={toGoDisplay ?? '—'} sub={toGoSub} />
+          <StatCard label="To Go" value={toGoDisplay ?? '—'} sub={toGoSub}
+            highlight={toGoDisplay != null} highlightColor={toGoHighlightCol} />
         </div>
       )}
 
       {/* ── Check-In History ──────────────────────────────────────── */}
-      <CheckInHistory refreshKey={historyKey} />
+      <CheckInHistory refreshKey={historyKey} goal={effectiveGoal} />
 
       {/* ── 1RM Tracker ───────────────────────────────────────────── */}
       <OneRmTracker />
