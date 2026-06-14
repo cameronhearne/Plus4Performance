@@ -61,52 +61,58 @@ function inferFocus(sessionName) {
 function FlipCard({ currentWeight, targetWeight }) {
   const [flipped, setFlipped] = useState(false);
   return (
-    <div
-      onClick={() => setFlipped(f => !f)}
-      title="Tap to flip"
-      style={{ perspective: '1000px', width: 160, height: 160, cursor: 'pointer', flexShrink: 0 }}
-    >
-      <div style={{
-        width: '100%',
-        height: '100%',
-        position: 'relative',
-        transformStyle: 'preserve-3d',
-        transition: 'transform 0.55s cubic-bezier(0.4,0,0.2,1)',
-        transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
-      }}>
-        {/* Front — current weight */}
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+      <div
+        onClick={() => setFlipped(f => !f)}
+        style={{ perspective: '1000px', width: 160, height: 160, cursor: 'pointer' }}
+      >
         <div style={{
-          position: 'absolute', inset: 0,
-          backfaceVisibility: 'hidden',
-          background: '#111',
-          border: '1px solid rgba(200,200,200,0.1)',
-          display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center', gap: 6,
+          width: '100%',
+          height: '100%',
+          position: 'relative',
+          transformStyle: 'preserve-3d',
+          transition: 'transform 0.55s cubic-bezier(0.4,0,0.2,1)',
+          transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
         }}>
-          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 52, color: '#F5F3EE', lineHeight: 1 }}>
-            {currentWeight != null ? currentWeight : '—'}
+          {/* Front — current weight */}
+          <div style={{
+            position: 'absolute', inset: 0,
+            backfaceVisibility: 'hidden',
+            background: '#111',
+            border: '1px solid rgba(200,200,200,0.1)',
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center', gap: 6,
+          }}>
+            <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 52, color: '#F5F3EE', lineHeight: 1 }}>
+              {currentWeight != null ? currentWeight : '—'}
+            </div>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: '#555' }}>
+              Current Weight
+            </div>
           </div>
-          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: '#555' }}>
-            Current Weight
+          {/* Back — target weight */}
+          <div style={{
+            position: 'absolute', inset: 0,
+            backfaceVisibility: 'hidden',
+            transform: 'rotateY(180deg)',
+            background: '#111',
+            border: '1px solid rgba(200,200,200,0.1)',
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center', gap: 6,
+          }}>
+            <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 52, color: '#C0392B', lineHeight: 1 }}>
+              {targetWeight != null ? targetWeight : '—'}
+            </div>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: '#555' }}>
+              Target Weight
+            </div>
           </div>
         </div>
-        {/* Back — target weight */}
-        <div style={{
-          position: 'absolute', inset: 0,
-          backfaceVisibility: 'hidden',
-          transform: 'rotateY(180deg)',
-          background: '#111',
-          border: '1px solid rgba(200,200,200,0.1)',
-          display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center', gap: 6,
-        }}>
-          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 52, color: '#C0392B', lineHeight: 1 }}>
-            {targetWeight != null ? targetWeight : '—'}
-          </div>
-          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: '#555' }}>
-            Target Weight
-          </div>
-        </div>
+      </div>
+      {/* Discovery hint */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+        <span className="tap-dot" style={{ display: 'block', width: 4, height: 4, borderRadius: '50%', background: '#444' }} />
+        <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 8, letterSpacing: '0.22em', color: '#444', textTransform: 'uppercase' }}>tap</span>
       </div>
     </div>
   );
@@ -153,22 +159,26 @@ function ProgressRing({ startDate }) {
 // ─── STREAK BADGE ────────────────────────────────────────────────────────────
 
 function StreakBadge({ streak }) {
+  const flameSize  = streak >= 30 ? 40 : streak >= 7 ? 36 : 32;
+  const flameColor = streak === 0 ? '#333333' : streak >= 30 ? '#FF4500' : streak >= 7 ? '#FF6B00' : '#C0392B';
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, flexShrink: 0, width: 120 }}>
-      {streak === 0 ? (
-        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, color: '#444', letterSpacing: '0.08em', textAlign: 'center', lineHeight: 1.4 }}>
-          Start your<br />streak today
+      <span className={streak >= 30 ? 'flame-pulse' : ''}>
+        <Flame size={flameSize} color={flameColor} strokeWidth={1.5} />
+      </span>
+      <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 52, color: '#F5F3EE', lineHeight: 1 }}>
+        {streak}
+      </span>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: '#555' }}>
+          Session Streak
         </div>
-      ) : (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Flame size={28} color="#C0392B" strokeWidth={1.5} />
-          <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 52, color: '#F5F3EE', lineHeight: 1 }}>
-            {streak}
-          </span>
-        </div>
-      )}
-      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: '#555' }}>
-        Session Streak
+        {streak === 0 && (
+          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 9, letterSpacing: '0.1em', color: '#333', textAlign: 'center' }}>
+            Complete a session to begin
+          </div>
+        )}
       </div>
     </div>
   );
@@ -495,6 +505,10 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock }) {
       <style>{`
         .today-stats-row { display:flex; justify-content:center; align-items:center; gap:40px; flex-wrap:wrap; margin-bottom:20px; }
         @media (max-width:540px) { .today-stats-row { flex-direction:column; gap:24px; } }
+        @keyframes tapPulse { 0%,100%{opacity:0.3} 50%{opacity:1} }
+        .tap-dot { animation: tapPulse 2s ease-in-out infinite; }
+        @keyframes flamePulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+        .flame-pulse { animation: flamePulse 1.5s ease-in-out infinite; display:inline-flex; }
       `}</style>
 
       {/* ── Stats row ─────────────────────────────────────────── */}
