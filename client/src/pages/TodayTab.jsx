@@ -221,6 +221,68 @@ function StreakBadge({ streak }) {
   );
 }
 
+// ─── SESSION FOR TODAY ────────────────────────────────────────────────────────
+
+const DAY_ORDER_MON = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const DAY_NAMES_JS  = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+function getSessionForToday(plan, intakeData) {
+  const allSessions = (plan?.phases || []).flatMap(p => p.sessions || []);
+  if (!allSessions.length) return { session: null, isRestDay: false, tomorrowSession: null };
+
+  const numTrainingDays = parseInt(intakeData?.trainingDays || '4', 10);
+  const scheduleType    = intakeData?.scheduleType || 'rolling';
+  const preferredDays   = intakeData?.preferredDays || [];
+  const startDateStr    = intakeData?.startDate;
+
+  const todayDate = new Date();
+  todayDate.setHours(0, 0, 0, 0);
+  const todayName = DAY_NAMES_JS[todayDate.getDay()];
+
+  const startDate = startDateStr ? new Date(startDateStr) : new Date(todayDate);
+  startDate.setHours(0, 0, 0, 0);
+  const daysElapsed = Math.max(0, Math.floor((todayDate - startDate) / 86400000));
+
+  if (scheduleType === 'fixed' && preferredDays.length > 0) {
+    const sortedDays = [...preferredDays].sort((a, b) => DAY_ORDER_MON.indexOf(a) - DAY_ORDER_MON.indexOf(b));
+
+    if (!sortedDays.includes(todayName)) {
+      let tomorrowSession = null;
+      for (let i = 1; i <= 7; i++) {
+        const nextDate = new Date(todayDate);
+        nextDate.setDate(todayDate.getDate() + i);
+        const nextName = DAY_NAMES_JS[nextDate.getDay()];
+        if (sortedDays.includes(nextName)) {
+          const nextElapsed  = daysElapsed + i;
+          const weeksPassed  = Math.floor(nextElapsed / 7);
+          const nextDayIdx   = sortedDays.indexOf(nextName);
+          const sessionIdx   = (weeksPassed * sortedDays.length + nextDayIdx) % allSessions.length;
+          tomorrowSession    = allSessions[sessionIdx];
+          break;
+        }
+      }
+      return { session: null, isRestDay: true, tomorrowSession };
+    }
+
+    const weeksPassed = Math.floor(daysElapsed / 7);
+    const dayIdx      = sortedDays.indexOf(todayName);
+    const sessionIdx  = (weeksPassed * sortedDays.length + dayIdx) % allSessions.length;
+    return { session: allSessions[sessionIdx], isRestDay: false, tomorrowSession: null };
+  }
+
+  // Rolling: train first N days of each 7-day cycle
+  const dayInCycle = daysElapsed % 7;
+  const fullWeeks  = Math.floor(daysElapsed / 7);
+
+  if (dayInCycle >= numTrainingDays) {
+    const sessionsCompleted = (fullWeeks + 1) * numTrainingDays;
+    return { session: null, isRestDay: true, tomorrowSession: allSessions[sessionsCompleted % allSessions.length] };
+  }
+
+  const sessionsCompleted = fullWeeks * numTrainingDays + dayInCycle;
+  return { session: allSessions[sessionsCompleted % allSessions.length], isRestDay: false, tomorrowSession: null };
+}
+
 // ─── MOTIVATIONAL LINE ───────────────────────────────────────────────────────
 
 function MotivationalLine({ streak, currentWeight, startingWeight, targetWeight, weekNum }) {
@@ -259,6 +321,57 @@ function MotivationalLine({ streak, currentWeight, startingWeight, targetWeight,
     }}>
       {line}
     </p>
+  );
+}
+
+// ─── REST DAY CARD ───────────────────────────────────────────────────────────
+
+function RestDayCard({ tomorrowSession }) {
+  return (
+    <div style={{ background: '#0d0d0d', border: '1px solid rgba(200,200,200,0.12)', padding: '24px 20px', marginBottom: 12 }}>
+      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, letterSpacing: '0.3em', textTransform: 'uppercase', color: '#C0392B', marginBottom: 12 }}>
+        Rest Day
+      </div>
+      <p style={{ fontFamily: "'Barlow', sans-serif", fontSize: 13, color: '#CDCDC8', lineHeight: 1.7, margin: '0 0 16px', fontWeight: 300 }}>
+        Recovery is part of the programme. Stay active, hit your nutrition targets, and come back strong tomorrow.
+      </p>
+      {tomorrowSession && (
+        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: '#555' }}>
+          TOMORROW: {tomorrowSession.name}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── STAT CHIPS ──────────────────────────────────────────────────────────────
+
+const GOAL_LABELS = {
+  fat_loss:         'FAT LOSS',
+  muscle_building:  'LEAN BULK',
+  maintenance:      'RECOMP',
+};
+
+function StatChip({ label, value }) {
+  return (
+    <div style={{ background: '#111', border: '1px solid rgba(192,57,43,0.35)', padding: '10px 16px', flex: '1 1 80px', minWidth: 80 }}>
+      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 9, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: '#555', marginBottom: 4 }}>
+        {label}
+      </div>
+      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 16, fontWeight: 700, color: '#F5F3EE', letterSpacing: '0.06em' }}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function StatChips() {
+  return (
+    <div style={{ display: 'flex', gap: 10, marginBottom: 28, flexWrap: 'wrap' }}>
+      <StatChip label="Goal"     value="LEAN BULK" />
+      <StatChip label="Calories" value="3456 KCAL" />
+      <StatChip label="Protein"  value="228G" />
+    </div>
   );
 }
 
@@ -526,6 +639,7 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
   const [streak, setStreak]               = useState(0);
   const [showModal, setShowModal]         = useState(false);
   const [logSuccess, setLogSuccess]       = useState(false);
+  const [intakeSchedule, setIntakeSchedule] = useState({ scheduleType: 'rolling', trainingDays: '4', preferredDays: [], goal: null });
 
   useEffect(() => {
     async function load() {
@@ -554,9 +668,15 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
         .maybeSingle();
 
       if (intake?.data) {
-        if (intake.data.targetWeight) setTargetWeight(Number(intake.data.targetWeight));
-        if (intake.data.startDate)    setStartDate(intake.data.startDate);
+        if (intake.data.targetWeight)  setTargetWeight(Number(intake.data.targetWeight));
+        if (intake.data.startDate)     setStartDate(intake.data.startDate);
         if (intake.data.sessionLength) setSessionLength(intake.data.sessionLength);
+        setIntakeSchedule({
+          scheduleType:  intake.data.scheduleType  || 'rolling',
+          trainingDays:  intake.data.trainingDays  || '4',
+          preferredDays: intake.data.preferredDays || [],
+          goal:          intake.data.goal          || null,
+        });
       }
 
       // Streak — handle gracefully if table absent
@@ -572,10 +692,24 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
     load();
   }, []);
 
-  const weekNum      = getWeekNum(startDate);
-  const todaySession = plan?.phases?.[0]?.sessions?.[0];
-  const library      = plan?.exercise_library || {};
-  const nutrition    = plan?.nutrition;
+  useEffect(() => {
+    if (plan) {
+      console.log('[TodayTab] plan loaded — top-level keys:', Object.keys(plan));
+      console.log('[TodayTab] plan.user_summary:', plan.user_summary);
+      console.log('[TodayTab] plan.nutrition:', plan.nutrition);
+    }
+  }, [plan]);
+
+  const weekNum   = getWeekNum(startDate);
+  const library   = plan?.exercise_library || {};
+  const nutrition = plan?.nutrition;
+
+  const todayInfo      = (plan && isUnlocked)
+    ? getSessionForToday(plan, { ...intakeSchedule, startDate })
+    : { session: null, isRestDay: false, tomorrowSession: null };
+  const todaySession   = todayInfo.session;
+  const isRestDay      = todayInfo.isRestDay;
+  const tomorrowSession = todayInfo.tomorrowSession;
 
   async function handleSessionComplete() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -601,7 +735,11 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
     <div>
       <style>{`
         .today-stats-row { display:flex; justify-content:center; align-items:center; gap:40px; flex-wrap:wrap; margin-bottom:20px; }
-        @media (max-width:540px) { .today-stats-row { flex-direction:column; gap:24px; } }
+        @media (max-width:600px) {
+          .today-stats-row { flex-direction:column; gap:24px; align-items:center; }
+          .today-mission-card { font-size:0.9em; }
+          .today-btn { min-height:44px; }
+        }
         @keyframes tapPulse { 0%,100%{opacity:0.3} 50%{opacity:1} }
         .tap-dot { animation: tapPulse 2s ease-in-out infinite; }
         @keyframes flamePulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
@@ -626,13 +764,20 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
         weekNum={weekNum}
       />
 
+      {/* ── Stat chips ─────────────────────────────────────────── */}
+      <StatChips plan={null} intakeGoal={null} />
+
       {/* ── Today's Mission ────────────────────────────────────── */}
-      <div style={{ marginBottom: 28 }}>
+      <div style={{ marginBottom: 28 }} className="today-mission-card">
         <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 22, letterSpacing: '0.06em', color: '#F5F3EE', marginBottom: 14, marginTop: 4 }}>
           Today's Session
         </div>
-        {isUnlocked && todaySession ? (
-          <MissionCard session={todaySession} library={library} sessionLength={sessionLength} weekNum={weekNum} onComplete={handleSessionComplete} onOpenLogbook={onOpenLogbook} />
+        {isUnlocked ? (
+          isRestDay ? (
+            <RestDayCard tomorrowSession={tomorrowSession} />
+          ) : todaySession ? (
+            <MissionCard session={todaySession} library={library} sessionLength={sessionLength} weekNum={weekNum} onComplete={handleSessionComplete} onOpenLogbook={onOpenLogbook} />
+          ) : null
         ) : (
           <div style={{ position: 'relative' }}>
             <div style={{ filter: 'blur(6px)', userSelect: 'none', pointerEvents: 'none', background: '#0d0d0d', border: '1px solid rgba(200,200,200,0.12)', padding: '20px' }}>
@@ -645,7 +790,7 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
               </div>
             </div>
             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(8,8,8,0.5)' }}>
-              <button className="btn-primary" onClick={onUnlock} style={{ fontSize: 12, padding: '10px 20px' }}>
+              <button className="btn-primary today-btn" onClick={onUnlock} style={{ fontSize: 12, padding: '10px 20px' }}>
                 Unlock — £9.99/month
               </button>
             </div>

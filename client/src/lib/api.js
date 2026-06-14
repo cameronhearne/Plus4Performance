@@ -23,3 +23,19 @@ export async function submitSnapshot(intakeData, token) {
 export async function createCheckoutSession(email, token) {
   return authedPost('/create-checkout-session', { email }, token);
 }
+
+export async function createPortalSession(token) {
+  return authedPost('/create-portal-session', {}, token);
+}
+
+export async function deleteAccount(token) {
+  const res = await fetch((import.meta.env.VITE_API_URL || '') + '/delete-account', {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Request failed');
+  }
+  return res.json();
+}

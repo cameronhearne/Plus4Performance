@@ -218,6 +218,92 @@ function SortableExerciseCard(props) {
   );
 }
 
+// ─── SESSION DROPDOWN ────────────────────────────────────────────────────────
+
+function SessionDropdown({ phases, selectedSession, onSelect }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    function handleClick(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  return (
+    <div ref={ref} style={{ position: 'relative', width: '100%' }}>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        style={{
+          width: '100%', padding: '12px 14px',
+          background: '#111', border: '1px solid rgba(200,200,200,0.15)',
+          color: selectedSession ? '#F5F3EE' : '#555',
+          fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, letterSpacing: '0.06em',
+          textAlign: 'left', cursor: 'pointer',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          minHeight: 44,
+        }}
+      >
+        <span>{selectedSession?.name || 'Select a session…'}</span>
+        <span style={{ color: '#444', fontSize: 11, marginLeft: 8, flexShrink: 0 }}>{open ? '▲' : '▼'}</span>
+      </button>
+
+      {open && (
+        <div style={{
+          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 300,
+          background: '#111', border: '1px solid rgba(200,200,200,0.15)', borderTop: 'none',
+          maxHeight: 300, overflowY: 'auto',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.7)',
+        }}>
+          {(phases || []).map(phase => (
+            <React.Fragment key={phase.phase}>
+              <div style={{
+                padding: '8px 14px 6px',
+                fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700,
+                letterSpacing: '0.22em', textTransform: 'uppercase', color: '#444',
+                background: '#0d0d0d', borderBottom: '1px solid #1a1a1a',
+                userSelect: 'none',
+              }}>
+                Phase {phase.phase} — {phase.label || ''}
+              </div>
+              {(phase.sessions || []).map((s, i) => {
+                const isActive = selectedSession?.name === s.name;
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    onMouseDown={e => { e.preventDefault(); onSelect(s); setOpen(false); }}
+                    style={{
+                      display: 'block', width: '100%', textAlign: 'left', minHeight: 44,
+                      background: isActive ? '#1e1e1e' : 'none',
+                      border: 'none', borderBottom: '1px solid #1a1a1a',
+                      padding: '10px 14px 10px 22px',
+                      color: isActive ? '#C0392B' : '#CDCDC8',
+                      fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14,
+                      letterSpacing: '0.06em', cursor: 'pointer',
+                    }}
+                    onMouseEnter={e => {
+                      if (!isActive) { e.currentTarget.style.color = '#C0392B'; e.currentTarget.style.background = '#1a1a1a'; }
+                    }}
+                    onMouseLeave={e => {
+                      if (!isActive) { e.currentTarget.style.color = '#CDCDC8'; e.currentTarget.style.background = 'none'; }
+                    }}
+                  >
+                    {s.name}
+                  </button>
+                );
+              })}
+            </React.Fragment>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── HISTORY ENTRY ───────────────────────────────────────────────────────────
 
 function HistoryEntry({ group, expanded, onToggle, prSet }) {
@@ -449,6 +535,10 @@ export default function Logbook({ userId, plan, preselectedSession }) {
         @media (max-width: 480px) {
           .logbook-fields { grid-template-columns: 1fr; }
         }
+        .logbook-save-btn { min-height: 44px; padding: 18px 0; }
+        @media (max-width: 600px) {
+          .logbook-save-btn { min-height: 52px; }
+        }
       `}</style>
 
       {/* ── Session selector ──────────────────────────────────── */}
@@ -459,29 +549,11 @@ export default function Logbook({ userId, plan, preselectedSession }) {
             Unlock your plan to access session data.
           </p>
         ) : (
-          <select
-            value={selectedSession?.name || ''}
-            onChange={e => {
-              const found = allSessions.find(s => s.name === e.target.value);
-              if (found) loadSession(found);
-            }}
-            style={{
-              width: '100%', padding: '12px 14px', background: '#111',
-              border: '1px solid rgba(200,200,200,0.15)',
-              color: selectedSession ? '#F5F3EE' : '#555',
-              fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14,
-              letterSpacing: '0.06em', outline: 'none', cursor: 'pointer',
-            }}
-          >
-            <option value="">Select a session...</option>
-            {(plan?.phases || []).map(phase => (
-              <optgroup key={phase.phase} label={`Phase ${phase.phase} — ${phase.label || ''}`}>
-                {(phase.sessions || []).map((s, i) => (
-                  <option key={i} value={s.name}>{s.name}</option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
+          <SessionDropdown
+            phases={plan?.phases || []}
+            selectedSession={selectedSession}
+            onSelect={loadSession}
+          />
         )}
       </div>
 
@@ -540,7 +612,8 @@ export default function Logbook({ userId, plan, preselectedSession }) {
               type="button"
               onClick={handleSave}
               disabled={saving}
-              style={{ width: '100%', background: '#C0392B', border: 'none', color: '#fff', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', padding: '18px 0', cursor: saving ? 'default' : 'pointer', opacity: saving ? 0.7 : 1, marginTop: 4 }}
+              className="logbook-save-btn"
+              style={{ width: '100%', background: '#C0392B', border: 'none', color: '#fff', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', cursor: saving ? 'default' : 'pointer', opacity: saving ? 0.7 : 1, marginTop: 4 }}
             >
               {saving ? '…' : 'Save Session Log'}
             </button>

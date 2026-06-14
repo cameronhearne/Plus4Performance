@@ -180,7 +180,7 @@ ${JSON.stringify(intakeData, null, 2)}`;
 
 function cors(res) {
   res.setHeader('Access-Control-Allow-Origin', process.env.CLIENT_ORIGIN || '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, GET, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 }
 
@@ -540,6 +540,52 @@ async function handleAdminGeneratePlan(req, res) {
   });
 }
 
+// POST /create-portal-session
+// Returns a Stripe billing-portal URL for the authenticated user.
+async function handleCreatePortalSession(req, res) {
+  const userId = await getUserIdFromToken(req.headers['authorization']);
+  if (!userId) return json(res, 401, { error: 'Unauthorized' });
+
+  const { data: sub } = await supabaseAdmin
+    .from('subscriptions')
+    .select('stripe_customer_id')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (!sub?.stripe_customer_id) return json(res, 404, { error: 'No subscription found' });
+
+  const origin = process.env.CLIENT_ORIGIN || 'https://plus4performance.com';
+  try {
+    const session = await stripe.billingPortal.sessions.create({
+      customer: sub.stripe_customer_id,
+      return_url: `${origin}/dashboard`,
+    });
+    return json(res, 200, { url: session.url });
+  } catch (err) {
+    console.error('Portal session error:', err);
+    return json(res, 500, { error: 'Failed to create portal session' });
+  }
+}
+
+// DELETE /delete-account
+// Permanently removes all user data then deletes the auth user.
+async function handleDeleteAccount(req, res) {
+  const userId = await getUserIdFromToken(req.headers['authorization']);
+  if (!userId) return json(res, 401, { error: 'Unauthorized' });
+
+  try {
+    for (const table of ['weight_logs', 'lift_logs', 'session_completions', 'intake_submissions', 'snapshots', 'plans', 'subscriptions']) {
+      await supabaseAdmin.from(table).delete().eq('user_id', userId);
+    }
+    const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
+    if (error) throw error;
+    return json(res, 200, { ok: true });
+  } catch (err) {
+    console.error('Delete account error:', err);
+    return json(res, 500, { error: 'Failed to delete account: ' + err.message });
+  }
+}
+
 // ─── HTTP SERVER ──────────────────────────────────────────────────────────────
 
 const server = http.createServer(async (req, res) => {
@@ -572,6 +618,14 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'POST' && url === '/admin/generate-plan') {
       return await handleAdminGeneratePlan(req, res);
+    }
+
+    if (req.method === 'POST' && url === '/create-portal-session') {
+      return await handleCreatePortalSession(req, res);
+    }
+
+    if (req.method === 'DELETE' && url === '/delete-account') {
+      return await handleDeleteAccount(req, res);
     }
 
     json(res, 404, { error: 'Not found' });

@@ -6,6 +6,7 @@ import AchievementsTab from './AchievementsTab';
 import ProgressTab from './ProgressTab';
 import TodayTab from './TodayTab';
 import Logbook from './Logbook';
+import AccountTab from './AccountTab';
 
 const TABS = [
   { id: 'today', label: 'Today' },
@@ -14,6 +15,7 @@ const TABS = [
   { id: 'progress', label: 'Progress' },
   { id: 'achievements', label: 'Achievements' },
   { id: 'logbook', label: 'Logbook' },
+  { id: 'account', label: 'Account' },
 ];
 
 // ─── LOCKED OVERLAY ──────────────────────────────────────────────────────────
@@ -230,17 +232,30 @@ function MealTemplateCard({ label, meals }) {
       </button>
       {open && (
         <div style={{ padding: '0 20px 20px' }}>
-          {(meals || []).map((meal, i) => (
-            <div key={i} style={{ marginBottom: 16 }}>
-              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, fontWeight: 700, color: '#C8C8C8', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>{meal.name}</div>
-              {(meal.foods || []).map((food, j) => (
-                <div key={j} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#CDCDC8', padding: '4px 0', borderBottom: '1px solid #1a1a1a' }}>
-                  <span>{food.name}</span>
-                  <span style={{ color: '#787878' }}>{food.amount} · {food.cal} kcal</span>
+          {(meals || []).map((meal, i) => {
+            const foods = meal.foods || meal.items || [];
+            return (
+              <div key={i} style={{ marginBottom: 16 }}>
+                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, fontWeight: 700, color: '#C8C8C8', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>
+                  {meal.name || meal.title || `Meal ${i + 1}`}
                 </div>
-              ))}
-            </div>
-          ))}
+                {foods.length > 0 ? foods.map((food, j) => (
+                  typeof food === 'string' ? (
+                    <div key={j} style={{ fontSize: 13, color: '#CDCDC8', padding: '4px 0', borderBottom: '1px solid #1a1a1a' }}>{food}</div>
+                  ) : (
+                    <div key={j} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#CDCDC8', padding: '4px 0', borderBottom: '1px solid #1a1a1a' }}>
+                      <span>{food.name}</span>
+                      <span style={{ color: '#787878' }}>
+                        {[food.amount, food.cal != null ? `${food.cal} kcal` : null].filter(Boolean).join(' · ')}
+                      </span>
+                    </div>
+                  )
+                )) : (
+                  <div style={{ fontSize: 12, color: '#444', padding: '4px 0' }}>No items listed.</div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
@@ -248,23 +263,29 @@ function MealTemplateCard({ label, meals }) {
 }
 
 function GroceryList({ list }) {
-  const sections = [
-    { key: 'proteins', label: 'Proteins' },
-    { key: 'carbs', label: 'Carbs' },
-    { key: 'veg', label: 'Vegetables & Fruit' },
-    { key: 'fats', label: 'Fats' },
+  const KNOWN = [
+    { key: 'proteins',    label: 'Proteins' },
+    { key: 'carbs',       label: 'Carbs' },
+    { key: 'veg',         label: 'Vegetables & Fruit' },
+    { key: 'fats',        label: 'Fats' },
     { key: 'supplements', label: 'Supplements' },
   ];
+  const knownKeys = new Set(KNOWN.map(s => s.key));
+  const extraKeys = Object.keys(list || {})
+    .filter(k => !knownKeys.has(k) && Array.isArray(list[k]) && list[k].length > 0)
+    .map(k => ({ key: k, label: k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) }));
+  const sections = [...KNOWN, ...extraKeys];
+
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-      {sections.map(({ key, label }) => list[key]?.length ? (
+      {sections.map(({ key, label }) => (list[key]?.length ? (
         <div key={key} style={styles.infoCard}>
           <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#787878', marginBottom: 10 }}>{label}</div>
           {list[key].map((item, i) => (
             <div key={i} style={{ fontSize: 13, color: '#CDCDC8', padding: '3px 0', borderBottom: '1px solid #1a1a1a' }}>{item}</div>
           ))}
         </div>
-      ) : null)}
+      ) : null))}
     </div>
   );
 }
@@ -279,6 +300,7 @@ export default function Dashboard() {
   const [snapshot, setSnapshot] = useState(null);
   const [plan, setPlan] = useState(null);
   const [isUnlocked, setIsUnlocked] = useState(false);
+  const [subRow, setSubRow] = useState(null);
   const [loadingUnlock, setLoadingUnlock] = useState(false);
   const [logbookSession, setLogbookSession] = useState(null);
 
@@ -306,7 +328,7 @@ export default function Dashboard() {
 
       const { data: sub, error: subErr } = await supabase
         .from('subscriptions')
-        .select('status, current_period_end')
+        .select('status, current_period_end, stripe_customer_id, stripe_subscription_id')
         .eq('user_id', user.id)
         .eq('status', 'active')
         .limit(1)
@@ -315,6 +337,7 @@ export default function Dashboard() {
 
       const subscribed = sub && (!sub.current_period_end || new Date(sub.current_period_end) > new Date());
       setIsUnlocked(!!subscribed);
+      if (sub) setSubRow(sub);
 
       if (subscribed) {
         const { data: planRow, error: planErr } = await supabase
@@ -429,6 +452,7 @@ export default function Dashboard() {
           {activeTab === 'progress' && <ProgressTab userId={user?.id} />}
           {activeTab === 'achievements' && <AchievementsTab userId={user?.id} />}
           {activeTab === 'logbook' && <Logbook userId={user?.id} plan={plan} preselectedSession={logbookSession} />}
+          {activeTab === 'account' && <AccountTab user={user} plan={plan} isUnlocked={isUnlocked} subRow={subRow} onUnlock={handleUnlock} />}
         </div>
       </div>
     </div>
