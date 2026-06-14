@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { createCheckoutSession } from '../lib/api';
 import AchievementsTab from './AchievementsTab';
 import ProgressTab from './ProgressTab';
+import TodayTab from './TodayTab';
 
 const TABS = [
   { id: 'today', label: 'Today' },
@@ -46,65 +47,6 @@ function BlurredCard({ children, onUnlock }) {
 
 // ─── TAB CONTENT ─────────────────────────────────────────────────────────────
 
-function TabToday({ snapshot, plan, isUnlocked, onUnlock }) {
-  const todaySession = plan?.phases?.[0]?.sessions?.[0];
-  const library = plan?.exercise_library || {};
-
-  return (
-    <div>
-      {/* Snapshot always visible */}
-      {snapshot && (
-        <div style={styles.snapshotCard}>
-          <div style={styles.snapshotEyebrow}>Your Snapshot</div>
-          <p style={styles.snapshotSummary}>{snapshot.coach_summary}</p>
-          <div style={styles.snapshotStats}>
-            <div style={styles.stat}>
-              <div style={styles.statVal}>{snapshot.calorie_target}</div>
-              <div style={styles.statLabel}>kcal / day</div>
-            </div>
-            <div style={styles.stat}>
-              <div style={styles.statVal}>{snapshot.protein_target}g</div>
-              <div style={styles.statLabel}>protein</div>
-            </div>
-            <div style={styles.stat}>
-              <div style={styles.statVal}>{snapshot.split_recommendation?.split(' ')[0]}</div>
-              <div style={styles.statLabel}>split</div>
-            </div>
-          </div>
-          <div style={styles.timeline}>{snapshot.goal_timeline}</div>
-        </div>
-      )}
-
-      <div style={styles.sectionHead}>Today's Session</div>
-      {isUnlocked && todaySession ? (
-        <SessionCard session={todaySession} library={library} />
-      ) : (
-        <BlurredCard onUnlock={onUnlock}>
-          <div style={styles.mockCard}>
-            <div style={styles.mockTitle}>Upper Body A</div>
-            <div style={styles.mockRow}><span>Barbell Bench Press</span><span>4 × 6–8</span></div>
-            <div style={styles.mockRow}><span>Incline Dumbbell Press</span><span>3 × 10–12</span></div>
-            <div style={styles.mockRow}><span>Cable Flyes</span><span>3 × 12–15</span></div>
-          </div>
-        </BlurredCard>
-      )}
-
-      <div style={styles.sectionHead}>Today's Nutrition</div>
-      {isUnlocked && plan ? (
-        <NutritionCard nutrition={plan.nutrition} />
-      ) : (
-        <BlurredCard onUnlock={onUnlock}>
-          <div style={styles.mockCard}>
-            <div style={styles.mockRow}><span>Calories</span><span>2,800 kcal</span></div>
-            <div style={styles.mockRow}><span>Protein</span><span>180g</span></div>
-            <div style={styles.mockRow}><span>Carbs</span><span>320g</span></div>
-            <div style={styles.mockRow}><span>Fat</span><span>78g</span></div>
-          </div>
-        </BlurredCard>
-      )}
-    </div>
-  );
-}
 
 function TabPlan({ plan, isUnlocked, onUnlock }) {
   const [selectedPhase, setSelectedPhase] = useState(0);
@@ -473,7 +415,7 @@ export default function Dashboard() {
 
         {/* Tab content */}
         <div style={styles.content}>
-          {activeTab === 'today' && <TabToday snapshot={snapshot} plan={plan} isUnlocked={isUnlocked} onUnlock={handleUnlock} />}
+          {activeTab === 'today' && <TodayTab snapshot={snapshot} plan={plan} isUnlocked={isUnlocked} onUnlock={handleUnlock} />}
           {activeTab === 'plan' && <TabPlan plan={plan} isUnlocked={isUnlocked} onUnlock={handleUnlock} />}
           {activeTab === 'nutrition' && <TabNutrition plan={plan} isUnlocked={isUnlocked} onUnlock={handleUnlock} />}
           {activeTab === 'progress' && <ProgressTab userId={user?.id} />}
