@@ -768,26 +768,46 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
 
       if (!completions) return;
 
+      console.log('[Achievements] checking unlocks, completions count:', completions.length);
+      console.log('[Achievements] userId:', user.id);
+
       const newStreak = calcStreak(completions);
       setStreak(newStreak);
 
       // first_rep — very first session ever
       if (completions.length === 1) {
-        await unlockAchievement(supabase, user.id, 'first_rep', 100);
+        try {
+          await unlockAchievement(supabase, user.id, 'first_rep', 100);
+          console.log('[Achievements] unlocked: first_rep');
+        } catch (e) {
+          console.error('[Achievements] error unlocking first_rep:', e);
+        }
       }
 
       // on_fire — 7-day session streak
       if (newStreak >= 7) {
-        await unlockAchievement(supabase, user.id, 'on_fire', 100);
+        try {
+          await unlockAchievement(supabase, user.id, 'on_fire', 100);
+          console.log('[Achievements] unlocked: on_fire');
+        } catch (e) {
+          console.error('[Achievements] error unlocking on_fire:', e);
+        }
       }
 
       // week1_warrior — completed all scheduled sessions in week 1
       const numTrainingDays = parseInt(intakeSchedule.trainingDays || '4', 10);
       const week1Count = completions.filter(c => c.week_number === 1).length;
       if (week1Count >= numTrainingDays) {
-        await unlockAchievement(supabase, user.id, 'week1_warrior', 150);
+        try {
+          await unlockAchievement(supabase, user.id, 'week1_warrior', 150);
+          console.log('[Achievements] unlocked: week1_warrior');
+        } catch (e) {
+          console.error('[Achievements] error unlocking week1_warrior:', e);
+        }
       }
-    } catch { /* ignore if table absent */ }
+    } catch (e) {
+      console.error('[Achievements] handleSessionComplete error:', e);
+    }
   }
 
   function handleLogSuccess(kg) {
