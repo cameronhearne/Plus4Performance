@@ -394,6 +394,17 @@ function StatChip({ label, value }) {
   );
 }
 
+function formatGoal(goal) {
+  const labels = {
+    'muscle_building': 'MUSCLE BUILDING',
+    'lean_bulk':       'LEAN BULK',
+    'fat_loss':        'FAT LOSS',
+    'maintenance':     'MAINTENANCE',
+    'recomposition':   'RECOMPOSITION',
+  };
+  return labels[goal?.toLowerCase()] || (goal ? goal.toUpperCase().replace(/_/g, ' ') : 'LEAN BULK');
+}
+
 function StatChips() {
   return (
     <div style={{ display: 'flex', gap: 10, marginBottom: 28, flexWrap: 'wrap' }}>
@@ -894,7 +905,7 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
         <div style={{ background: '#111', border: '1px solid #C0392B', borderRadius: '8px', padding: '12px 20px', textAlign: 'center', minWidth: '100px' }}>
           <div style={{ fontSize: '10px', color: '#666', letterSpacing: '0.15em', marginBottom: '6px', fontFamily: 'inherit' }}>GOAL</div>
           <div style={{ fontSize: '16px', color: '#fff', fontWeight: '700', fontFamily: 'inherit' }}>
-            {plan?.user_summary?.goal || plan?.nutrition?.goal || 'LEAN BULK'}
+            {formatGoal(plan?.user_summary?.goal || plan?.nutrition?.goal)}
           </div>
         </div>
         <div style={{ background: '#111', border: '1px solid #C0392B', borderRadius: '8px', padding: '12px 20px', textAlign: 'center', minWidth: '100px' }}>
