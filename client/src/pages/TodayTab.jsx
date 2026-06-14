@@ -46,20 +46,48 @@ function localDayKey(date) {
   return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
 }
 
-function calcStreak(completions) {
-  if (!completions?.length) return 0;
-  const daySet = new Set(completions.map(c => localDayKey(new Date(c.completed_at))));
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  if (!daySet.has(localDayKey(today)) && !daySet.has(localDayKey(yesterday))) return 0;
-  const cursor = daySet.has(localDayKey(today)) ? new Date(today) : new Date(yesterday);
-  let n = 0;
-  while (daySet.has(localDayKey(cursor))) {
-    n++;
-    cursor.setDate(cursor.getDate() - 1);
+function calcStreak(completions, trainingDays) {
+  if (!completions?.length || !trainingDays) return 0;
+
+  // Returns 'YYYY-MM-DD' of the Monday starting the ISO week containing `date`
+  function weekMonday(date) {
+    const d = new Date(date);
+    const daysSinceMonday = (d.getDay() + 6) % 7; // Sun=6, Mon=0, …, Sat=5
+    d.setDate(d.getDate() - daysSinceMonday);
+    return d.getFullYear() + '-' +
+      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
   }
-  return n;
+
+  // Count completions per week
+  const weekCounts = {};
+  completions.forEach(c => {
+    const k = weekMonday(new Date(c.completed_at));
+    weekCounts[k] = (weekCounts[k] || 0) + 1;
+  });
+
+  const currentKey = weekMonday(new Date());
+
+  function subWeek(key) {
+    const [y, m, d] = key.split('-').map(Number);
+    const dt = new Date(y, m - 1, d - 7);
+    return dt.getFullYear() + '-' +
+      String(dt.getMonth() + 1).padStart(2, '0') + '-' +
+      String(dt.getDate()).padStart(2, '0');
+  }
+
+  // If the current week already hit the target, include it; otherwise skip it
+  // (still in progress — don't penalise an incomplete week)
+  let checkKey = (weekCounts[currentKey] || 0) >= trainingDays
+    ? currentKey
+    : subWeek(currentKey);
+
+  let streak = 0;
+  while ((weekCounts[checkKey] || 0) >= trainingDays) {
+    streak++;
+    checkKey = subWeek(checkKey);
+  }
+  return streak;
 }
 
 function getWeekNum(startDateStr) {
@@ -197,8 +225,8 @@ function ProgressRing({ startDate }) {
 // ─── STREAK BADGE ────────────────────────────────────────────────────────────
 
 function StreakBadge({ streak }) {
-  const flameSize  = streak >= 30 ? 40 : streak >= 7 ? 36 : 32;
-  const flameColor = streak === 0 ? '#333333' : streak >= 30 ? '#FF4500' : streak >= 7 ? '#FF6B00' : '#C0392B';
+  const flameSize  = streak >= 8 ? 40 : streak >= 3 ? 36 : 32;
+  const flameColor = streak === 0 ? '#333333' : streak >= 8 ? '#FF4500' : streak >= 3 ? '#FF6B00' : '#C0392B';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, flexShrink: 0, width: 120 }}>
@@ -695,12 +723,13 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
 
       // Streak — handle gracefully if table absent
       try {
+        const trainingDays = parseInt(intake?.data?.trainingDays || '4', 10);
         const { data: completions, error: cErr } = await supabase
           .from('session_completions')
           .select('completed_at')
           .eq('user_id', user.id)
           .order('completed_at', { ascending: false });
-        if (!cErr && completions) setStreak(calcStreak(completions));
+        if (!cErr && completions) setStreak(calcStreak(completions, trainingDays));
       } catch { /* table may not exist yet */ }
     }
     load();
@@ -771,7 +800,8 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
       console.log('[Achievements] checking unlocks, completions count:', completions.length);
       console.log('[Achievements] userId:', user.id);
 
-      const newStreak = calcStreak(completions);
+      const numTrainingDays = parseInt(intakeSchedule.trainingDays || '4', 10);
+      const newStreak = calcStreak(completions, numTrainingDays);
       setStreak(newStreak);
 
       // first_rep — unlock on every session call; upsert ignoreDuplicates makes it idempotent
@@ -782,8 +812,8 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
         console.error('[Achievements] error unlocking first_rep:', e);
       }
 
-      // on_fire — 7-day session streak
-      if (newStreak >= 7) {
+      // on_fire — 3 consecutive successful weeks
+      if (newStreak >= 3) {
         try {
           await unlockAchievement(supabase, user.id, 'on_fire', 100);
           console.log('[Achievements] unlocked: on_fire');
@@ -792,8 +822,17 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
         }
       }
 
+      // unstoppable — 8 consecutive successful weeks
+      if (newStreak >= 8) {
+        try {
+          await unlockAchievement(supabase, user.id, 'unstoppable', 300);
+          console.log('[Achievements] unlocked: unstoppable');
+        } catch (e) {
+          console.error('[Achievements] error unlocking unstoppable:', e);
+        }
+      }
+
       // week1_warrior — completed all scheduled sessions in week 1
-      const numTrainingDays = parseInt(intakeSchedule.trainingDays || '4', 10);
       const week1Count = completions.filter(c => c.week_number === 1).length;
       if (week1Count >= numTrainingDays) {
         try {
