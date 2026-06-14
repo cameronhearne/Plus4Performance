@@ -2,6 +2,43 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Flame } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
+/*
+  ─── SUPABASE SQL — run once in the SQL editor ─────────────────────────────
+
+  create table session_completions (
+    id uuid default gen_random_uuid() primary key,
+    user_id uuid references auth.users(id) on delete cascade,
+    session_name text not null,
+    completed_at timestamptz not null default now(),
+    week_number int,
+    plan_id uuid
+  );
+  alter table session_completions enable row level security;
+  create policy "session_completions_all" on session_completions
+    for all to authenticated
+    using (auth.uid() = user_id)
+    with check (auth.uid() = user_id);
+  grant all on session_completions to authenticated;
+
+  create table lift_logs (
+    id uuid default gen_random_uuid() primary key,
+    user_id uuid references auth.users(id) on delete cascade,
+    exercise_name text not null,
+    weight_kg numeric(5,2) not null,
+    logged_at timestamptz not null default now(),
+    session_name text,
+    week_number int
+  );
+  alter table lift_logs enable row level security;
+  create policy "lift_logs_all" on lift_logs
+    for all to authenticated
+    using (auth.uid() = user_id)
+    with check (auth.uid() = user_id);
+  grant all on lift_logs to authenticated;
+
+  ───────────────────────────────────────────────────────────────────────────
+*/
+
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 
 function localDayKey(date) {
@@ -245,14 +282,81 @@ function Pill({ children }) {
   );
 }
 
-function MissionCard({ session, library, sessionLength }) {
-  const [open, setOpen]         = useState(false);
+function MissionCard({ session, library, sessionLength, weekNum, onComplete }) {
+  const [open, setOpen]             = useState(false);
   const [expandedEx, setExpandedEx] = useState(null);
+  const [completing, setCompleting] = useState(false);
   const [completed, setCompleted]   = useState(false);
+  // lift logging
+  const [liftWeights, setLiftWeights] = useState({});   // name → input string
+  const [liftSaved,   setLiftSaved]   = useState({});   // name → bool (tick)
+  const [lastLifts,   setLastLifts]   = useState({});   // name → last weight_kg
 
-  const exCount   = session.exercises?.length ?? 0;
-  const duration  = sessionLength ? `${sessionLength} min` : null;
-  const focus     = inferFocus(session.name);
+  const exCount  = session.exercises?.length ?? 0;
+  const duration = sessionLength ? `${sessionLength} min` : null;
+  const focus    = inferFocus(session.name);
+
+  // Fetch last logged weight for each exercise when table expands
+  useEffect(() => {
+    if (!open) return;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const names = (session.exercises || []).map(ex => library[ex.ex]?.name || ex.ex);
+      if (!names.length) return;
+      const { data } = await supabase
+        .from('lift_logs')
+        .select('exercise_name, weight_kg')
+        .eq('user_id', user.id)
+        .in('exercise_name', names)
+        .order('logged_at', { ascending: false });
+      if (data) {
+        const last = {};
+        for (const r of data) {
+          if (!(r.exercise_name in last)) last[r.exercise_name] = r.weight_kg;
+        }
+        setLastLifts(last);
+      }
+    })();
+  }, [open, session, library]);
+
+  async function handleComplete() {
+    setCompleting(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setCompleting(false); return; }
+    const { error } = await supabase.from('session_completions').insert({
+      user_id: user.id,
+      session_name: session.name,
+      completed_at: new Date().toISOString(),
+      week_number: weekNum,
+    });
+    setCompleting(false);
+    if (!error) {
+      setCompleted(true);
+      onComplete?.();
+    }
+  }
+
+  async function handleSaveLift(e, exerciseName) {
+    e.stopPropagation();
+    const kg = parseFloat(liftWeights[exerciseName] || '');
+    if (!kg || kg <= 0) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { error } = await supabase.from('lift_logs').insert({
+      user_id: user.id,
+      exercise_name: exerciseName,
+      weight_kg: kg,
+      logged_at: new Date().toISOString(),
+      session_name: session.name,
+      week_number: weekNum,
+    });
+    if (!error) {
+      setLiftSaved(prev => ({ ...prev, [exerciseName]: true }));
+      setLastLifts(prev => ({ ...prev, [exerciseName]: kg }));
+      setTimeout(() => setLiftSaved(prev => ({ ...prev, [exerciseName]: false })), 2000);
+    }
+  }
 
   return (
     <div style={{ background: '#0d0d0d', border: '1px solid rgba(200,200,200,0.12)', marginBottom: 12 }}>
@@ -271,7 +375,6 @@ function MissionCard({ session, library, sessionLength }) {
           </div>
           <span style={{ color: '#555', fontSize: 20, paddingTop: 2 }}>{open ? '−' : '+'}</span>
         </div>
-        {/* Pills */}
         <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
           <Pill>{exCount} exercises</Pill>
           {duration && <Pill>{duration}</Pill>}
@@ -285,7 +388,7 @@ function MissionCard({ session, library, sessionLength }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 4 }}>
             <thead>
               <tr>
-                {['Exercise', 'Sets', 'Reps', 'Rest'].map(h => (
+                {['Exercise', 'Sets', 'Reps', 'Rest', 'Weight'].map(h => (
                   <th key={h} style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#787878', padding: '8px 8px 8px 0', textAlign: 'left', borderBottom: '1px solid #222' }}>
                     {h}
                   </th>
@@ -294,27 +397,64 @@ function MissionCard({ session, library, sessionLength }) {
             </thead>
             <tbody>
               {(session.exercises || []).map((ex, i) => {
-                const info   = library[ex.ex] || {};
-                const name   = info.name || ex.ex;
-                const isOpen = expandedEx === i;
-                const hasCue = !!(info.cues || info.common_mistakes || info.injury_modifications);
+                const info      = library[ex.ex] || {};
+                const name      = info.name || ex.ex;
+                const isOpen    = expandedEx === i;
+                const hasCue    = !!(info.cues || info.common_mistakes || info.injury_modifications);
+                const lastKg    = lastLifts[name];
+                const saved     = liftSaved[name];
+
                 return (
                   <React.Fragment key={i}>
                     <tr
                       style={{ background: i % 2 === 0 ? '#111' : '#0d0d0d', cursor: hasCue ? 'pointer' : 'default' }}
                       onClick={() => hasCue && setExpandedEx(isOpen ? null : i)}
                     >
-                      <td style={{ fontSize: 13, color: '#CDCDC8', padding: '10px 8px 10px 0', verticalAlign: 'top' }}>
+                      <td style={{ fontSize: 13, color: '#CDCDC8', padding: '10px 8px 10px 0', verticalAlign: 'middle' }}>
                         {name}
                         {hasCue && <span style={{ color: '#444', fontSize: 11, marginLeft: 6 }}>{isOpen ? '▲' : '▼'}</span>}
                       </td>
-                      <td style={{ fontSize: 13, color: '#CDCDC8', padding: '10px 8px', textAlign: 'center', verticalAlign: 'top' }}>{ex.sets}</td>
-                      <td style={{ fontSize: 13, color: '#CDCDC8', padding: '10px 8px', textAlign: 'center', verticalAlign: 'top' }}>{ex.reps}</td>
-                      <td style={{ fontSize: 13, color: '#CDCDC8', padding: '10px 8px', textAlign: 'center', verticalAlign: 'top' }}>{ex.rest}</td>
+                      <td style={{ fontSize: 13, color: '#CDCDC8', padding: '10px 8px', textAlign: 'center', verticalAlign: 'middle' }}>{ex.sets}</td>
+                      <td style={{ fontSize: 13, color: '#CDCDC8', padding: '10px 8px', textAlign: 'center', verticalAlign: 'middle' }}>{ex.reps}</td>
+                      <td style={{ fontSize: 13, color: '#CDCDC8', padding: '10px 8px', textAlign: 'center', verticalAlign: 'middle' }}>{ex.rest}</td>
+                      {/* Weight logging cell */}
+                      <td style={{ padding: '8px 0 8px 8px', verticalAlign: 'middle' }} onClick={e => e.stopPropagation()}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                          <input
+                            type="number"
+                            step="0.5"
+                            value={liftWeights[name] || ''}
+                            onChange={e => setLiftWeights(prev => ({ ...prev, [name]: e.target.value }))}
+                            onClick={e => e.stopPropagation()}
+                            placeholder={lastKg != null ? `Last: ${lastKg}` : '0 kg'}
+                            style={{
+                              width: 72, padding: '5px 6px',
+                              background: '#1a1a1a', border: '1px solid #2a2a2a',
+                              color: '#CDCDC8', fontFamily: "'Barlow Condensed', sans-serif",
+                              fontSize: 12, outline: 'none', textAlign: 'center',
+                            }}
+                          />
+                          {saved ? (
+                            <span style={{ color: '#4CAF50', fontSize: 15, lineHeight: 1 }}>✓</span>
+                          ) : (
+                            <button
+                              onClick={e => handleSaveLift(e, name)}
+                              style={{
+                                background: 'none', border: 'none', cursor: 'pointer',
+                                color: '#C0392B', fontFamily: "'Barlow Condensed', sans-serif",
+                                fontSize: 11, fontWeight: 700, letterSpacing: '0.12em',
+                                textTransform: 'uppercase', padding: '2px 0',
+                              }}
+                            >
+                              Save
+                            </button>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                     {isOpen && hasCue && (
                       <tr style={{ background: '#0a0a0a' }}>
-                        <td colSpan={4} style={{ padding: '10px 0 14px', fontSize: 12, color: '#CDCDC8', lineHeight: 1.6 }}>
+                        <td colSpan={5} style={{ padding: '10px 0 14px', fontSize: 12, color: '#CDCDC8', lineHeight: 1.6 }}>
                           {info.cues && <div style={{ marginBottom: 4 }}><span style={{ color: '#787878', fontWeight: 700 }}>Cue: </span>{info.cues}</div>}
                           {info.common_mistakes && <div style={{ marginBottom: 4 }}><span style={{ color: '#787878', fontWeight: 700 }}>Avoid: </span>{info.common_mistakes}</div>}
                           {info.injury_modifications && <div><span style={{ color: '#787878', fontWeight: 700 }}>Mod: </span>{info.injury_modifications}</div>}
@@ -332,10 +472,11 @@ function MissionCard({ session, library, sessionLength }) {
             {!completed ? (
               <button
                 type="button"
-                onClick={() => setCompleted(true)}
-                style={{ width: '100%', background: '#C0392B', border: 'none', color: '#fff', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', padding: '16px 0', cursor: 'pointer' }}
+                onClick={handleComplete}
+                disabled={completing}
+                style={{ width: '100%', background: '#C0392B', border: 'none', color: '#fff', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', padding: '16px 0', cursor: completing ? 'default' : 'pointer', opacity: completing ? 0.7 : 1 }}
               >
-                Session Complete
+                {completing ? '…' : 'Session Complete'}
               </button>
             ) : (
               <div style={{ textAlign: 'center', padding: '16px 0', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, fontWeight: 700, letterSpacing: '0.14em', color: '#4CAF50' }}>
@@ -493,6 +634,19 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock }) {
   const library      = plan?.exercise_library || {};
   const nutrition    = plan?.nutrition;
 
+  async function handleSessionComplete() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    try {
+      const { data: completions } = await supabase
+        .from('session_completions')
+        .select('completed_at')
+        .eq('user_id', user.id)
+        .order('completed_at', { ascending: false });
+      if (completions) setStreak(calcStreak(completions));
+    } catch { /* ignore if table absent */ }
+  }
+
   function handleLogSuccess(kg) {
     setCurrentWeight(kg);
     setShowModal(false);
@@ -533,7 +687,7 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock }) {
           Today's Session
         </div>
         {isUnlocked && todaySession ? (
-          <MissionCard session={todaySession} library={library} sessionLength={sessionLength} />
+          <MissionCard session={todaySession} library={library} sessionLength={sessionLength} weekNum={weekNum} onComplete={handleSessionComplete} />
         ) : (
           <div style={{ position: 'relative' }}>
             <div style={{ filter: 'blur(6px)', userSelect: 'none', pointerEvents: 'none', background: '#0d0d0d', border: '1px solid rgba(200,200,200,0.12)', padding: '20px' }}>
