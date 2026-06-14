@@ -287,6 +287,17 @@ function MissionCard({ session, library, sessionLength, weekNum, onComplete, onO
   const [expandedEx, setExpandedEx] = useState(null);
   const [completing, setCompleting] = useState(false);
   const [completed, setCompleted]   = useState(false);
+  const [hasBeenOpened, setHasBeenOpened] = useState(
+    () => localStorage.getItem('missionCardOpened') === 'true'
+  );
+
+  function handleToggle() {
+    if (!open && !hasBeenOpened) {
+      setHasBeenOpened(true);
+      localStorage.setItem('missionCardOpened', 'true');
+    }
+    setOpen(o => !o);
+  }
 
   const exCount  = session.exercises?.length ?? 0;
   const duration = sessionLength ? `${sessionLength} min` : null;
@@ -311,7 +322,7 @@ function MissionCard({ session, library, sessionLength, weekNum, onComplete, onO
       {/* Collapsible header */}
       <button
         type="button"
-        onClick={() => setOpen(o => !o)}
+        onClick={handleToggle}
         style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: '20px 20px 12px', textAlign: 'left' }}
       >
         <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.3em', textTransform: 'uppercase', color: '#C0392B', marginBottom: 8 }}>
@@ -321,7 +332,12 @@ function MissionCard({ session, library, sessionLength, weekNum, onComplete, onO
           <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 28, letterSpacing: '0.04em', color: '#F5F3EE', lineHeight: 1 }}>
             {session.name}
           </div>
-          <span style={{ color: '#555', fontSize: 20, paddingTop: 2 }}>{open ? '−' : '+'}</span>
+          <span
+            className={!open && !hasBeenOpened ? 'pulse-expand' : ''}
+            style={{ color: !open && !hasBeenOpened ? '#C0392B' : '#555', fontSize: 20, paddingTop: 2 }}
+          >
+            {open ? '−' : '+'}
+          </span>
         </div>
         <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
           <Pill>{exCount} exercises</Pill>
@@ -590,6 +606,8 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
         .tap-dot { animation: tapPulse 2s ease-in-out infinite; }
         @keyframes flamePulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
         .flame-pulse { animation: flamePulse 1.5s ease-in-out infinite; display:inline-flex; }
+        @keyframes pulseExpand { 0%,100%{transform:scale(1);filter:drop-shadow(0 0 0px #C0392B)} 50%{transform:scale(1.2);filter:drop-shadow(0 0 6px #C0392B)} }
+        .pulse-expand { display:inline-block; animation: pulseExpand 1.5s ease-in-out infinite; }
       `}</style>
 
       {/* ── Stats row ─────────────────────────────────────────── */}

@@ -1,6 +1,36 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { GripVertical } from 'lucide-react';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  DragOverlay,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { supabase } from '../lib/supabase';
+
+// ─── EXERCISE AUTOCOMPLETE LIST ───────────────────────────────────────────────
+
+const EXERCISE_LIST = [
+  'Arnold Press', 'Barbell Bench Press', 'Barbell Row', 'Cable Fly',
+  'Cable Lateral Raise', 'Calf Raise', 'Chest Dip', 'Deadlift',
+  'Dumbbell Curl', 'Dumbbell Shoulder Press', 'EZ Bar Skull Crushers',
+  'Face Pull', 'Hammer Curl', 'Hip Thrust', 'Incline Curl',
+  'Incline Dumbbell Press', 'Incline Plate Loaded Chest Press',
+  'Lat Pulldown', 'Leg Curl', 'Leg Extension', 'Leg Press',
+  'Overhead Press', 'Pec Fly Machine', 'Preacher Curl', 'Pull Up',
+  'Romanian Deadlift', 'Seated Cable Row', 'Squat', 'Tricep Dip',
+  'Tricep Pushdown Rope',
+];
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 
@@ -21,7 +51,6 @@ function groupHistory(rows) {
 }
 
 function computePRs(rows) {
-  // Process oldest → newest; mark a row ID as PR when it beats previous max
   const sorted     = [...rows].sort((a, b) => new Date(a.logged_at) - new Date(b.logged_at));
   const runningMax = {};
   const prs        = new Set();
@@ -33,39 +62,82 @@ function computePRs(rows) {
   return prs;
 }
 
+// ─── AUTOCOMPLETE INPUT ───────────────────────────────────────────────────────
+
+function AutocompleteInput({ value, onChange, extraOptions, inputStyle }) {
+  const [showSugg, setShowSugg] = useState(false);
+  const wrapperRef = useRef(null);
+
+  const allOptions = [...new Set([...EXERCISE_LIST, ...(extraOptions || [])])].sort();
+  const suggestions = value.length < 1 ? [] : allOptions
+    .filter(e => e.toLowerCase().includes(value.toLowerCase()))
+    .slice(0, 5);
+
+  useEffect(() => {
+    function handleOutside(e) {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) setShowSugg(false);
+    }
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, []);
+
+  return (
+    <div ref={wrapperRef} style={{ position: 'relative', flex: 1, minWidth: 0 }}>
+      <input
+        type="text"
+        value={value}
+        onChange={e => { onChange(e.target.value); setShowSugg(true); }}
+        onFocus={() => setShowSugg(true)}
+        style={inputStyle || inp({ width: '100%', fontWeight: 600, boxSizing: 'border-box' })}
+      />
+      {showSugg && suggestions.length > 0 && (
+        <div style={{
+          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 200,
+          background: '#1a1a1a', border: '1px solid #2a2a2a',
+          boxShadow: '0 6px 16px rgba(0,0,0,0.5)', marginTop: 2,
+        }}>
+          {suggestions.map(s => (
+            <button
+              key={s}
+              type="button"
+              onMouseDown={e => { e.preventDefault(); onChange(s); setShowSugg(false); }}
+              style={{
+                display: 'block', width: '100%', textAlign: 'left', background: 'none',
+                border: 'none', borderBottom: '1px solid #222',
+                padding: '9px 12px', color: '#CDCDC8',
+                fontFamily: "'Barlow', sans-serif", fontSize: 13, cursor: 'pointer',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.color = '#C0392B'; e.currentTarget.style.background = '#111'; }}
+              onMouseLeave={e => { e.currentTarget.style.color = '#CDCDC8'; e.currentTarget.style.background = 'none'; }}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── EXERCISE CARD ───────────────────────────────────────────────────────────
 
-function ExerciseCard({ ex, idx, total, lastKg, onChange, onMove }) {
+function ExerciseCard({ ex, idx, lastKg, onChange, dragHandleProps, planExerciseNames }) {
   return (
-    <div style={{
-      background: '#111', border: '1px solid #1e1e1e',
-      padding: '16px', marginBottom: 10,
-    }}>
-      {/* Row 1: grip + name + reorder */}
+    <div style={{ background: '#111', border: '1px solid #1e1e1e', padding: '16px', marginBottom: 10 }}>
+      {/* Row 1: drag handle + autocomplete name */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-        <span style={{ color: '#333', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
-          <GripVertical size={16} strokeWidth={1.5} />
+        <span
+          style={{ color: '#444', cursor: 'grab', flexShrink: 0, display: 'flex', alignItems: 'center', touchAction: 'none' }}
+          {...dragHandleProps}
+        >
+          <GripVertical size={18} strokeWidth={1.5} />
         </span>
-        <input
-          type="text"
+        <AutocompleteInput
           value={ex.name}
-          onChange={e => onChange(idx, 'name', e.target.value)}
-          style={inp({ flex: 1, fontWeight: 600 })}
+          onChange={val => onChange(idx, 'name', val)}
+          extraOptions={planExerciseNames}
+          inputStyle={inp({ flex: 1, fontWeight: 600, boxSizing: 'border-box', width: '100%' })}
         />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flexShrink: 0 }}>
-          <button
-            type="button"
-            onClick={() => onMove(idx, -1)}
-            disabled={idx === 0}
-            style={reorderBtn}
-          >▲</button>
-          <button
-            type="button"
-            onClick={() => onMove(idx, 1)}
-            disabled={idx === total - 1}
-            style={reorderBtn}
-          >▼</button>
-        </div>
       </div>
 
       {/* Row 2: sets / reps / weight */}
@@ -76,7 +148,7 @@ function ExerciseCard({ ex, idx, total, lastKg, onChange, onMove }) {
             type="text"
             value={ex.sets}
             onChange={e => onChange(idx, 'sets', e.target.value)}
-            style={inp({ width: '100%' })}
+            style={inp({ width: '100%', boxSizing: 'border-box' })}
           />
         </label>
         <label style={fieldLabel}>
@@ -85,7 +157,7 @@ function ExerciseCard({ ex, idx, total, lastKg, onChange, onMove }) {
             type="text"
             value={ex.reps}
             onChange={e => onChange(idx, 'reps', e.target.value)}
-            style={inp({ width: '100%' })}
+            style={inp({ width: '100%', boxSizing: 'border-box' })}
           />
         </label>
         <label style={fieldLabel}>
@@ -96,10 +168,10 @@ function ExerciseCard({ ex, idx, total, lastKg, onChange, onMove }) {
             value={ex.weight}
             onChange={e => onChange(idx, 'weight', e.target.value)}
             placeholder="kg"
-            style={inp({ width: '100%' })}
+            style={inp({ width: '100%', boxSizing: 'border-box' })}
           />
           {lastKg != null && (
-            <span style={{ fontSize: 10, color: '#555', fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.08em', marginTop: 4, display: 'block' }}>
+            <span style={{ fontSize: 10, color: '#444', fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.08em', fontStyle: 'italic' }}>
               Last: {lastKg} kg
             </span>
           )}
@@ -112,8 +184,36 @@ function ExerciseCard({ ex, idx, total, lastKg, onChange, onMove }) {
         value={ex.notes}
         onChange={e => onChange(idx, 'notes', e.target.value)}
         placeholder="Notes..."
-        style={{ ...inp({ width: '100%', marginTop: 10 }), boxSizing: 'border-box', fontStyle: ex.notes ? 'normal' : 'italic' }}
+        style={{ ...inp({ width: '100%', marginTop: 10, boxSizing: 'border-box' }), fontStyle: ex.notes ? 'normal' : 'italic' }}
       />
+    </div>
+  );
+}
+
+// ─── SORTABLE WRAPPER ─────────────────────────────────────────────────────────
+
+function SortableExerciseCard(props) {
+  const { ex } = props;
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: ex.id });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.35 : 1,
+        zIndex: isDragging ? 1 : 'auto',
+      }}
+    >
+      <ExerciseCard {...props} dragHandleProps={{ ...attributes, ...listeners }} />
     </div>
   );
 }
@@ -172,9 +272,16 @@ export default function Logbook({ userId, plan, preselectedSession }) {
   const [history, setHistory]                 = useState([]);
   const [expandedKeys, setExpandedKeys]       = useState(new Set());
   const [prSet, setPrSet]                     = useState(new Set());
+  const [activeId, setActiveId]               = useState(null);
 
-  const library     = plan?.exercise_library || {};
-  const allSessions = (plan?.phases || []).flatMap(p =>
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor,   { activationConstraint: { delay: 200, tolerance: 5 } }),
+  );
+
+  const library          = plan?.exercise_library || {};
+  const planExerciseNames = Object.values(library).map(e => e.name).filter(Boolean);
+  const allSessions      = (plan?.phases || []).flatMap(p =>
     (p.sessions || []).map(s => ({ ...s, phaseNum: p.phase, phaseLabel: p.label }))
   );
 
@@ -196,7 +303,6 @@ export default function Logbook({ userId, plan, preselectedSession }) {
 
   useEffect(() => {
     fetchHistory();
-    // Fetch start date for week number
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -229,7 +335,8 @@ export default function Logbook({ userId, plan, preselectedSession }) {
     setSelectedSession(session);
     setSaved(false);
     setSaveErr('');
-    const exList = (session.exercises || []).map(ex => ({
+    const exList = (session.exercises || []).map((ex, i) => ({
+      id:     `${ex.ex}-${i}`,
       key:    ex.ex,
       name:   library[ex.ex]?.name || ex.ex,
       sets:   String(ex.sets ?? ''),
@@ -239,7 +346,6 @@ export default function Logbook({ userId, plan, preselectedSession }) {
     }));
     setExercises(exList);
 
-    // Fetch last logged weights for this session's exercises
     const { data: { user } } = await supabase.auth.getUser();
     if (!user || !exList.length) return;
     const names = exList.map(e => e.name);
@@ -264,28 +370,36 @@ export default function Logbook({ userId, plan, preselectedSession }) {
     setExercises(prev => prev.map((e, i) => i === idx ? { ...e, [field]: value } : e));
   }
 
-  function moveExercise(idx, dir) {
-    setExercises(prev => {
-      const next = [...prev];
-      const j    = idx + dir;
-      if (j < 0 || j >= next.length) return prev;
-      [next[idx], next[j]] = [next[j], next[idx]];
-      return next;
-    });
+  // ── DnD handlers ─────────────────────────────────────────────────────────
+
+  function handleDragStart(event) {
+    setActiveId(event.active.id);
+  }
+
+  function handleDragEnd(event) {
+    const { active, over } = event;
+    setActiveId(null);
+    if (active.id !== over?.id) {
+      setExercises(prev => {
+        const oldIdx = prev.findIndex(e => e.id === active.id);
+        const newIdx = prev.findIndex(e => e.id === over.id);
+        return arrayMove(prev, oldIdx, newIdx);
+      });
+    }
   }
 
   // ── Save ─────────────────────────────────────────────────────────────────
 
   async function handleSave() {
     setSaveErr('');
-    const rows = exercises.filter(e => parseFloat(e.weight) > 0);
-    if (!rows.length) { setSaveErr('Enter at least one weight before saving.'); return; }
+    const toSave = exercises.filter(e => parseFloat(e.weight) > 0);
+    if (!toSave.length) { setSaveErr('Enter at least one weight before saving.'); return; }
     setSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setSaving(false); setSaveErr('Not authenticated.'); return; }
     const now = new Date().toISOString();
     const { error } = await supabase.from('lift_logs').insert(
-      rows.map(e => ({
+      toSave.map(e => ({
         user_id:       user.id,
         exercise_name: e.name,
         weight_kg:     parseFloat(e.weight),
@@ -296,6 +410,14 @@ export default function Logbook({ userId, plan, preselectedSession }) {
     );
     setSaving(false);
     if (error) { setSaveErr(error.message || 'Failed to save.'); return; }
+
+    // Update ghost numbers immediately — no reload needed
+    setLastLifts(prev => {
+      const next = { ...prev };
+      toSave.forEach(e => { next[e.name] = parseFloat(e.weight); });
+      return next;
+    });
+
     setSaved(true);
     fetchHistory();
     setTimeout(() => setSaved(false), 3500);
@@ -310,6 +432,8 @@ export default function Logbook({ userId, plan, preselectedSession }) {
       return next;
     });
   }
+
+  const activeEx = exercises.find(e => e.id === activeId);
 
   // ── Render ───────────────────────────────────────────────────────────────
 
@@ -342,7 +466,8 @@ export default function Logbook({ userId, plan, preselectedSession }) {
             }}
             style={{
               width: '100%', padding: '12px 14px', background: '#111',
-              border: '1px solid rgba(200,200,200,0.15)', color: selectedSession ? '#F5F3EE' : '#555',
+              border: '1px solid rgba(200,200,200,0.15)',
+              color: selectedSession ? '#F5F3EE' : '#555',
               fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14,
               letterSpacing: '0.06em', outline: 'none', cursor: 'pointer',
             }}
@@ -364,19 +489,46 @@ export default function Logbook({ userId, plan, preselectedSession }) {
         <div style={{ marginBottom: 40 }}>
           <div style={sectionHead}>{selectedSession.name}</div>
 
-          {exercises.map((ex, i) => (
-            <ExerciseCard
-              key={i}
-              ex={ex}
-              idx={i}
-              total={exercises.length}
-              lastKg={lastLifts[ex.name] ?? null}
-              onChange={updateExercise}
-              onMove={moveExercise}
-            />
-          ))}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={exercises.map(e => e.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              {exercises.map((ex, i) => (
+                <SortableExerciseCard
+                  key={ex.id}
+                  ex={ex}
+                  idx={i}
+                  lastKg={lastLifts[ex.name] ?? null}
+                  onChange={updateExercise}
+                  planExerciseNames={planExerciseNames}
+                />
+              ))}
+            </SortableContext>
 
-          {/* Save button */}
+            <DragOverlay>
+              {activeEx ? (
+                <div style={{
+                  background: '#111', border: '1px solid #C0392B',
+                  padding: '16px', boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
+                  opacity: 0.92,
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <GripVertical size={18} strokeWidth={1.5} color="#444" />
+                    <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, fontWeight: 700, color: '#F5F3EE', letterSpacing: '0.08em' }}>
+                      {activeEx.name}
+                    </span>
+                  </div>
+                </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+
           {saveErr && (
             <p style={{ color: '#ef4444', fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.06em', marginBottom: 12 }}>
               {saveErr}
@@ -467,15 +619,3 @@ function inp(extra = {}) {
     ...extra,
   };
 }
-
-const reorderBtn = {
-  background: 'none',
-  border: '1px solid #2a2a2a',
-  color: '#444',
-  fontFamily: 'monospace',
-  fontSize: 10,
-  lineHeight: 1,
-  padding: '2px 5px',
-  cursor: 'pointer',
-  display: 'block',
-};
