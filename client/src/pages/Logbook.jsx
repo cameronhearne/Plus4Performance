@@ -335,7 +335,8 @@ export default function Logbook({ userId, plan, preselectedSession }) {
     setSelectedSession(session);
     setSaved(false);
     setSaveErr('');
-    const exList = (session.exercises || []).map((ex, i) => ({
+    // Preserve exact plan order — no sorting here
+    const exList = [...(session.exercises || [])].map((ex, i) => ({
       id:     `${ex.ex}-${i}`,
       key:    ex.ex,
       name:   library[ex.ex]?.name || ex.ex,

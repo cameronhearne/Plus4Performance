@@ -334,7 +334,7 @@ function MissionCard({ session, library, sessionLength, weekNum, onComplete, onO
           </div>
           <span
             className={!open && !hasBeenOpened ? 'pulse-expand' : ''}
-            style={{ color: !open && !hasBeenOpened ? '#C0392B' : '#555', fontSize: 20, paddingTop: 2 }}
+            style={{ color: !open && !hasBeenOpened ? '#C0392B' : '#555', fontSize: 24, fontWeight: 700, paddingTop: 2 }}
           >
             {open ? '−' : '+'}
           </span>
