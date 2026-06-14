@@ -746,14 +746,6 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
     load();
   }, []);
 
-  useEffect(() => {
-    if (plan) {
-      console.log('[TodayTab] plan loaded — top-level keys:', Object.keys(plan));
-      console.log('[TodayTab] plan.user_summary:', plan.user_summary);
-      console.log('[TodayTab] plan.nutrition:', plan.nutrition);
-    }
-  }, [plan]);
-
   const weekNum   = getWeekNum(startDate);
   const library   = plan?.exercise_library || {};
   const nutrition = plan?.nutrition;
@@ -808,9 +800,6 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
 
       if (!completions) return;
 
-      console.log('[Achievements] checking unlocks, completions count:', completions.length);
-      console.log('[Achievements] userId:', user.id);
-
       const numTrainingDays = parseInt(intakeSchedule.trainingDays || '4', 10);
       const newStreak = calcStreak(completions, numTrainingDays);
       setStreak(newStreak);
@@ -818,7 +807,6 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
       // first_rep — unlock on every session call; upsert ignoreDuplicates makes it idempotent
       try {
         await unlockAchievement(supabase, user.id, 'first_rep', 100);
-        console.log('[Achievements] unlocked: first_rep');
       } catch (e) {
         console.error('[Achievements] error unlocking first_rep:', e);
       }
@@ -827,7 +815,6 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
       if (newStreak >= 3) {
         try {
           await unlockAchievement(supabase, user.id, 'on_fire', 100);
-          console.log('[Achievements] unlocked: on_fire');
         } catch (e) {
           console.error('[Achievements] error unlocking on_fire:', e);
         }
@@ -837,7 +824,6 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
       if (newStreak >= 8) {
         try {
           await unlockAchievement(supabase, user.id, 'unstoppable', 300);
-          console.log('[Achievements] unlocked: unstoppable');
         } catch (e) {
           console.error('[Achievements] error unlocking unstoppable:', e);
         }
@@ -848,7 +834,6 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
       if (week1Count >= numTrainingDays) {
         try {
           await unlockAchievement(supabase, user.id, 'week1_warrior', 150);
-          console.log('[Achievements] unlocked: week1_warrior');
         } catch (e) {
           console.error('[Achievements] error unlocking week1_warrior:', e);
         }

@@ -468,7 +468,7 @@ const styles = {
   signOut: { background: 'none', border: 'none', color: '#787878', fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer', padding: 0 },
   inner: { maxWidth: 860, margin: '0 auto', padding: '40px 24px 80px' },
   header: { marginBottom: 40 },
-  heading: { fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(32px, 5vw, 56px)', letterSpacing: '0.03em', color: '#F5F3EE', marginBottom: 8 },
+  heading: { fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(24px, 3.5vw, 40px)', letterSpacing: '0.03em', color: '#F5F3EE', marginBottom: 8 },
   headingSub: { fontSize: 15, color: '#787878', fontWeight: 300 },
   tabBar: { display: 'flex', gap: 2, marginBottom: 32, background: '#101010', padding: 4, borderRadius: 2, overflowX: 'auto' },
   tab: { flex: '0 0 auto', padding: '10px 20px', background: 'none', border: 'none', color: '#787878', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', cursor: 'pointer', transition: 'color 0.15s', borderRadius: 2 },

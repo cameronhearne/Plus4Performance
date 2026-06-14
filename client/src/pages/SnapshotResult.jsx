@@ -12,18 +12,15 @@ export default function SnapshotResult() {
   useEffect(() => {
     // If we already have the snapshot from navigation state, skip the fetch
     if (snapshot) {
-      console.log('[SnapshotResult] snapshot from navigation state:', snapshot);
       setLoading(false);
       return;
     }
 
     // Fallback: fetch from Supabase (handles page refresh or direct navigation)
     async function load() {
-      console.log('[SnapshotResult] no state snapshot — fetching from Supabase');
       const { data: { user }, error: userErr } = await supabase.auth.getUser();
       if (userErr) { console.error('[SnapshotResult] auth error:', userErr); }
       if (!user) { navigate('/login'); return; }
-      console.log('[SnapshotResult] querying snapshots for user_id:', user.id);
 
       const { data, error } = await supabase
         .from('snapshots')
@@ -34,7 +31,6 @@ export default function SnapshotResult() {
         .maybeSingle();
 
       if (error) console.error('[SnapshotResult] Supabase select error:', error);
-      console.log('[SnapshotResult] snapshot from Supabase:', data);
       setSnapshot(data);
       setLoading(false);
     }

@@ -16,3 +16,7 @@ client/.env.local
 
 # Logs
 *.log
+
+# Office / PDF documents
+*.docx
+*.pdf
