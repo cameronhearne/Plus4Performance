@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { createPortalSession, deleteAccount, createCheckoutSession } from '../lib/api';
+import { createPortalSession, deleteAccount, createCheckoutSession, getEmailPreferences, saveEmailPreferences } from '../lib/api';
 
 /*
   ─── NO NEW SQL TABLES REQUIRED ────────────────────────────────────────────────
@@ -94,10 +94,13 @@ function SkeletonLine({ width = '60%', height = 14 }) {
   return <div style={{ width, height, background: '#1a1a1a', borderRadius: 2, marginBottom: 8 }} />;
 }
 
-function Toggle({ label, checked, onChange }) {
+function Toggle({ label, checked, onChange, saved }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 0', borderBottom: '1px solid #1a1a1a', minHeight: 44 }}>
-      <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, color: '#CDCDC8', letterSpacing: '0.04em' }}>{label}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, color: '#CDCDC8', letterSpacing: '0.04em' }}>{label}</span>
+        {saved && <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, color: '#4CAF50', letterSpacing: '0.08em' }}>✓ Saved</span>}
+      </div>
       <button
         type="button"
         onClick={() => onChange(!checked)}
@@ -371,32 +374,51 @@ function SubscriptionSection({ isUnlocked, subRow, user, onUnlock }) {
 // ─── SECTION 4: SETTINGS & PRIVACY ───────────────────────────────────────────
 
 function SettingsSection({ user }) {
-  const meta        = user?.user_metadata || {};
-  const prefs       = meta.preferences   || {};
+  const [reminders,     setReminders]     = useState(true);
+  const [weighIn,       setWeighIn]       = useState(true);
+  const [weeklySummary, setWeeklySummary] = useState(true);
+  const [units,         setUnits]         = useState('kg');
+  const [savedKey,      setSavedKey]      = useState(null);
+  const [showDelete,    setShowDelete]    = useState(false);
+  const [deleting,      setDeleting]      = useState(false);
 
-  const [reminders,  setReminders]  = useState(!!prefs.session_reminders);
-  const [weighIn,    setWeighIn]    = useState(!!prefs.daily_weigh_in);
-  const [weeklySummary, setWeeklySummary] = useState(!!prefs.weekly_summary);
-  const [units,      setUnits]      = useState(prefs.units || 'kg');
-  const [saving,     setSaving]     = useState(false);
-  const [showDelete, setShowDelete] = useState(false);
-  const [deleting,   setDeleting]   = useState(false);
+  // Load email preferences from API on mount
+  useEffect(() => {
+    async function loadPrefs() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+        const prefs = await getEmailPreferences(session.access_token);
+        setReminders(prefs.sessionReminders);
+        setWeighIn(prefs.weighInReminders);
+        setWeeklySummary(prefs.weeklySummary);
+      } catch { /* use defaults */ }
+    }
+    // Also load units from user_metadata
+    const meta = user?.user_metadata || {};
+    const storedPrefs = meta.preferences || {};
+    setUnits(storedPrefs.units || 'kg');
+    loadPrefs();
+  }, [user]);
 
-  async function savePrefs(patch) {
-    setSaving(true);
-    const current = (await supabase.auth.getUser()).data?.user?.user_metadata?.preferences || {};
-    await supabase.auth.updateUser({ data: { preferences: { ...current, ...patch } } });
-    setSaving(false);
-  }
-
-  function handleToggle(key, setter, value) {
+  async function handleToggle(key, setter, value) {
     setter(value);
-    savePrefs({ [key]: value });
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      await saveEmailPreferences({
+        sessionReminders: key === 'session_reminders' ? value : reminders,
+        weighInReminders: key === 'daily_weigh_in'    ? value : weighIn,
+        weeklySummary:    key === 'weekly_summary'    ? value : weeklySummary,
+      }, session.access_token);
+      setSavedKey(key);
+      setTimeout(() => setSavedKey(null), 2500);
+    } catch { /* silent */ }
   }
 
   function handleUnits(u) {
     setUnits(u);
-    savePrefs({ units: u });
+    const current = user?.user_metadata?.preferences || {};
+    supabase.auth.updateUser({ data: { preferences: { ...current, units: u } } });
   }
 
   async function handleDeleteConfirm() {
@@ -418,9 +440,9 @@ function SettingsSection({ user }) {
         {/* Notification toggles */}
         <div style={{ marginBottom: 20 }}>
           <div style={{ ...eyebrowStyle, marginBottom: 4 }}>Notifications</div>
-          <Toggle label="Session reminders"              checked={reminders}     onChange={v => handleToggle('session_reminders', setReminders,     v)} />
-          <Toggle label="Daily weigh-in reminder"        checked={weighIn}       onChange={v => handleToggle('daily_weigh_in',    setWeighIn,       v)} />
-          <Toggle label="Weekly progress summary email"  checked={weeklySummary} onChange={v => handleToggle('weekly_summary',    setWeeklySummary, v)} />
+          <Toggle label="Session reminders"             checked={reminders}     onChange={v => handleToggle('session_reminders', setReminders,     v)} saved={savedKey === 'session_reminders'} />
+          <Toggle label="Daily weigh-in reminder"       checked={weighIn}       onChange={v => handleToggle('daily_weigh_in',    setWeighIn,       v)} saved={savedKey === 'daily_weigh_in'} />
+          <Toggle label="Weekly progress summary email" checked={weeklySummary} onChange={v => handleToggle('weekly_summary',    setWeeklySummary, v)} saved={savedKey === 'weekly_summary'} />
         </div>
 
         {/* Unit preference */}

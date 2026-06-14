@@ -4,6 +4,7 @@ const path = require('path');
 const Anthropic = require('@anthropic-ai/sdk');
 const { createClient } = require('@supabase/supabase-js');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const cron = require('node-cron');
 
 const anthropic = new Anthropic();
 const coachingBible = fs.readFileSync(path.join(__dirname, 'coaching_bible.txt'), 'utf8');
@@ -22,6 +23,27 @@ const supabaseAuth = createClient(
   process.env.SUPABASE_ANON_KEY,
   { auth: { autoRefreshToken: false, persistSession: false } }
 );
+
+/*
+  ─── SQL — run once in Supabase SQL editor ────────────────────────────────────
+
+  create table email_preferences (
+    id uuid default gen_random_uuid() primary key,
+    user_id uuid references auth.users(id) on delete cascade unique,
+    session_reminders boolean not null default true,
+    weigh_in_reminders boolean not null default true,
+    weekly_summary boolean not null default true,
+    updated_at timestamptz not null default now()
+  );
+  alter table email_preferences enable row level security;
+  create policy "prefs_all" on email_preferences
+    for all to authenticated
+    using (auth.uid() = user_id)
+    with check (auth.uid() = user_id);
+  grant all on email_preferences to authenticated;
+
+  ─────────────────────────────────────────────────────────────────────────────
+*/
 
 // Startup key validation
 (function validateEnv() {
@@ -233,6 +255,302 @@ async function sendWelcomeEmail(email, firstName) {
     });
   } catch (err) {
     console.error('Welcome email error:', err.message);
+  }
+}
+
+// ─── EMAIL HELPERS ────────────────────────────────────────────────────────────
+
+async function sendResendEmail(to, subject, html) {
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: 'Plus 4 Performance <noreply@plus4performance.com>',
+      to,
+      subject,
+      html,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error('Resend error ' + res.status + ': ' + (err.message || ''));
+  }
+}
+
+function isTrainingDayForUser(intakeData) {
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const todayName = dayNames[new Date().getDay()];
+  const numDays = parseInt(intakeData?.trainingDays || '4', 10);
+  if (intakeData?.scheduleType === 'fixed' && Array.isArray(intakeData?.preferredDays) && intakeData.preferredDays.length > 0) {
+    return intakeData.preferredDays.includes(todayName);
+  }
+  // Rolling: assume Mon → Sat up to numDays
+  return ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+    .slice(0, numDays)
+    .includes(todayName);
+}
+
+// ─── EMAIL TEMPLATES ─────────────────────────────────────────────────────────
+
+function buildWeeklyEmailHtml({ firstName, weightChange, sessionsThisWeek, targetSessions, xpThisWeek, newBadges }) {
+  const weightSign  = weightChange >= 0 ? '+' : '';
+  const weightColor = weightChange < 0 ? '#4CAF50' : weightChange > 0 ? '#C0392B' : '#787878';
+  const motivational = sessionsThisWeek >= targetSessions
+    ? "Perfect week. That's what consistency looks like."
+    : sessionsThisWeek >= Math.ceil(targetSessions * 0.6)
+    ? 'Solid week. Keep building the habit.'
+    : sessionsThisWeek >= 1
+    ? 'Every session counts. Get back on it this week.'
+    : 'Missed week. This week is a fresh start.';
+
+  const badgesHtml = newBadges.length > 0
+    ? `<tr><td style="padding-bottom:28px;"><p style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:#555;margin:0 0 12px;">BADGES UNLOCKED</p>${newBadges.map(b => `<span style="display:inline-block;background:#1a1a1a;border:1px solid #C0392B;padding:5px 12px;margin:3px 3px 3px 0;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.12em;color:#F5F3EE;text-transform:uppercase;">${b}</span>`).join('')}</td></tr>`
+    : '';
+
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#080808;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#080808;">
+<tr><td align="center" style="padding:40px 20px;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background:#080808;">
+  <tr><td style="padding-bottom:32px;border-bottom:1px solid #1a1a1a;">
+    <span style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:0.3em;text-transform:uppercase;color:#C0392B;">PLUS 4 PERFORMANCE</span>
+  </td></tr>
+  <tr><td style="padding:32px 0 24px;">
+    <h1 style="margin:0;font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#F5F3EE;line-height:1.1;">YOUR WEEK, ${firstName}.</h1>
+  </td></tr>
+  <tr><td style="padding-bottom:28px;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td width="50%" style="padding:0 6px 12px 0;vertical-align:top;">
+          <div style="background:#111;border:1px solid #1e1e1e;padding:20px;">
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:#555;margin-bottom:8px;">WEIGHT CHANGE</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:700;color:${weightColor};line-height:1;">${weightSign}${Math.abs(weightChange).toFixed(1)}kg</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#444;margin-top:4px;letter-spacing:0.06em;">this week</div>
+          </div>
+        </td>
+        <td width="50%" style="padding:0 0 12px 6px;vertical-align:top;">
+          <div style="background:#111;border:1px solid #1e1e1e;padding:20px;">
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:#555;margin-bottom:8px;">SESSIONS</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:700;color:#F5F3EE;line-height:1;">${sessionsThisWeek} <span style="font-size:16px;color:#555;">of ${targetSessions}</span></div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#444;margin-top:4px;letter-spacing:0.06em;">this week</div>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td width="50%" style="padding:0 6px 0 0;vertical-align:top;">
+          <div style="background:#111;border:1px solid #1e1e1e;padding:20px;">
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:#555;margin-bottom:8px;">XP EARNED</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:700;color:#C0392B;line-height:1;">+${xpThisWeek}</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#444;margin-top:4px;letter-spacing:0.06em;">this week</div>
+          </div>
+        </td>
+        <td width="50%" style="padding:0 0 0 6px;vertical-align:top;">
+          <div style="background:#111;border:1px solid #1e1e1e;padding:20px;">
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:#555;margin-bottom:8px;">BADGES</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:700;color:#F5F3EE;line-height:1;">${newBadges.length > 0 ? newBadges.length : '—'}</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#444;margin-top:4px;letter-spacing:0.06em;">${newBadges.length === 1 ? 'new badge' : newBadges.length > 1 ? 'new badges' : 'no new badges'}</div>
+          </div>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+  ${badgesHtml}
+  <tr><td style="padding:0 0 32px;">
+    <p style="font-family:'Barlow Condensed',sans-serif;font-size:16px;color:#888;letter-spacing:0.06em;margin:0;font-style:italic;">"${motivational}"</p>
+  </td></tr>
+  <tr><td style="padding-bottom:40px;">
+    <a href="https://plus4performance.com/dashboard" style="display:inline-block;background:#C0392B;color:#ffffff;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;padding:16px 32px;text-decoration:none;">VIEW YOUR DASHBOARD →</a>
+  </td></tr>
+  <tr><td style="padding-top:24px;border-top:1px solid #1a1a1a;">
+    <p style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#444;letter-spacing:0.06em;margin:0;">To unsubscribe from weekly summaries, update your notification settings in the app.</p>
+  </td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>`;
+}
+
+function buildSessionReminderHtml(firstName, sessionName) {
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#080808;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#080808;">
+<tr><td align="center" style="padding:40px 20px;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background:#080808;">
+  <tr><td style="padding-bottom:32px;border-bottom:1px solid #1a1a1a;">
+    <span style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:0.3em;text-transform:uppercase;color:#C0392B;">PLUS 4 PERFORMANCE</span>
+  </td></tr>
+  <tr><td style="padding:32px 0 20px;">
+    <h1 style="margin:0;font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#F5F3EE;line-height:1.1;">IT'S TRAINING DAY, ${firstName}.</h1>
+  </td></tr>
+  <tr><td style="padding-bottom:32px;">
+    <p style="font-family:'Barlow Condensed',sans-serif;font-size:16px;color:#CDCDC8;letter-spacing:0.04em;margin:0;line-height:1.6;">Your ${sessionName} session is loaded and ready. Get after it.</p>
+  </td></tr>
+  <tr><td style="padding-bottom:40px;">
+    <a href="https://plus4performance.com/dashboard" style="display:inline-block;background:#C0392B;color:#ffffff;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;padding:16px 32px;text-decoration:none;">OPEN YOUR SESSION →</a>
+  </td></tr>
+  <tr><td style="padding-top:24px;border-top:1px solid #1a1a1a;">
+    <p style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#444;letter-spacing:0.06em;margin:0;">To stop receiving session reminders, update your notification settings in the app.</p>
+  </td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>`;
+}
+
+function buildWeighInReminderHtml(firstName) {
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#080808;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#080808;">
+<tr><td align="center" style="padding:40px 20px;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background:#080808;">
+  <tr><td style="padding-bottom:32px;border-bottom:1px solid #1a1a1a;">
+    <span style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:0.3em;text-transform:uppercase;color:#C0392B;">PLUS 4 PERFORMANCE</span>
+  </td></tr>
+  <tr><td style="padding:32px 0 20px;">
+    <h1 style="margin:0;font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#F5F3EE;line-height:1.1;">MORNING CHECK-IN, ${firstName}.</h1>
+  </td></tr>
+  <tr><td style="padding-bottom:32px;">
+    <p style="font-family:'Barlow Condensed',sans-serif;font-size:16px;color:#CDCDC8;letter-spacing:0.04em;margin:0;line-height:1.6;">Log your weight this morning to keep your progress tracking accurate. Takes 10 seconds.</p>
+  </td></tr>
+  <tr><td style="padding-bottom:40px;">
+    <a href="https://plus4performance.com/dashboard?tab=progress" style="display:inline-block;background:#C0392B;color:#ffffff;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;padding:16px 32px;text-decoration:none;">LOG MY WEIGHT →</a>
+  </td></tr>
+  <tr><td style="padding-top:24px;border-top:1px solid #1a1a1a;">
+    <p style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#444;letter-spacing:0.06em;margin:0;">To stop receiving weigh-in reminders, update your notification settings in the app.</p>
+  </td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>`;
+}
+
+// ─── CRON RUNNERS ─────────────────────────────────────────────────────────────
+
+async function runWeeklyProgressEmails() {
+  console.log('[Cron] Running weekly progress emails');
+  const { data: prefs, error } = await supabaseAdmin
+    .from('email_preferences')
+    .select('user_id')
+    .eq('weekly_summary', true);
+  if (error) { console.error('[Cron] prefs fetch error:', error.message); return; }
+  if (!prefs?.length) return;
+
+  const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+
+  for (const { user_id } of prefs) {
+    try {
+      const { data: { user }, error: uErr } = await supabaseAdmin.auth.admin.getUserById(user_id);
+      if (uErr || !user) continue;
+
+      const firstName = user.user_metadata?.first_name || user.email.split('@')[0];
+
+      // Weight change
+      const { data: weightLogs } = await supabaseAdmin
+        .from('weight_logs').select('weight_kg, logged_at')
+        .eq('user_id', user_id).order('logged_at', { ascending: true });
+      let weightChange = 0;
+      if (weightLogs?.length >= 2) {
+        const thisWeek = weightLogs.filter(l => l.logged_at >= sevenDaysAgo);
+        if (thisWeek.length > 0) {
+          const before = weightLogs.filter(l => l.logged_at < sevenDaysAgo);
+          const baseline = before.length ? before[before.length - 1] : weightLogs[0];
+          weightChange = thisWeek[thisWeek.length - 1].weight_kg - baseline.weight_kg;
+        }
+      }
+
+      // Sessions this week
+      const { data: sessions } = await supabaseAdmin
+        .from('session_completions').select('id')
+        .eq('user_id', user_id).gte('completed_at', sevenDaysAgo);
+      const sessionsThisWeek = sessions?.length || 0;
+
+      // Target sessions from intake
+      const { data: intakeRow } = await supabaseAdmin
+        .from('intake_submissions').select('data')
+        .eq('user_id', user_id).order('created_at', { ascending: false }).limit(1).maybeSingle();
+      const targetSessions = parseInt(intakeRow?.data?.trainingDays || '4', 10);
+
+      // XP: sessions × 50 + achievements this week × 100
+      const { data: newAchv } = await supabaseAdmin
+        .from('user_achievements').select('achievement_id')
+        .eq('user_id', user_id).gte('unlocked_at', sevenDaysAgo);
+      const xpThisWeek = sessionsThisWeek * 50 + (newAchv?.length || 0) * 100;
+      const newBadges = (newAchv || []).map(a =>
+        a.achievement_id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+      );
+
+      const html = buildWeeklyEmailHtml({ firstName, weightChange, sessionsThisWeek, targetSessions, xpThisWeek, newBadges });
+      await sendResendEmail(user.email, 'Your Week in Review — Plus 4 Performance', html);
+      console.log('[Cron] Weekly email sent to', user.email);
+    } catch (err) {
+      console.error('[Cron] Weekly email error for user', user_id + ':', err.message);
+    }
+  }
+}
+
+async function runSessionReminderEmails() {
+  console.log('[Cron] Running session reminder emails');
+  const { data: prefs, error } = await supabaseAdmin
+    .from('email_preferences').select('user_id').eq('session_reminders', true);
+  if (error) { console.error('[Cron] prefs fetch error:', error.message); return; }
+  if (!prefs?.length) return;
+
+  for (const { user_id } of prefs) {
+    try {
+      const { data: intakeRow } = await supabaseAdmin
+        .from('intake_submissions').select('data')
+        .eq('user_id', user_id).order('created_at', { ascending: false }).limit(1).maybeSingle();
+      if (!isTrainingDayForUser(intakeRow?.data)) continue;
+
+      const { data: { user }, error: uErr } = await supabaseAdmin.auth.admin.getUserById(user_id);
+      if (uErr || !user) continue;
+
+      const firstName = user.user_metadata?.first_name || user.email.split('@')[0];
+      const { data: planRow } = await supabaseAdmin
+        .from('plans').select('plan_data').eq('user_id', user_id)
+        .order('generated_at', { ascending: false }).limit(1).maybeSingle();
+      const sessionName = (planRow?.plan_data?.user_summary?.split || 'training').toLowerCase();
+
+      const html = buildSessionReminderHtml(firstName, sessionName);
+      await sendResendEmail(user.email, 'Training day — your session is ready', html);
+      console.log('[Cron] Session reminder sent to', user.email);
+    } catch (err) {
+      console.error('[Cron] Session reminder error for user', user_id + ':', err.message);
+    }
+  }
+}
+
+async function runWeighInReminderEmails() {
+  console.log('[Cron] Running weigh-in reminder emails');
+  const { data: prefs, error } = await supabaseAdmin
+    .from('email_preferences').select('user_id').eq('weigh_in_reminders', true);
+  if (error) { console.error('[Cron] prefs fetch error:', error.message); return; }
+  if (!prefs?.length) return;
+
+  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+  const todayEnd   = new Date(todayStart.getTime() + 86400000);
+
+  for (const { user_id } of prefs) {
+    try {
+      const { data: todayLog } = await supabaseAdmin
+        .from('weight_logs').select('id').eq('user_id', user_id)
+        .gte('logged_at', todayStart.toISOString()).lt('logged_at', todayEnd.toISOString())
+        .limit(1).maybeSingle();
+      if (todayLog) continue;
+
+      const { data: { user }, error: uErr } = await supabaseAdmin.auth.admin.getUserById(user_id);
+      if (uErr || !user) continue;
+
+      const firstName = user.user_metadata?.first_name || user.email.split('@')[0];
+      const html = buildWeighInReminderHtml(firstName);
+      await sendResendEmail(user.email, "Don't forget your morning weigh-in", html);
+      console.log('[Cron] Weigh-in reminder sent to', user.email);
+    } catch (err) {
+      console.error('[Cron] Weigh-in reminder error for user', user_id + ':', err.message);
+    }
   }
 }
 
@@ -586,6 +904,49 @@ async function handleDeleteAccount(req, res) {
   }
 }
 
+// GET /api/email-preferences
+async function handleGetEmailPreferences(req, res) {
+  const userId = await getUserIdFromToken(req.headers['authorization']);
+  if (!userId) return json(res, 401, { error: 'Unauthorized' });
+
+  const { data, error } = await supabaseAdmin
+    .from('email_preferences')
+    .select('session_reminders, weigh_in_reminders, weekly_summary')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (error) return json(res, 500, { error: error.message });
+  return json(res, 200, {
+    sessionReminders: data?.session_reminders ?? true,
+    weighInReminders: data?.weigh_in_reminders ?? true,
+    weeklySummary:    data?.weekly_summary ?? true,
+  });
+}
+
+// POST /api/email-preferences
+async function handleSaveEmailPreferences(req, res) {
+  const userId = await getUserIdFromToken(req.headers['authorization']);
+  if (!userId) return json(res, 401, { error: 'Unauthorized' });
+
+  const body = await readBody(req);
+  let parsed;
+  try { parsed = JSON.parse(body); } catch { return json(res, 400, { error: 'Invalid JSON' }); }
+
+  const { sessionReminders, weighInReminders, weeklySummary } = parsed;
+  const { error } = await supabaseAdmin
+    .from('email_preferences')
+    .upsert({
+      user_id:           userId,
+      session_reminders: sessionReminders !== undefined ? Boolean(sessionReminders) : true,
+      weigh_in_reminders: weighInReminders !== undefined ? Boolean(weighInReminders) : true,
+      weekly_summary:    weeklySummary !== undefined    ? Boolean(weeklySummary)    : true,
+      updated_at:        new Date().toISOString(),
+    }, { onConflict: 'user_id' });
+
+  if (error) return json(res, 500, { error: error.message });
+  return json(res, 200, { ok: true });
+}
+
 // ─── HTTP SERVER ──────────────────────────────────────────────────────────────
 
 const server = http.createServer(async (req, res) => {
@@ -628,6 +989,13 @@ const server = http.createServer(async (req, res) => {
       return await handleDeleteAccount(req, res);
     }
 
+    if (req.method === 'GET' && url === '/api/email-preferences') {
+      return await handleGetEmailPreferences(req, res);
+    }
+    if (req.method === 'POST' && url === '/api/email-preferences') {
+      return await handleSaveEmailPreferences(req, res);
+    }
+
     json(res, 404, { error: 'Not found' });
   } catch (err) {
     console.error('Unhandled error:', err);
@@ -637,3 +1005,12 @@ const server = http.createServer(async (req, res) => {
 
 const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => console.log('Server running on port ' + PORT));
+
+// ─── CRON JOBS ────────────────────────────────────────────────────────────────
+// Weekly progress summary — every Sunday at 8:00 AM UTC
+cron.schedule('0 8 * * 0', runWeeklyProgressEmails, { timezone: 'UTC' });
+// Session reminder — every day at 7:00 AM UTC
+cron.schedule('0 7 * * *', runSessionReminderEmails, { timezone: 'UTC' });
+// Weigh-in reminder — every day at 8:00 AM UTC
+cron.schedule('0 8 * * *', runWeighInReminderEmails, { timezone: 'UTC' });
+console.log('Cron jobs scheduled');

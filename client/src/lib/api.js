@@ -16,6 +16,26 @@ async function authedPost(path, body, token) {
   return res.json();
 }
 
+async function authedGet(path, token) {
+  const res = await fetch(API + path, {
+    method: 'GET',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Request failed');
+  }
+  return res.json();
+}
+
+export async function getEmailPreferences(token) {
+  return authedGet('/api/email-preferences', token);
+}
+
+export async function saveEmailPreferences(prefs, token) {
+  return authedPost('/api/email-preferences', prefs, token);
+}
+
 export async function submitSnapshot(intakeData, token) {
   return authedPost('/snapshot', { intakeData }, token);
 }
