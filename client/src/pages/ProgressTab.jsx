@@ -4,6 +4,7 @@ import {
   Tooltip, ReferenceLine, ResponsiveContainer,
 } from 'recharts';
 import { supabase } from '../lib/supabase';
+import { unlockAchievement, hasConsecutiveDays } from '../lib/achievements';
 
 /*
   Supabase table required (run once in the Supabase SQL editor):
@@ -209,6 +210,37 @@ export default function ProgressTab({ userId }) {
         if (err) throw err;
       }
       await fetchLogs();
+
+      // Achievement checks — only on new logs, not edits
+      if (!editing) {
+        const { data: allLogs } = await supabase
+          .from('weight_logs')
+          .select('logged_at, weight_kg')
+          .eq('user_id', user.id)
+          .order('logged_at', { ascending: true });
+
+        if (allLogs) {
+          // first_checkin — very first weight log
+          if (allLogs.length === 1) {
+            await unlockAchievement(supabase, user.id, 'first_checkin', 10);
+          }
+
+          // moving_needle — current weight down 1 kg from starting weight
+          if (allLogs.length >= 2) {
+            const startKg   = allLogs[0].weight_kg;
+            const currentKg = allLogs[allLogs.length - 1].weight_kg;
+            if (startKg - currentKg >= 1) {
+              await unlockAchievement(supabase, user.id, 'moving_needle', 100);
+            }
+          }
+
+          // consistent — 30 consecutive calendar days of logs
+          if (hasConsecutiveDays(allLogs, 30)) {
+            await unlockAchievement(supabase, user.id, 'consistent', 200);
+          }
+        }
+      }
+
       setSaved(true);
       setEditing(false);
       setInputVal('');

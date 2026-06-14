@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Dumbbell, Flame, Zap, Trophy, Flag, Medal, Hash, RefreshCw,
   Swords, Beef, ShoppingBag, Target, Pill, Scale, ArrowDown,
   Camera, LayoutTemplate, CalendarCheck, Crown, Users, Shield,
   BarChart2, Lock,
 } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
@@ -485,15 +486,44 @@ function XpGuide() {
 // ─── MAIN EXPORT ─────────────────────────────────────────────────────────────
 
 export default function AchievementsTab({ userId }) {
-  // ?preview=true renders all badges unlocked for design review
   const isPreview =
     typeof window !== 'undefined' &&
     new URLSearchParams(window.location.search).get('preview') === 'true';
 
-  // currentXp and unlockedIds will be populated from Supabase when unlock logic is wired
-  const currentXp = 0;
+  const [unlockedIds, setUnlockedIds] = useState(new Set());
+  const [currentXp,   setCurrentXp]   = useState(0);
+  const [loading,     setLoading]      = useState(true);
+
+  useEffect(() => {
+    if (isPreview) { setLoading(false); return; }
+
+    async function load() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
+
+      const [{ data: achvRows }, { data: xpRow }] = await Promise.all([
+        supabase
+          .from('user_achievements')
+          .select('achievement_id')
+          .eq('user_id', user.id),
+        supabase
+          .from('user_xp')
+          .select('total_xp')
+          .eq('user_id', user.id)
+          .maybeSingle(),
+      ]);
+
+      if (achvRows) setUnlockedIds(new Set(achvRows.map(r => r.achievement_id)));
+      if (xpRow)    setCurrentXp(xpRow.total_xp || 0);
+      setLoading(false);
+    }
+
+    load();
+  }, [userId]); // re-fetches whenever the tab remounts or userId changes
+
   const allIds = CATEGORIES.flatMap(c => c.badges.map(b => b.id));
-  const unlockedIds = isPreview ? new Set(allIds) : new Set();
+  const displayIds = isPreview ? new Set(allIds) : unlockedIds;
+  const displayXp  = isPreview ? 10000 : currentXp;
 
   return (
     <div>
@@ -510,13 +540,21 @@ export default function AchievementsTab({ userId }) {
         }
       `}</style>
 
-      <XpSection currentXp={currentXp} />
+      {loading ? (
+        <div style={{ color: '#555', padding: '60px 0', textAlign: 'center', fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.1em' }}>
+          Loading…
+        </div>
+      ) : (
+        <>
+          <XpSection currentXp={displayXp} />
 
-      {CATEGORIES.map(cat => (
-        <CategorySection key={cat.key} category={cat} unlockedIds={unlockedIds} />
-      ))}
+          {CATEGORIES.map(cat => (
+            <CategorySection key={cat.key} category={cat} unlockedIds={displayIds} />
+          ))}
 
-      <XpGuide />
+          <XpGuide />
+        </>
+      )}
     </div>
   );
 }

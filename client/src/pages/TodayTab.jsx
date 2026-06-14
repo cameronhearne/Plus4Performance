@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Flame } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { unlockAchievement } from '../lib/achievements';
 
 /*
   ─── SUPABASE SQL — run once in the SQL editor ─────────────────────────────
@@ -761,10 +762,31 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
     try {
       const { data: completions } = await supabase
         .from('session_completions')
-        .select('completed_at')
+        .select('completed_at, week_number')
         .eq('user_id', user.id)
         .order('completed_at', { ascending: false });
-      if (completions) setStreak(calcStreak(completions));
+
+      if (!completions) return;
+
+      const newStreak = calcStreak(completions);
+      setStreak(newStreak);
+
+      // first_rep — very first session ever
+      if (completions.length === 1) {
+        await unlockAchievement(supabase, user.id, 'first_rep', 100);
+      }
+
+      // on_fire — 7-day session streak
+      if (newStreak >= 7) {
+        await unlockAchievement(supabase, user.id, 'on_fire', 100);
+      }
+
+      // week1_warrior — completed all scheduled sessions in week 1
+      const numTrainingDays = parseInt(intakeSchedule.trainingDays || '4', 10);
+      const week1Count = completions.filter(c => c.week_number === 1).length;
+      if (week1Count >= numTrainingDays) {
+        await unlockAchievement(supabase, user.id, 'week1_warrior', 150);
+      }
     } catch { /* ignore if table absent */ }
   }
 
