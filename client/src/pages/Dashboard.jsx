@@ -5,6 +5,7 @@ import { createCheckoutSession } from '../lib/api';
 import AchievementsTab from './AchievementsTab';
 import ProgressTab from './ProgressTab';
 import TodayTab from './TodayTab';
+import Logbook from './Logbook';
 
 const TABS = [
   { id: 'today', label: 'Today' },
@@ -12,6 +13,7 @@ const TABS = [
   { id: 'nutrition', label: 'Nutrition' },
   { id: 'progress', label: 'Progress' },
   { id: 'achievements', label: 'Achievements' },
+  { id: 'logbook', label: 'Logbook' },
 ];
 
 // ─── LOCKED OVERLAY ──────────────────────────────────────────────────────────
@@ -278,6 +280,12 @@ export default function Dashboard() {
   const [plan, setPlan] = useState(null);
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [loadingUnlock, setLoadingUnlock] = useState(false);
+  const [logbookSession, setLogbookSession] = useState(null);
+
+  function handleOpenLogbook(sessionName) {
+    setLogbookSession(sessionName);
+    setActiveTab('logbook');
+  }
 
   useEffect(() => {
     async function load() {
@@ -415,11 +423,12 @@ export default function Dashboard() {
 
         {/* Tab content */}
         <div style={styles.content}>
-          {activeTab === 'today' && <TodayTab snapshot={snapshot} plan={plan} isUnlocked={isUnlocked} onUnlock={handleUnlock} />}
+          {activeTab === 'today' && <TodayTab snapshot={snapshot} plan={plan} isUnlocked={isUnlocked} onUnlock={handleUnlock} onOpenLogbook={handleOpenLogbook} />}
           {activeTab === 'plan' && <TabPlan plan={plan} isUnlocked={isUnlocked} onUnlock={handleUnlock} />}
           {activeTab === 'nutrition' && <TabNutrition plan={plan} isUnlocked={isUnlocked} onUnlock={handleUnlock} />}
           {activeTab === 'progress' && <ProgressTab userId={user?.id} />}
           {activeTab === 'achievements' && <AchievementsTab userId={user?.id} />}
+          {activeTab === 'logbook' && <Logbook userId={user?.id} plan={plan} preselectedSession={logbookSession} />}
         </div>
       </div>
     </div>

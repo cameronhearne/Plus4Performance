@@ -282,43 +282,15 @@ function Pill({ children }) {
   );
 }
 
-function MissionCard({ session, library, sessionLength, weekNum, onComplete }) {
+function MissionCard({ session, library, sessionLength, weekNum, onComplete, onOpenLogbook }) {
   const [open, setOpen]             = useState(false);
   const [expandedEx, setExpandedEx] = useState(null);
   const [completing, setCompleting] = useState(false);
   const [completed, setCompleted]   = useState(false);
-  // lift logging
-  const [liftWeights, setLiftWeights] = useState({});   // name → input string
-  const [liftSaved,   setLiftSaved]   = useState({});   // name → bool (tick)
-  const [lastLifts,   setLastLifts]   = useState({});   // name → last weight_kg
 
   const exCount  = session.exercises?.length ?? 0;
   const duration = sessionLength ? `${sessionLength} min` : null;
   const focus    = inferFocus(session.name);
-
-  // Fetch last logged weight for each exercise when table expands
-  useEffect(() => {
-    if (!open) return;
-    (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const names = (session.exercises || []).map(ex => library[ex.ex]?.name || ex.ex);
-      if (!names.length) return;
-      const { data } = await supabase
-        .from('lift_logs')
-        .select('exercise_name, weight_kg')
-        .eq('user_id', user.id)
-        .in('exercise_name', names)
-        .order('logged_at', { ascending: false });
-      if (data) {
-        const last = {};
-        for (const r of data) {
-          if (!(r.exercise_name in last)) last[r.exercise_name] = r.weight_kg;
-        }
-        setLastLifts(last);
-      }
-    })();
-  }, [open, session, library]);
 
   async function handleComplete() {
     setCompleting(true);
@@ -331,40 +303,16 @@ function MissionCard({ session, library, sessionLength, weekNum, onComplete }) {
       week_number: weekNum,
     });
     setCompleting(false);
-    if (!error) {
-      setCompleted(true);
-      onComplete?.();
-    }
-  }
-
-  async function handleSaveLift(e, exerciseName) {
-    e.stopPropagation();
-    const kg = parseFloat(liftWeights[exerciseName] || '');
-    if (!kg || kg <= 0) return;
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const { error } = await supabase.from('lift_logs').insert({
-      user_id: user.id,
-      exercise_name: exerciseName,
-      weight_kg: kg,
-      logged_at: new Date().toISOString(),
-      session_name: session.name,
-      week_number: weekNum,
-    });
-    if (!error) {
-      setLiftSaved(prev => ({ ...prev, [exerciseName]: true }));
-      setLastLifts(prev => ({ ...prev, [exerciseName]: kg }));
-      setTimeout(() => setLiftSaved(prev => ({ ...prev, [exerciseName]: false })), 2000);
-    }
+    if (!error) { setCompleted(true); onComplete?.(); }
   }
 
   return (
     <div style={{ background: '#0d0d0d', border: '1px solid rgba(200,200,200,0.12)', marginBottom: 12 }}>
-      {/* Header row */}
+      {/* Collapsible header */}
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
-        style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: '20px 20px 16px', textAlign: 'left' }}
+        style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: '20px 20px 12px', textAlign: 'left' }}
       >
         <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.3em', textTransform: 'uppercase', color: '#C0392B', marginBottom: 8 }}>
           Today's Mission
@@ -382,13 +330,29 @@ function MissionCard({ session, library, sessionLength, weekNum, onComplete }) {
         </div>
       </button>
 
+      {/* OPEN LOGBOOK — always visible, below pills */}
+      <div style={{ padding: '10px 20px 16px' }}>
+        <button
+          type="button"
+          onClick={() => onOpenLogbook?.(session.name)}
+          style={{
+            background: 'none', border: '1px solid #C0392B',
+            color: '#C0392B', fontFamily: "'Barlow Condensed', sans-serif",
+            fontSize: 12, fontWeight: 700, letterSpacing: '0.18em',
+            textTransform: 'uppercase', padding: '9px 20px', cursor: 'pointer',
+          }}
+        >
+          Open Logbook →
+        </button>
+      </div>
+
       {/* Expanded exercise list */}
       {open && (
         <div style={{ padding: '0 20px 20px' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 4 }}>
             <thead>
               <tr>
-                {['Exercise', 'Sets', 'Reps', 'Rest', 'Weight'].map(h => (
+                {['Exercise', 'Sets', 'Reps', 'Rest'].map(h => (
                   <th key={h} style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#787878', padding: '8px 8px 8px 0', textAlign: 'left', borderBottom: '1px solid #222' }}>
                     {h}
                   </th>
@@ -397,64 +361,27 @@ function MissionCard({ session, library, sessionLength, weekNum, onComplete }) {
             </thead>
             <tbody>
               {(session.exercises || []).map((ex, i) => {
-                const info      = library[ex.ex] || {};
-                const name      = info.name || ex.ex;
-                const isOpen    = expandedEx === i;
-                const hasCue    = !!(info.cues || info.common_mistakes || info.injury_modifications);
-                const lastKg    = lastLifts[name];
-                const saved     = liftSaved[name];
-
+                const info   = library[ex.ex] || {};
+                const name   = info.name || ex.ex;
+                const isOpen = expandedEx === i;
+                const hasCue = !!(info.cues || info.common_mistakes || info.injury_modifications);
                 return (
                   <React.Fragment key={i}>
                     <tr
                       style={{ background: i % 2 === 0 ? '#111' : '#0d0d0d', cursor: hasCue ? 'pointer' : 'default' }}
                       onClick={() => hasCue && setExpandedEx(isOpen ? null : i)}
                     >
-                      <td style={{ fontSize: 13, color: '#CDCDC8', padding: '10px 8px 10px 0', verticalAlign: 'middle' }}>
+                      <td style={{ fontSize: 13, color: '#CDCDC8', padding: '10px 8px 10px 0', verticalAlign: 'top' }}>
                         {name}
                         {hasCue && <span style={{ color: '#444', fontSize: 11, marginLeft: 6 }}>{isOpen ? '▲' : '▼'}</span>}
                       </td>
-                      <td style={{ fontSize: 13, color: '#CDCDC8', padding: '10px 8px', textAlign: 'center', verticalAlign: 'middle' }}>{ex.sets}</td>
-                      <td style={{ fontSize: 13, color: '#CDCDC8', padding: '10px 8px', textAlign: 'center', verticalAlign: 'middle' }}>{ex.reps}</td>
-                      <td style={{ fontSize: 13, color: '#CDCDC8', padding: '10px 8px', textAlign: 'center', verticalAlign: 'middle' }}>{ex.rest}</td>
-                      {/* Weight logging cell */}
-                      <td style={{ padding: '8px 0 8px 8px', verticalAlign: 'middle' }} onClick={e => e.stopPropagation()}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                          <input
-                            type="number"
-                            step="0.5"
-                            value={liftWeights[name] || ''}
-                            onChange={e => setLiftWeights(prev => ({ ...prev, [name]: e.target.value }))}
-                            onClick={e => e.stopPropagation()}
-                            placeholder={lastKg != null ? `Last: ${lastKg}` : '0 kg'}
-                            style={{
-                              width: 72, padding: '5px 6px',
-                              background: '#1a1a1a', border: '1px solid #2a2a2a',
-                              color: '#CDCDC8', fontFamily: "'Barlow Condensed', sans-serif",
-                              fontSize: 12, outline: 'none', textAlign: 'center',
-                            }}
-                          />
-                          {saved ? (
-                            <span style={{ color: '#4CAF50', fontSize: 15, lineHeight: 1 }}>✓</span>
-                          ) : (
-                            <button
-                              onClick={e => handleSaveLift(e, name)}
-                              style={{
-                                background: 'none', border: 'none', cursor: 'pointer',
-                                color: '#C0392B', fontFamily: "'Barlow Condensed', sans-serif",
-                                fontSize: 11, fontWeight: 700, letterSpacing: '0.12em',
-                                textTransform: 'uppercase', padding: '2px 0',
-                              }}
-                            >
-                              Save
-                            </button>
-                          )}
-                        </div>
-                      </td>
+                      <td style={{ fontSize: 13, color: '#CDCDC8', padding: '10px 8px', textAlign: 'center', verticalAlign: 'top' }}>{ex.sets}</td>
+                      <td style={{ fontSize: 13, color: '#CDCDC8', padding: '10px 8px', textAlign: 'center', verticalAlign: 'top' }}>{ex.reps}</td>
+                      <td style={{ fontSize: 13, color: '#CDCDC8', padding: '10px 8px', textAlign: 'center', verticalAlign: 'top' }}>{ex.rest}</td>
                     </tr>
                     {isOpen && hasCue && (
                       <tr style={{ background: '#0a0a0a' }}>
-                        <td colSpan={5} style={{ padding: '10px 0 14px', fontSize: 12, color: '#CDCDC8', lineHeight: 1.6 }}>
+                        <td colSpan={4} style={{ padding: '10px 0 14px', fontSize: 12, color: '#CDCDC8', lineHeight: 1.6 }}>
                           {info.cues && <div style={{ marginBottom: 4 }}><span style={{ color: '#787878', fontWeight: 700 }}>Cue: </span>{info.cues}</div>}
                           {info.common_mistakes && <div style={{ marginBottom: 4 }}><span style={{ color: '#787878', fontWeight: 700 }}>Avoid: </span>{info.common_mistakes}</div>}
                           {info.injury_modifications && <div><span style={{ color: '#787878', fontWeight: 700 }}>Mod: </span>{info.injury_modifications}</div>}
@@ -574,7 +501,7 @@ function LogWeightModal({ onClose, onSuccess }) {
 
 // ─── MAIN EXPORT ─────────────────────────────────────────────────────────────
 
-export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock }) {
+export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenLogbook }) {
   const [currentWeight, setCurrentWeight] = useState(null);
   const [startingWeight, setStartingWeight] = useState(null);
   const [targetWeight, setTargetWeight]   = useState(null);
@@ -687,7 +614,7 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock }) {
           Today's Session
         </div>
         {isUnlocked && todaySession ? (
-          <MissionCard session={todaySession} library={library} sessionLength={sessionLength} weekNum={weekNum} onComplete={handleSessionComplete} />
+          <MissionCard session={todaySession} library={library} sessionLength={sessionLength} weekNum={weekNum} onComplete={handleSessionComplete} onOpenLogbook={onOpenLogbook} />
         ) : (
           <div style={{ position: 'relative' }}>
             <div style={{ filter: 'blur(6px)', userSelect: 'none', pointerEvents: 'none', background: '#0d0d0d', border: '1px solid rgba(200,200,200,0.12)', padding: '20px' }}>
