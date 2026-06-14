@@ -890,7 +890,26 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
       />
 
       {/* ── Stat chips ─────────────────────────────────────────── */}
-      <StatChips plan={null} intakeGoal={null} />
+      <div style={{ display: 'flex', gap: '12px', margin: '24px 0', justifyContent: 'center', flexWrap: 'wrap' }}>
+        <div style={{ background: '#111', border: '1px solid #C0392B', borderRadius: '8px', padding: '12px 20px', textAlign: 'center', minWidth: '100px' }}>
+          <div style={{ fontSize: '10px', color: '#666', letterSpacing: '0.15em', marginBottom: '6px', fontFamily: 'inherit' }}>GOAL</div>
+          <div style={{ fontSize: '16px', color: '#fff', fontWeight: '700', fontFamily: 'inherit' }}>
+            {plan?.user_summary?.goal || plan?.nutrition?.goal || 'LEAN BULK'}
+          </div>
+        </div>
+        <div style={{ background: '#111', border: '1px solid #C0392B', borderRadius: '8px', padding: '12px 20px', textAlign: 'center', minWidth: '100px' }}>
+          <div style={{ fontSize: '10px', color: '#666', letterSpacing: '0.15em', marginBottom: '6px', fontFamily: 'inherit' }}>CALORIES</div>
+          <div style={{ fontSize: '16px', color: '#fff', fontWeight: '700', fontFamily: 'inherit' }}>
+            {plan?.user_summary?.calorie_target || plan?.nutrition?.training_day?.calories || '3456'} KCAL
+          </div>
+        </div>
+        <div style={{ background: '#111', border: '1px solid #C0392B', borderRadius: '8px', padding: '12px 20px', textAlign: 'center', minWidth: '100px' }}>
+          <div style={{ fontSize: '10px', color: '#666', letterSpacing: '0.15em', marginBottom: '6px', fontFamily: 'inherit' }}>PROTEIN</div>
+          <div style={{ fontSize: '16px', color: '#fff', fontWeight: '700', fontFamily: 'inherit' }}>
+            {plan?.user_summary?.protein_g || plan?.nutrition?.training_day?.protein || '228'}G
+          </div>
+        </div>
+      </div>
 
       {/* ── Today's Mission ────────────────────────────────────── */}
       <div style={{ marginBottom: 28 }} className="today-mission-card">
