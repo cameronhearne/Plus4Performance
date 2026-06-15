@@ -989,5 +989,21 @@ if (waitlistBtn) {
         e.preventDefault();
     }, { passive: false });
 }); </script>
+<script>
+(function(){
+  var KEY='p4p_cookie_consent';
+  if(localStorage.getItem(KEY))return;
+  var style=document.createElement('style');
+  style.textContent='@keyframes p4pSlideUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}#p4p-cookie-bar{position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#111;border-top:1px solid #1e1e1e;display:flex;align-items:center;justify-content:space-between;gap:24px;padding:16px 32px;animation:p4pSlideUp 0.3s ease-out both;flex-wrap:wrap;}#p4p-cookie-bar p{color:#fff;font-size:14px;line-height:1.5;margin:0;flex:1 1 280px;}#p4p-cookie-bar .p4p-cb-actions{display:flex;gap:12px;flex-shrink:0;flex-wrap:wrap;}#p4p-cookie-bar button{font-size:12px;font-weight:700;letter-spacing:0.12em;cursor:pointer;min-height:44px;padding:10px 22px;white-space:nowrap;}#p4p-cb-accept{background:#C0392B;color:#fff;border:none;}#p4p-cb-essential{background:transparent;color:#fff;border:1px solid rgba(255,255,255,0.35);}@media(max-width:600px){#p4p-cookie-bar{flex-direction:column;}#p4p-cookie-bar .p4p-cb-actions{width:100%;}#p4p-cookie-bar button{width:100%;}}';
+  document.head.appendChild(style);
+  var bar=document.createElement('div');
+  bar.id='p4p-cookie-bar';
+  bar.innerHTML='<p>We use cookies to improve your experience. Essential cookies are always active. Analytics and marketing cookies are optional.</p><div class="p4p-cb-actions"><button id="p4p-cb-essential">ESSENTIAL ONLY</button><button id="p4p-cb-accept">ACCEPT ALL</button></div>';
+  document.body.appendChild(bar);
+  function dismiss(v){localStorage.setItem(KEY,v);bar.remove();}
+  document.getElementById('p4p-cb-accept').addEventListener('click',function(){dismiss('all');});
+  document.getElementById('p4p-cb-essential').addEventListener('click',function(){dismiss('essential');});
+})();
+</script>
 </body>
 </html>

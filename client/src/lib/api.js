@@ -48,6 +48,10 @@ export async function createPortalSession(token) {
   return authedPost('/create-portal-session', {}, token);
 }
 
+export async function submitMonthlyCheckin(payload, token) {
+  return authedPost('/api/monthly-checkin', payload, token);
+}
+
 export async function deleteAccount(token) {
   const res = await fetch((import.meta.env.VITE_API_URL || '') + '/delete-account', {
     method: 'DELETE',

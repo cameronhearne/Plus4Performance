@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Flame } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { unlockAchievement } from '../lib/achievements';
+import MonthlyCheckIn from '../components/MonthlyCheckIn';
 
 /*
   ─── SUPABASE SQL — run once in the SQL editor ─────────────────────────────
@@ -906,6 +907,9 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
           </div>
         </div>
       </div>
+
+      {/* ── Monthly check-in ───────────────────────────────────── */}
+      <MonthlyCheckIn weekNum={weekNum} currentWeight={currentWeight} />
 
       {/* ── Today's Mission ────────────────────────────────────── */}
       <div style={{ marginBottom: 28 }} className="today-mission-card">

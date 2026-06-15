@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { supabase } from './lib/supabase';
 import Signup from './pages/Signup';
 import Login from './pages/Login';
@@ -8,6 +8,7 @@ import SnapshotResult from './pages/SnapshotResult';
 import Dashboard from './pages/Dashboard';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import CookieBanner from './components/CookieBanner';
 
 function RequireAuth({ children }) {
   const [session, setSession] = useState(undefined);
@@ -23,8 +24,16 @@ function RequireAuth({ children }) {
   return children;
 }
 
+function CookieBannerGuard() {
+  const { pathname } = useLocation();
+  const isDashboard = pathname === '/dashboard' || pathname.startsWith('/dashboard/');
+  return isDashboard ? null : <CookieBanner />;
+}
+
 export default function App() {
   return (
+    <>
+    <CookieBannerGuard />
     <Routes>
       <Route path="/signup" element={<Signup />} />
       <Route path="/login" element={<Login />} />
@@ -45,5 +54,6 @@ export default function App() {
       {/* Catch-all for the app shell */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
+    </>
   );
 }

@@ -947,6 +947,182 @@ async function handleSaveEmailPreferences(req, res) {
   return json(res, 200, { ok: true });
 }
 
+// POST /api/monthly-checkin
+// Accepts five check-in inputs, fetches user plan/history from Supabase, calls Claude,
+// saves result to monthly_checkins and returns the structured feedback.
+//
+// ─── SQL — run once in Supabase SQL editor ────────────────────────────────────
+//
+// create table monthly_checkins (
+//   id uuid default gen_random_uuid() primary key,
+//   user_id uuid references auth.users(id) on delete cascade,
+//   week_number int not null,
+//   current_weight numeric(5,2),
+//   feeling text,
+//   energy text,
+//   nutrition_compliance text,
+//   injuries text,
+//   ai_feedback text not null,
+//   calorie_adjustment int,
+//   created_at timestamptz not null default now()
+// );
+// alter table monthly_checkins enable row level security;
+// create policy "checkins_all" on monthly_checkins
+// for all to authenticated
+// using (auth.uid() = user_id)
+// with check (auth.uid() = user_id);
+// grant all on monthly_checkins to authenticated;
+//
+// ──────────────────────────────────────────────────────────────────────────────
+async function handleMonthlyCheckin(req, res) {
+  const userId = await getUserIdFromToken(req.headers['authorization']);
+  if (!userId) return json(res, 401, { error: 'Unauthorized' });
+
+  const body = await readBody(req);
+  let parsed;
+  try { parsed = JSON.parse(body); } catch { return json(res, 400, { error: 'Invalid JSON' }); }
+
+  const { weekNumber, currentWeight, feeling, energy, nutritionCompliance, injuries } = parsed;
+  if (!weekNumber || !feeling || !energy || !nutritionCompliance) {
+    return json(res, 400, { error: 'weekNumber, feeling, energy and nutritionCompliance are required' });
+  }
+
+  // Fetch intake data
+  const { data: intakeRow } = await supabaseAdmin
+    .from('intake_submissions')
+    .select('data')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const intake = intakeRow?.data || {};
+
+  // Fetch plan data
+  const { data: planRow } = await supabaseAdmin
+    .from('plans')
+    .select('plan_data')
+    .eq('user_id', userId)
+    .order('generated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const plan = planRow?.plan_data || {};
+
+  // Session completions over last 28 days
+  const fourWeeksAgo = new Date(Date.now() - 28 * 86400000).toISOString();
+  const { data: completions } = await supabaseAdmin
+    .from('session_completions')
+    .select('completed_at')
+    .eq('user_id', userId)
+    .gte('completed_at', fourWeeksAgo);
+
+  const sessionsCompleted = completions?.length || 0;
+  const targetPerWeek    = parseInt(intake.trainingDays || '4', 10);
+  const targetTotal      = targetPerWeek * 4;
+  const completionPct    = targetTotal > 0 ? Math.round((sessionsCompleted / targetTotal) * 100) : 0;
+
+  // Weight logs over last 28 days for trend
+  const { data: weightLogs } = await supabaseAdmin
+    .from('weight_logs')
+    .select('weight_kg, logged_at')
+    .eq('user_id', userId)
+    .gte('logged_at', fourWeeksAgo)
+    .order('logged_at', { ascending: true });
+
+  let weightTrendStr = 'insufficient data to calculate trend';
+  if (weightLogs?.length >= 2) {
+    const diff = weightLogs[weightLogs.length - 1].weight_kg - weightLogs[0].weight_kg;
+    const sign = diff > 0 ? '+' : '';
+    weightTrendStr = `${sign}${diff.toFixed(1)}kg over 4 weeks`;
+  }
+
+  const startingWeight  = intake.currentWeight || weightLogs?.[0]?.weight_kg || null;
+  const targetWeight    = intake.targetWeight || null;
+  const goal            = intake.goal || plan?.user_summary?.goal || 'muscle_building';
+  const calorieTarget   = plan?.user_summary?.calorie_target
+                       || plan?.nutrition?.training_day?.calories
+                       || null;
+
+  const systemPrompt = `${coachingBible}
+
+You are a Plus 4 Performance coach delivering a monthly check-in review. Tone: direct, honest, specific, zero fluff. Speak to the client as a coach who cares about real results — not as a cheerleader.
+
+Respond with ONLY a valid JSON object, no markdown, no code fences:
+{
+  "overall_assessment": "2-3 sentences assessing overall progress and adherence based on the data",
+  "doing_well": "One specific thing they are doing well with a concrete reason why it matters",
+  "focus_next_4_weeks": "One specific, actionable thing to focus on or adjust in the next 4 weeks",
+  "calorie_adjustment": null or integer (e.g. 150 or -100),
+  "calorie_adjustment_reason": null or string explaining the adjustment with reference to their weight trend,
+  "closing_line": "One short, direct motivational line in the coaching bible tone — no generic phrases"
+}
+
+Calorie adjustment rules (apply strictly):
+- Fat loss goal: ideal loss is 0.5–1.0 kg per 4 weeks. If losing >1.2 kg/4 wks → +100 to +150 kcal. If losing <0.2 kg/4 wks → -100 to -150 kcal. If losing >1.8 kg → +200 kcal.
+- Muscle building goal: ideal gain is 0.5–1.0 kg per 4 weeks. If gaining <0.2 kg/4 wks → +100 to +200 kcal. If gaining >1.5 kg/4 wks → -100 to -150 kcal.
+- Maintenance/recomposition: if trending significantly in either direction, adjust by 100 kcal.
+- No data or stable weight within goal range: set calorie_adjustment to null.
+Always reference the specific weight trend numbers in the reason.`;
+
+  const userPrompt = `Monthly check-in — Week ${weekNumber} of 12
+
+PLAN:
+- Goal: ${goal}
+- Starting weight: ${startingWeight != null ? startingWeight + ' kg' : 'unknown'}
+- Current weight: ${currentWeight != null ? currentWeight + ' kg' : 'unknown'}
+- Target weight: ${targetWeight != null ? targetWeight + ' kg' : 'unknown'}
+- Current calorie target: ${calorieTarget != null ? calorieTarget + ' kcal/day' : 'unknown'}
+
+LAST 4 WEEKS:
+- Sessions completed: ${sessionsCompleted} of ${targetTotal} (${completionPct}% completion rate)
+- Weight trend: ${weightTrendStr}
+
+CLIENT SELF-REPORT:
+- Overall feeling: ${feeling}
+- Session energy: ${energy}
+- Nutrition compliance: ${nutritionCompliance}
+- Injuries / issues: ${injuries || 'None reported'}
+
+Apply the calorie adjustment rules precisely. Reference real numbers. Be specific.`;
+
+  let aiResponse;
+  try {
+    const message = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 600,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userPrompt }],
+    });
+    const raw = message.content[0].text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+    aiResponse = JSON.parse(raw);
+  } catch (err) {
+    console.error('[monthly-checkin] AI error:', err);
+    return json(res, 500, { error: 'AI generation failed' });
+  }
+
+  const { data: saved, error: saveErr } = await supabaseAdmin
+    .from('monthly_checkins')
+    .insert({
+      user_id:              userId,
+      week_number:          weekNumber,
+      current_weight:       currentWeight != null ? currentWeight : null,
+      feeling,
+      energy,
+      nutrition_compliance: nutritionCompliance,
+      injuries:             injuries || null,
+      ai_feedback:          JSON.stringify(aiResponse),
+      calorie_adjustment:   aiResponse.calorie_adjustment || null,
+    })
+    .select()
+    .single();
+
+  if (saveErr) {
+    console.error('[monthly-checkin] save error:', saveErr);
+    return json(res, 500, { error: 'Failed to save check-in' });
+  }
+
+  return json(res, 200, { feedback: aiResponse, checkinId: saved.id });
+}
+
 // ─── HTTP SERVER ──────────────────────────────────────────────────────────────
 
 const server = http.createServer(async (req, res) => {
@@ -994,6 +1170,10 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'POST' && url === '/api/email-preferences') {
       return await handleSaveEmailPreferences(req, res);
+    }
+
+    if (req.method === 'POST' && url === '/api/monthly-checkin') {
+      return await handleMonthlyCheckin(req, res);
     }
 
     json(res, 404, { error: 'Not found' });
