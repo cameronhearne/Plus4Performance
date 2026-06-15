@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { createPortalSession, deleteAccount, createCheckoutSession, getEmailPreferences, saveEmailPreferences } from '../lib/api';
+import { createPortalSession, deleteAccount, createCheckoutSession, getEmailPreferences, saveEmailPreferences, sendTestWeeklyEmail } from '../lib/api';
 
 /*
   ─── NO NEW SQL TABLES REQUIRED ────────────────────────────────────────────────
@@ -371,6 +371,50 @@ function SubscriptionSection({ isUnlocked, subRow, user, onUnlock }) {
   );
 }
 
+// ─── EMAIL TESTING CARD ───────────────────────────────────────────────────────
+
+function EmailTestingCard() {
+  const [status, setStatus] = useState(null); // null | 'sending' | 'ok' | 'error'
+  const [msg, setMsg]       = useState('');
+
+  async function handleSend() {
+    setStatus('sending');
+    setMsg('');
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const result = await sendTestWeeklyEmail(session.access_token);
+      setStatus('ok');
+      setMsg(result.email || 'Email sent.');
+    } catch (e) {
+      setStatus('error');
+      setMsg(e.message || 'Failed to send.');
+    }
+  }
+
+  return (
+    <div style={{ background: '#0d0d0d', border: '1px solid #2a2a2a', padding: '20px', marginBottom: 20 }}>
+      <div style={{ ...eyebrowStyle, marginBottom: 14 }}>Email Testing</div>
+      <button
+        onClick={handleSend}
+        disabled={status === 'sending'}
+        style={{ ...ghostBtn(), opacity: status === 'sending' ? 0.55 : 1 }}
+      >
+        {status === 'sending' ? 'Sending…' : 'Send Test Weekly Email'}
+      </button>
+      {status === 'ok' && (
+        <p style={{ margin: '12px 0 0', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, letterSpacing: '0.06em', color: '#4CAF50' }}>
+          ✓ Test email sent — check your inbox ({msg})
+        </p>
+      )}
+      {status === 'error' && (
+        <p style={{ margin: '12px 0 0', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, letterSpacing: '0.06em', color: '#ef4444' }}>
+          {msg}
+        </p>
+      )}
+    </div>
+  );
+}
+
 // ─── SECTION 4: SETTINGS & PRIVACY ───────────────────────────────────────────
 
 function SettingsSection({ user }) {
@@ -481,6 +525,11 @@ function SettingsSection({ user }) {
           ))}
         </div>
       </SectionCard>
+
+      {/* Email testing — only in dev or when ?debug=true */}
+      {(import.meta.env.DEV || new URLSearchParams(window.location.search).get('debug') === 'true') && (
+        <EmailTestingCard />
+      )}
 
       {/* Danger zone */}
       <div style={{ background: '#0d0d0d', border: '1px solid rgba(192,57,43,0.3)', padding: '20px', marginBottom: 20 }}>

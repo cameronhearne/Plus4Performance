@@ -48,6 +48,10 @@ export async function createPortalSession(token) {
   return authedPost('/create-portal-session', {}, token);
 }
 
+export async function sendTestWeeklyEmail(token) {
+  return authedPost('/api/test-weekly-email', {}, token);
+}
+
 export async function submitMonthlyCheckin(payload, token) {
   return authedPost('/api/monthly-checkin', payload, token);
 }

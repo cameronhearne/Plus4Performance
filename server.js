@@ -5,6 +5,7 @@ const Anthropic = require('@anthropic-ai/sdk');
 const { createClient } = require('@supabase/supabase-js');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const cron = require('node-cron');
+const sanitizeHtml = require('sanitize-html');
 
 const anthropic = new Anthropic();
 const coachingBible = fs.readFileSync(path.join(__dirname, 'coaching_bible.txt'), 'utf8');
@@ -200,10 +201,111 @@ ${JSON.stringify(intakeData, null, 2)}`;
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 
-function cors(res) {
-  res.setHeader('Access-Control-Allow-Origin', process.env.CLIENT_ORIGIN || '*');
+// ── CORS — allowlist ─────────────────────────────────────────────────────────
+// express-rate-limit and helmet both require Express middleware — this server
+// uses plain http, so rate limiting, CORS and security headers are implemented
+// natively with identical behaviour.
+
+const ALLOWED_ORIGINS = new Set([
+  'https://plus4performance.com',
+  'https://www.plus4performance.com',
+  ...(process.env.NODE_ENV !== 'production'
+    ? ['http://localhost:3000', 'http://localhost:5173']
+    : []),
+]);
+
+// Returns false and sends 403 if Origin is present but not in the allowlist.
+// Absent Origin means server-to-server (Stripe webhook, curl, etc.) — allow it.
+function cors(req, res) {
+  const origin = req.headers.origin;
+  if (origin) {
+    if (!ALLOWED_ORIGINS.has(origin)) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Origin not allowed' }));
+      return false;
+    }
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+  }
   res.setHeader('Access-Control-Allow-Methods', 'POST, GET, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  return true;
+}
+
+// ── SECURITY HEADERS (helmet equivalent) ─────────────────────────────────────
+
+function addSecurityHeaders(res) {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '0'); // modern: disable legacy filter, rely on CSP
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  res.setHeader('Content-Security-Policy', "default-src 'none'");
+}
+
+// ── RATE LIMITING (express-rate-limit equivalent) ─────────────────────────────
+// Buckets: 'general' | 'plan' | 'auth'
+
+const _rlStore = new Map(); // key: `${ip}:${bucket}`
+
+// Purge expired windows every 10 minutes to prevent memory growth
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of _rlStore) if (now > v.resetAt) _rlStore.delete(k);
+}, 10 * 60 * 1000).unref();
+
+function getClientIp(req) {
+  const fwd = req.headers['x-forwarded-for'];
+  return fwd ? fwd.split(',')[0].trim() : (req.socket?.remoteAddress || 'unknown');
+}
+
+// Returns true and sends 429 if the limit is hit; returns false otherwise.
+function rateLimit(req, res, { windowMs, max, message, bucket }) {
+  const key = `${getClientIp(req)}:${bucket}`;
+  const now = Date.now();
+  let entry = _rlStore.get(key);
+  if (!entry || now > entry.resetAt) {
+    entry = { count: 1, resetAt: now + windowMs };
+    _rlStore.set(key, entry);
+    return false;
+  }
+  entry.count += 1;
+  if (entry.count > max) {
+    const retryAfter = Math.ceil((entry.resetAt - now) / 1000);
+    res.writeHead(429, { 'Content-Type': 'application/json', 'Retry-After': String(retryAfter) });
+    res.end(JSON.stringify({ error: message }));
+    return true;
+  }
+  return false;
+}
+
+const LIMITS = {
+  // 100 req / 15 min — all routes
+  general: { windowMs: 15 * 60 * 1000, max: 100, message: 'Too many requests, please try again later', bucket: 'general' },
+  // 3 req / 1 hour — plan generation
+  plan:    { windowMs: 60 * 60 * 1000, max: 3,   message: 'Plan generation limit reached. Please wait before trying again.', bucket: 'plan' },
+  // 10 req / 15 min — auth routes
+  auth:    { windowMs: 15 * 60 * 1000, max: 10,  message: 'Too many authentication attempts, please try again later', bucket: 'auth' },
+};
+
+// ── INPUT SANITISATION ────────────────────────────────────────────────────────
+
+function sanitiseInput(str, maxLength = 1000) {
+  if (typeof str !== 'string') return '';
+  return sanitizeHtml(str, { allowedTags: [], allowedAttributes: {} }).trim().slice(0, maxLength);
+}
+
+// Sanitises known free-text string fields on an intake data object in-place.
+function sanitiseIntakeData(data) {
+  if (!data || typeof data !== 'object') return data;
+  const out = { ...data };
+  const textFields = ['firstName', 'lastName', 'additionalNotes', 'injuries', 'notes', 'email', 'name'];
+  for (const field of textFields) {
+    if (typeof out[field] === 'string') {
+      out[field] = sanitiseInput(out[field], field === 'email' ? 254 : 1000);
+    }
+  }
+  return out;
 }
 
 function json(res, status, data) {
@@ -568,8 +670,9 @@ async function handleSnapshot(req, res) {
   let parsed;
   try { parsed = JSON.parse(body); } catch { return json(res, 400, { error: 'Invalid JSON' }); }
 
-  const { intakeData } = parsed;
+  let { intakeData } = parsed;
   if (!intakeData) return json(res, 400, { error: 'intakeData required' });
+  intakeData = sanitiseIntakeData(intakeData);
 
   // Ensure profile exists (handles users who signed up before the trigger was in place)
   const { data: { user: authUser } } = await supabaseAdmin.auth.admin.getUserById(userId);
@@ -633,6 +736,17 @@ async function handleSnapshot(req, res) {
 // Body: { userId: string, intakeData: {...} } — assembled by the webhook handler.
 async function handleGeneratePlan(userId, intakeData) {
   console.log('Generating full plan for user:', userId);
+
+  // Per-user Anthropic spend protection: max 2 plan generations per 24 hours
+  const dayAgo = new Date(Date.now() - 86400000).toISOString();
+  const { count: recentCount } = await supabaseAdmin
+    .from('plans')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .gte('generated_at', dayAgo);
+  if (recentCount >= 2) {
+    throw new Error('You have reached the plan generation limit for today. Please try again tomorrow.');
+  }
 
   let planData;
   const maxAttempts = 3;
@@ -947,6 +1061,65 @@ async function handleSaveEmailPreferences(req, res) {
   return json(res, 200, { ok: true });
 }
 
+// POST /api/test-weekly-email
+// Runs the weekly progress summary email for the authenticated user only.
+// Identical logic to runWeeklyProgressEmails() but scoped to one user.
+// Protected by user JWT — no admin secret required, but only sends to the requester.
+async function handleTestWeeklyEmail(req, res) {
+  const userId = await getUserIdFromToken(req.headers['authorization']);
+  if (!userId) return json(res, 401, { error: 'Unauthorized' });
+
+  const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+
+  try {
+    const { data: { user }, error: uErr } = await supabaseAdmin.auth.admin.getUserById(userId);
+    if (uErr || !user) return json(res, 404, { error: 'User not found' });
+
+    const firstName = user.user_metadata?.first_name || user.email.split('@')[0];
+
+    const { data: weightLogs } = await supabaseAdmin
+      .from('weight_logs').select('weight_kg, logged_at')
+      .eq('user_id', userId).order('logged_at', { ascending: true });
+
+    let weightChange = 0;
+    if (weightLogs?.length >= 2) {
+      const thisWeek = weightLogs.filter(l => l.logged_at >= sevenDaysAgo);
+      if (thisWeek.length > 0) {
+        const before   = weightLogs.filter(l => l.logged_at < sevenDaysAgo);
+        const baseline = before.length ? before[before.length - 1] : weightLogs[0];
+        weightChange   = thisWeek[thisWeek.length - 1].weight_kg - baseline.weight_kg;
+      }
+    }
+
+    const { data: sessions } = await supabaseAdmin
+      .from('session_completions').select('id')
+      .eq('user_id', userId).gte('completed_at', sevenDaysAgo);
+    const sessionsThisWeek = sessions?.length || 0;
+
+    const { data: intakeRow } = await supabaseAdmin
+      .from('intake_submissions').select('data')
+      .eq('user_id', userId).order('created_at', { ascending: false }).limit(1).maybeSingle();
+    const targetSessions = parseInt(intakeRow?.data?.trainingDays || '4', 10);
+
+    const { data: newAchv } = await supabaseAdmin
+      .from('user_achievements').select('achievement_id')
+      .eq('user_id', userId).gte('unlocked_at', sevenDaysAgo);
+    const xpThisWeek = sessionsThisWeek * 50 + (newAchv?.length || 0) * 100;
+    const newBadges  = (newAchv || []).map(a =>
+      a.achievement_id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+    );
+
+    const html = buildWeeklyEmailHtml({ firstName, weightChange, sessionsThisWeek, targetSessions, xpThisWeek, newBadges });
+    await sendResendEmail(user.email, 'Your Week in Review — Plus 4 Performance', html);
+
+    console.log('[test-weekly-email] Sent to', user.email);
+    return json(res, 200, { success: true, email: `sent to ${user.email}` });
+  } catch (err) {
+    console.error('[test-weekly-email] error:', err);
+    return json(res, 500, { error: err.message || 'Failed to send test email' });
+  }
+}
+
 // POST /api/monthly-checkin
 // Accepts five check-in inputs, fetches user plan/history from Supabase, calls Claude,
 // saves result to monthly_checkins and returns the structured feedback.
@@ -982,10 +1155,22 @@ async function handleMonthlyCheckin(req, res) {
   let parsed;
   try { parsed = JSON.parse(body); } catch { return json(res, 400, { error: 'Invalid JSON' }); }
 
-  const { weekNumber, currentWeight, feeling, energy, nutritionCompliance, injuries } = parsed;
+  const { weekNumber, currentWeight } = parsed;
+  const feeling            = sanitiseInput(parsed.feeling, 50);
+  const energy             = sanitiseInput(parsed.energy, 50);
+  const nutritionCompliance = sanitiseInput(parsed.nutritionCompliance, 50);
+  const injuries           = sanitiseInput(parsed.injuries || '', 500);
+
+  const VALID_FEELING   = new Set(['Excellent', 'Good', 'Okay', 'Struggling']);
+  const VALID_ENERGY    = new Set(['High', 'Normal', 'Low', 'Very Low']);
+  const VALID_NUTRITION = new Set(['Always', 'Most days', 'Sometimes', 'Rarely']);
+
   if (!weekNumber || !feeling || !energy || !nutritionCompliance) {
     return json(res, 400, { error: 'weekNumber, feeling, energy and nutritionCompliance are required' });
   }
+  if (!VALID_FEELING.has(feeling))   return json(res, 400, { error: 'Invalid feeling value' });
+  if (!VALID_ENERGY.has(energy))     return json(res, 400, { error: 'Invalid energy value' });
+  if (!VALID_NUTRITION.has(nutritionCompliance)) return json(res, 400, { error: 'Invalid nutritionCompliance value' });
 
   // Fetch intake data
   const { data: intakeRow } = await supabaseAdmin
@@ -1126,7 +1311,11 @@ Apply the calorie adjustment rules precisely. Reference real numbers. Be specifi
 // ─── HTTP SERVER ──────────────────────────────────────────────────────────────
 
 const server = http.createServer(async (req, res) => {
-  cors(res);
+  // Security headers on every response
+  addSecurityHeaders(res);
+
+  // CORS — rejects unknown Origins with 403
+  if (!cors(req, res)) return;
 
   if (req.method === 'OPTIONS') {
     res.writeHead(204);
@@ -1135,6 +1324,16 @@ const server = http.createServer(async (req, res) => {
   }
 
   const url = req.url.split('?')[0];
+
+  // Auth-route rate limiter (any route containing 'auth' or 'login')
+  if (url.includes('auth') || url.includes('login')) {
+    if (rateLimit(req, res, LIMITS.auth)) return;
+  }
+
+  // General rate limiter — all routes except Stripe webhook (server-to-server)
+  if (url !== '/stripe-webhook') {
+    if (rateLimit(req, res, LIMITS.general)) return;
+  }
 
   try {
     if (req.method === 'POST' && url === '/snapshot') {
@@ -1154,6 +1353,8 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === 'POST' && url === '/admin/generate-plan') {
+      // Plan generation rate limiter
+      if (rateLimit(req, res, LIMITS.plan)) return;
       return await handleAdminGeneratePlan(req, res);
     }
 
@@ -1170,6 +1371,10 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'POST' && url === '/api/email-preferences') {
       return await handleSaveEmailPreferences(req, res);
+    }
+
+    if (req.method === 'POST' && url === '/api/test-weekly-email') {
+      return await handleTestWeeklyEmail(req, res);
     }
 
     if (req.method === 'POST' && url === '/api/monthly-checkin') {
