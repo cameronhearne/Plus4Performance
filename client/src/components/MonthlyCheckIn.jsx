@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { submitMonthlyCheckin } from '../lib/api';
+import { submitMonthlyCheckin, getEmailPreferences } from '../lib/api';
 
 // ─── SHARED STYLES ────────────────────────────────────────────────────────────
 
@@ -464,14 +464,29 @@ export default function MonthlyCheckIn({ weekNum, currentWeight }) {
   const [showResults, setShowResults]     = useState(false);
   const [showHistory, setShowHistory]     = useState(false);
   const [latestFeedback, setLatestFeedback] = useState(null);
+  const [checkinDay, setCheckinDay]       = useState(0); // default Sunday until prefs load
 
-  // Show every Sunday, or if URL contains ?checkin=true for testing
-  const isSunday  = new Date().getDay() === 0;
+  const todayDow  = new Date().getDay();
   const forceShow = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('checkin');
-  const showCheckIn = isSunday || forceShow;
+  const showCheckIn = todayDow === checkinDay || forceShow;
+
+  const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const checkinDayName = DAY_NAMES[checkinDay];
 
   useEffect(() => {
-    if (!showCheckIn) return; // Don't fetch on non-Sundays
+    async function loadPrefs() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+        const prefs = await getEmailPreferences(session.access_token);
+        if (prefs.checkinDay != null) setCheckinDay(prefs.checkinDay);
+      } catch { /* keep default */ }
+    }
+    loadPrefs();
+  }, []);
+
+  useEffect(() => {
+    if (!showCheckIn) return;
     async function loadHistory() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -491,7 +506,7 @@ export default function MonthlyCheckIn({ weekNum, currentWeight }) {
     loadHistory();
   }, [showCheckIn]);
 
-  // Hide entirely on non-Sundays
+  // Hide on non-check-in days
   if (!showCheckIn) return null;
 
   // Check if user already completed a check-in this week (last 7 days)
@@ -602,6 +617,16 @@ export default function MonthlyCheckIn({ weekNum, currentWeight }) {
           </div>
         </button>
       )}
+
+      {/* Check-in day hint */}
+      <p style={{
+        fontFamily: "'Barlow', sans-serif",
+        fontSize: 11, color: '#3a3a3a',
+        fontStyle: 'italic', margin: '0 0 10px',
+        lineHeight: 1.5,
+      }}>
+        Check-in day: {checkinDayName}. Change in Account → Settings.
+      </p>
 
       {/* History link */}
       {historyLoaded && history.length > 0 && (

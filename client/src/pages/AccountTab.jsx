@@ -12,6 +12,18 @@ import { createPortalSession, deleteAccount, createCheckoutSession, getEmailPref
   ───────────────────────────────────────────────────────────────────────────────
 */
 
+// ─── CONSTANTS ───────────────────────────────────────────────────────────────
+
+const CHECKIN_DAYS = [
+  { label: 'Mon', value: 1 },
+  { label: 'Tue', value: 2 },
+  { label: 'Wed', value: 3 },
+  { label: 'Thu', value: 4 },
+  { label: 'Fri', value: 5 },
+  { label: 'Sat', value: 6 },
+  { label: 'Sun', value: 0 },
+];
+
 // ─── LABEL MAPS ──────────────────────────────────────────────────────────────
 
 const GOAL_LABELS = {
@@ -421,6 +433,7 @@ function SettingsSection({ user }) {
   const [reminders,     setReminders]     = useState(true);
   const [weighIn,       setWeighIn]       = useState(true);
   const [weeklySummary, setWeeklySummary] = useState(true);
+  const [checkinDay,    setCheckinDay]    = useState(0); // 0 = Sunday default
   const [units,         setUnits]         = useState('kg');
   const [savedKey,      setSavedKey]      = useState(null);
   const [showDelete,    setShowDelete]    = useState(false);
@@ -436,6 +449,7 @@ function SettingsSection({ user }) {
         setReminders(prefs.sessionReminders);
         setWeighIn(prefs.weighInReminders);
         setWeeklySummary(prefs.weeklySummary);
+        if (prefs.checkinDay != null) setCheckinDay(prefs.checkinDay);
       } catch { /* use defaults */ }
     }
     // Also load units from user_metadata
@@ -453,8 +467,24 @@ function SettingsSection({ user }) {
         sessionReminders: key === 'session_reminders' ? value : reminders,
         weighInReminders: key === 'daily_weigh_in'    ? value : weighIn,
         weeklySummary:    key === 'weekly_summary'    ? value : weeklySummary,
+        checkinDay,
       }, session.access_token);
       setSavedKey(key);
+      setTimeout(() => setSavedKey(null), 2500);
+    } catch { /* silent */ }
+  }
+
+  async function handleCheckinDayChange(day) {
+    setCheckinDay(day);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      await saveEmailPreferences({
+        sessionReminders: reminders,
+        weighInReminders: weighIn,
+        weeklySummary,
+        checkinDay: day,
+      }, session.access_token);
+      setSavedKey('checkin_day');
       setTimeout(() => setSavedKey(null), 2500);
     } catch { /* silent */ }
   }
@@ -487,6 +517,41 @@ function SettingsSection({ user }) {
           <Toggle label="Session reminders"             checked={reminders}     onChange={v => handleToggle('session_reminders', setReminders,     v)} saved={savedKey === 'session_reminders'} />
           <Toggle label="Daily weigh-in reminder"       checked={weighIn}       onChange={v => handleToggle('daily_weigh_in',    setWeighIn,       v)} saved={savedKey === 'daily_weigh_in'} />
           <Toggle label="Weekly progress summary email" checked={weeklySummary} onChange={v => handleToggle('weekly_summary',    setWeeklySummary, v)} saved={savedKey === 'weekly_summary'} />
+        </div>
+
+        {/* Check-in day picker */}
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+            <div style={eyebrowStyle}>Weekly Check-In Day</div>
+            {savedKey === 'checkin_day' && (
+              <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, color: '#4CAF50', letterSpacing: '0.08em' }}>✓ Saved</span>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {CHECKIN_DAYS.map(({ label, value }) => (
+              <button
+                key={value}
+                onClick={() => handleCheckinDayChange(value)}
+                style={{
+                  padding: '8px 12px',
+                  minHeight: 36,
+                  fontFamily: "'Barlow Condensed', sans-serif",
+                  fontSize: 12, fontWeight: 700,
+                  letterSpacing: '0.12em', textTransform: 'uppercase',
+                  cursor: 'pointer',
+                  border: checkinDay === value ? 'none' : '1px solid rgba(200,200,200,0.15)',
+                  background: checkinDay === value ? '#C0392B' : 'transparent',
+                  color: checkinDay === value ? '#fff' : '#555',
+                  transition: 'background 0.15s',
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <p style={{ fontFamily: "'Barlow', sans-serif", fontSize: 11, color: '#444', fontStyle: 'italic', margin: '10px 0 0', lineHeight: 1.5 }}>
+            This is the day your AI coaching check-in and weekly progress summary will appear. You can change this any time.
+          </p>
         </div>
 
         {/* Unit preference */}

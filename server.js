@@ -43,6 +43,9 @@ const supabaseAuth = createClient(
     with check (auth.uid() = user_id);
   grant all on email_preferences to authenticated;
 
+  -- Migration: add check-in day preference (0=Sun, 1=Mon … 6=Sat, matching JS getDay())
+  alter table email_preferences add column if not exists checkin_day int not null default 0;
+
   ─────────────────────────────────────────────────────────────────────────────
 */
 
@@ -545,17 +548,23 @@ function buildWeighInReminderHtml(firstName) {
 // ─── CRON RUNNERS ─────────────────────────────────────────────────────────────
 
 async function runWeeklyProgressEmails() {
-  console.log('[Cron] Running weekly progress emails');
+  const todayDow = new Date().getUTCDay(); // UTC DOW since cron runs at 8am UTC
+  console.log('[Cron] Running daily check for weekly progress emails (UTC DOW:', todayDow, ')');
+
   const { data: prefs, error } = await supabaseAdmin
     .from('email_preferences')
-    .select('user_id')
+    .select('user_id, checkin_day')
     .eq('weekly_summary', true);
   if (error) { console.error('[Cron] prefs fetch error:', error.message); return; }
   if (!prefs?.length) return;
 
+  // Only send to users whose chosen check-in day matches today
+  const todaysUsers = prefs.filter(p => (p.checkin_day ?? 0) === todayDow);
+  if (!todaysUsers.length) { console.log('[Cron] No users to email today'); return; }
+
   const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
 
-  for (const { user_id } of prefs) {
+  for (const { user_id } of todaysUsers) {
     try {
       const { data: { user }, error: uErr } = await supabaseAdmin.auth.admin.getUserById(user_id);
       if (uErr || !user) continue;
@@ -1061,7 +1070,7 @@ async function handleGetEmailPreferences(req, res) {
 
   const { data, error } = await supabaseAdmin
     .from('email_preferences')
-    .select('session_reminders, weigh_in_reminders, weekly_summary')
+    .select('session_reminders, weigh_in_reminders, weekly_summary, checkin_day')
     .eq('user_id', userId)
     .maybeSingle();
 
@@ -1073,6 +1082,7 @@ async function handleGetEmailPreferences(req, res) {
     sessionReminders: data?.session_reminders ?? true,
     weighInReminders: data?.weigh_in_reminders ?? true,
     weeklySummary:    data?.weekly_summary ?? true,
+    checkinDay:       data?.checkin_day ?? 0,
   });
 }
 
@@ -1085,16 +1095,27 @@ async function handleSaveEmailPreferences(req, res) {
   let parsed;
   try { parsed = JSON.parse(body); } catch { return json(res, 400, { error: 'Invalid JSON' }); }
 
-  const { sessionReminders, weighInReminders, weeklySummary } = parsed;
+  const { sessionReminders, weighInReminders, weeklySummary, checkinDay } = parsed;
+
+  if (checkinDay !== undefined) {
+    const day = parseInt(checkinDay, 10);
+    if (!Number.isInteger(day) || day < 0 || day > 6) {
+      return json(res, 400, { error: 'checkinDay must be an integer between 0 and 6' });
+    }
+  }
+
+  const upsertPayload = {
+    user_id:            userId,
+    session_reminders:  sessionReminders !== undefined ? Boolean(sessionReminders) : true,
+    weigh_in_reminders: weighInReminders !== undefined ? Boolean(weighInReminders) : true,
+    weekly_summary:     weeklySummary    !== undefined ? Boolean(weeklySummary)    : true,
+    updated_at:         new Date().toISOString(),
+  };
+  if (checkinDay !== undefined) upsertPayload.checkin_day = parseInt(checkinDay, 10);
+
   const { error } = await supabaseAdmin
     .from('email_preferences')
-    .upsert({
-      user_id:           userId,
-      session_reminders: sessionReminders !== undefined ? Boolean(sessionReminders) : true,
-      weigh_in_reminders: weighInReminders !== undefined ? Boolean(weighInReminders) : true,
-      weekly_summary:    weeklySummary !== undefined    ? Boolean(weeklySummary)    : true,
-      updated_at:        new Date().toISOString(),
-    }, { onConflict: 'user_id' });
+    .upsert(upsertPayload, { onConflict: 'user_id' });
 
   if (error) {
     console.error('[email-preferences/save] error:', error.message);
@@ -1473,8 +1494,8 @@ const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => console.log('Server running on port ' + PORT));
 
 // ─── CRON JOBS ────────────────────────────────────────────────────────────────
-// Weekly progress summary — every Sunday at 8:00 AM UTC
-cron.schedule('0 8 * * 0', runWeeklyProgressEmails, { timezone: 'UTC' });
+// Weekly progress summary — daily at 8:00 AM UTC; each user's chosen day is checked inside
+cron.schedule('0 8 * * *', runWeeklyProgressEmails, { timezone: 'UTC' });
 // Session reminder — every day at 7:00 AM UTC
 cron.schedule('0 7 * * *', runSessionReminderEmails, { timezone: 'UTC' });
 // Weigh-in reminder — every day at 8:00 AM UTC
