@@ -948,7 +948,7 @@ function OneRmTracker() {
 
 // ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
 
-export default function ProgressTab({ userId, plan }) {
+export default function ProgressTab({ userId, plan, onSwitchTab }) {
   const [logs, setLogs]               = useState([]);
   const [loadingLogs, setLoadingLogs] = useState(true);
   const [targetWeight, setTargetWeight] = useState(null);
@@ -960,9 +960,12 @@ export default function ProgressTab({ userId, plan }) {
   const [editing, setEditing]   = useState(false);
   const [error, setError]       = useState('');
 
-  const [showCheckIn, setShowCheckIn] = useState(false);
-  const [checkInMsg, setCheckInMsg]   = useState(false);
-  const [historyKey, setHistoryKey]   = useState(0);
+  const [showCheckIn, setShowCheckIn]         = useState(false);
+  const [checkInMsg, setCheckInMsg]           = useState(false);
+  const [showCheckinPrompt, setShowCheckinPrompt] = useState(false);
+  const [historyKey, setHistoryKey]           = useState(0);
+
+  const checkinPromptTimer = useRef(null);
 
   const fetchLogs = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -1106,7 +1109,16 @@ export default function ProgressTab({ userId, plan }) {
     setTimeout(() => setCheckInMsg(false), 4000);
     setHistoryKey(k => k + 1);
     fetchLogs();
+    // Show the AI check-in prompt and auto-dismiss after 60s
+    setShowCheckinPrompt(true);
+    if (checkinPromptTimer.current) clearTimeout(checkinPromptTimer.current);
+    checkinPromptTimer.current = setTimeout(() => setShowCheckinPrompt(false), 60000);
   }
+
+  // Clean up the prompt timer if the component unmounts
+  useEffect(() => () => {
+    if (checkinPromptTimer.current) clearTimeout(checkinPromptTimer.current);
+  }, []);
 
   const showForm = !todayLog || editing;
 
@@ -1179,6 +1191,82 @@ export default function ProgressTab({ userId, plan }) {
 
       {checkInMsg && (
         <div style={{ ...st.savedMsg, marginBottom: 16 }}>✓ Check-in saved.</div>
+      )}
+
+      {showCheckinPrompt && (
+        <div style={{
+          position: 'relative',
+          background: '#0d0d0d',
+          border: '1px solid #C0392B',
+          padding: '18px 20px',
+          marginBottom: 16,
+        }}>
+          {/* Close button */}
+          <button
+            type="button"
+            onClick={() => {
+              setShowCheckinPrompt(false);
+              if (checkinPromptTimer.current) clearTimeout(checkinPromptTimer.current);
+            }}
+            style={{
+              position: 'absolute', top: 10, right: 12,
+              background: 'none', border: 'none',
+              color: '#444', fontSize: 18, cursor: 'pointer',
+              lineHeight: 1, padding: '4px 6px',
+            }}
+          >
+            ×
+          </button>
+
+          {/* Label */}
+          <div style={{
+            fontFamily: "'Barlow Condensed', sans-serif",
+            fontSize: 10, fontWeight: 700,
+            letterSpacing: '0.28em', textTransform: 'uppercase',
+            color: '#C0392B', marginBottom: 6,
+          }}>
+            Next Step
+          </div>
+
+          {/* Heading */}
+          <div style={{
+            fontFamily: "'Barlow Condensed', sans-serif",
+            fontSize: 16, fontWeight: 700,
+            letterSpacing: '0.08em', textTransform: 'uppercase',
+            color: '#F5F3EE', marginBottom: 6,
+          }}>
+            Get your weekly coaching feedback
+          </div>
+
+          {/* Body */}
+          <div style={{
+            fontFamily: "'Barlow', sans-serif",
+            fontSize: 13, color: '#787878',
+            fontWeight: 300, lineHeight: 1.5, marginBottom: 16,
+          }}>
+            Your data is logged. Now let your AI coach review your week.
+          </div>
+
+          {/* CTA */}
+          <button
+            type="button"
+            onClick={() => {
+              setShowCheckinPrompt(false);
+              if (checkinPromptTimer.current) clearTimeout(checkinPromptTimer.current);
+              if (onSwitchTab) onSwitchTab('today', true);
+            }}
+            style={{
+              background: '#C0392B', border: 'none',
+              color: '#fff',
+              fontFamily: "'Barlow Condensed', sans-serif",
+              fontSize: 13, fontWeight: 700,
+              letterSpacing: '0.18em', textTransform: 'uppercase',
+              padding: '13px 20px', cursor: 'pointer',
+            }}
+          >
+            OPEN WEEKLY CHECK-IN →
+          </button>
+        </div>
       )}
 
       {/* ── Graph ─────────────────────────────────────────────────── */}

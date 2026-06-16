@@ -309,6 +309,13 @@ export default function Dashboard() {
     setActiveTab('logbook');
   }
 
+  function handleSwitchTab(tab, withCheckinParam = false) {
+    setActiveTab(tab);
+    if (withCheckinParam) {
+      navigate('/dashboard?checkin=true', { replace: true });
+    }
+  }
+
   useEffect(() => {
     async function load() {
       const { data: { user }, error: userErr } = await supabase.auth.getUser();
@@ -449,7 +456,7 @@ export default function Dashboard() {
           {activeTab === 'today' && <TodayTab snapshot={snapshot} plan={plan} isUnlocked={isUnlocked} onUnlock={handleUnlock} onOpenLogbook={handleOpenLogbook} />}
           {activeTab === 'plan' && <TabPlan plan={plan} isUnlocked={isUnlocked} onUnlock={handleUnlock} />}
           {activeTab === 'nutrition' && <TabNutrition plan={plan} isUnlocked={isUnlocked} onUnlock={handleUnlock} />}
-          {activeTab === 'progress' && <ProgressTab userId={user?.id} plan={plan} />}
+          {activeTab === 'progress' && <ProgressTab userId={user?.id} plan={plan} onSwitchTab={handleSwitchTab} />}
           {activeTab === 'achievements' && <AchievementsTab userId={user?.id} />}
           {activeTab === 'logbook' && <Logbook userId={user?.id} plan={plan} preselectedSession={logbookSession} />}
           {activeTab === 'account' && <AccountTab user={user} plan={plan} isUnlocked={isUnlocked} subRow={subRow} onUnlock={handleUnlock} />}
