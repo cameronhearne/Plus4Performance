@@ -1211,119 +1211,130 @@ async function handleTestWeeklyEmail(req, res) {
 //
 // ──────────────────────────────────────────────────────────────────────────────
 async function handleMonthlyCheckin(req, res) {
-  const userId = await getUserIdFromToken(req.headers['authorization']);
-  if (!userId) return json(res, 401, { error: 'Unauthorized' });
+  // Outer try/catch ensures a response is always sent and full errors are logged
+  try {
+    const userId = await getUserIdFromToken(req.headers['authorization']);
+    if (!userId) return json(res, 401, { error: 'Unauthorized' });
 
-  const body = await readBody(req);
-  let parsed;
-  try { parsed = JSON.parse(body); } catch { return json(res, 400, { error: 'Invalid JSON' }); }
+    const body = await readBody(req);
+    let parsed;
+    try { parsed = JSON.parse(body); } catch { return json(res, 400, { error: 'Invalid JSON' }); }
 
-  const { weekNumber, currentWeight } = parsed;
-  const feeling             = sanitiseInput(parsed.feeling, 50);
-  const energy              = sanitiseInput(parsed.energy, 50);
-  const nutritionCompliance = sanitiseInput(parsed.nutritionCompliance, 50);
-  const motivationLevel     = sanitiseInput(parsed.motivationLevel || '', 50);
-  const injuries            = sanitiseInput(parsed.injuries || '', 500);
+    const { weekNumber, currentWeight } = parsed;
+    const feeling             = sanitiseInput(String(parsed.feeling   || ''), 50);
+    const energy              = sanitiseInput(String(parsed.energy     || ''), 50);
+    const nutritionCompliance = sanitiseInput(String(parsed.nutritionCompliance || ''), 50);
+    const motivationLevel     = sanitiseInput(String(parsed.motivationLevel     || ''), 50);
+    const injuries            = sanitiseInput(String(parsed.injuries   || ''), 500);
 
-  const VALID_FEELING    = new Set(['Excellent', 'Good', 'Okay', 'Struggling']);
-  const VALID_ENERGY     = new Set(['High', 'Normal', 'Low', 'Very Low']);
-  const VALID_NUTRITION  = new Set(['Always', 'Most days', 'Sometimes', 'Rarely']);
-  const VALID_MOTIVATION = new Set(['Through the roof', 'Strong', 'Starting to dip', 'Really struggling']);
+    // Log received fields so Railway logs show exactly what came in
+    console.log('[monthly-checkin] received:', {
+      userId, weekNumber, currentWeight,
+      feeling, energy, nutritionCompliance, motivationLevel,
+      injuries: injuries ? '[set]' : '[empty]',
+    });
 
-  if (!weekNumber || !feeling || !energy || !nutritionCompliance) {
-    return json(res, 400, { error: 'weekNumber, feeling, energy and nutritionCompliance are required' });
-  }
-  if (!VALID_FEELING.has(feeling))   return json(res, 400, { error: 'Invalid feeling value' });
-  if (!VALID_ENERGY.has(energy))     return json(res, 400, { error: 'Invalid energy value' });
-  if (!VALID_NUTRITION.has(nutritionCompliance)) return json(res, 400, { error: 'Invalid nutritionCompliance value' });
-  if (motivationLevel && !VALID_MOTIVATION.has(motivationLevel)) return json(res, 400, { error: 'Invalid motivationLevel value' });
+    // Allowlists — values must match the dropdown options in MonthlyCheckIn.jsx exactly
+    const VALID_FEELING    = new Set(['Excellent', 'Good', 'Okay', 'Struggling']);
+    const VALID_ENERGY     = new Set(['High', 'Normal', 'Low', 'Very Low']);
+    const VALID_NUTRITION  = new Set(['Always', 'Most days', 'Sometimes', 'Rarely']);
+    const VALID_MOTIVATION = new Set(['Through the roof', 'Strong', 'Starting to dip', 'Really struggling']);
 
-  // Fetch intake data
-  const { data: intakeRow } = await supabaseAdmin
-    .from('intake_submissions')
-    .select('data')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const intake    = intakeRow?.data || {};
-  const firstName = intake.firstName || intake.name?.split(' ')[0] || 'there';
+    if (!weekNumber || !feeling || !energy || !nutritionCompliance) {
+      console.warn('[monthly-checkin] missing required field:', { weekNumber, feeling, energy, nutritionCompliance });
+      return json(res, 400, { error: 'weekNumber, feeling, energy and nutritionCompliance are required' });
+    }
+    if (!VALID_FEELING.has(feeling))   return json(res, 400, { error: `Invalid feeling value: "${feeling}"` });
+    if (!VALID_ENERGY.has(energy))     return json(res, 400, { error: `Invalid energy value: "${energy}"` });
+    if (!VALID_NUTRITION.has(nutritionCompliance)) return json(res, 400, { error: `Invalid nutritionCompliance value: "${nutritionCompliance}"` });
+    if (motivationLevel && !VALID_MOTIVATION.has(motivationLevel)) return json(res, 400, { error: `Invalid motivationLevel value: "${motivationLevel}"` });
 
-  // Fetch plan data
-  const { data: planRow } = await supabaseAdmin
-    .from('plans')
-    .select('plan_data')
-    .eq('user_id', userId)
-    .order('generated_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const plan = planRow?.plan_data || {};
+    // Fetch intake data
+    const { data: intakeRow } = await supabaseAdmin
+      .from('intake_submissions')
+      .select('data')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const intake    = intakeRow?.data || {};
+    const firstName = intake.firstName || intake.name?.split(' ')[0] || 'there';
 
-  // Session completions over last 28 days
-  const fourWeeksAgo = new Date(Date.now() - 28 * 86400000).toISOString();
-  const { data: completions } = await supabaseAdmin
-    .from('session_completions')
-    .select('completed_at')
-    .eq('user_id', userId)
-    .gte('completed_at', fourWeeksAgo);
+    // Fetch plan data
+    const { data: planRow } = await supabaseAdmin
+      .from('plans')
+      .select('plan_data')
+      .eq('user_id', userId)
+      .order('generated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const plan = planRow?.plan_data || {};
 
-  const sessionsCompleted = completions?.length || 0;
-  const targetPerWeek    = parseInt(intake.trainingDays || '4', 10);
-  const targetTotal      = targetPerWeek * 4;
-  const completionPct    = targetTotal > 0 ? Math.round((sessionsCompleted / targetTotal) * 100) : 0;
+    // Session completions over last 28 days
+    const fourWeeksAgo = new Date(Date.now() - 28 * 86400000).toISOString();
+    const { data: completions } = await supabaseAdmin
+      .from('session_completions')
+      .select('completed_at')
+      .eq('user_id', userId)
+      .gte('completed_at', fourWeeksAgo);
 
-  // Weight logs over last 28 days for trend
-  const { data: weightLogs } = await supabaseAdmin
-    .from('weight_logs')
-    .select('weight_kg, logged_at')
-    .eq('user_id', userId)
-    .gte('logged_at', fourWeeksAgo)
-    .order('logged_at', { ascending: true });
+    const sessionsCompleted = completions?.length || 0;
+    const targetPerWeek    = parseInt(intake.trainingDays || '4', 10);
+    const targetTotal      = targetPerWeek * 4;
+    const completionPct    = targetTotal > 0 ? Math.round((sessionsCompleted / targetTotal) * 100) : 0;
 
-  let weightTrendStr = 'insufficient data to calculate trend';
-  if (weightLogs?.length >= 2) {
-    const diff = weightLogs[weightLogs.length - 1].weight_kg - weightLogs[0].weight_kg;
-    const sign = diff > 0 ? '+' : '';
-    weightTrendStr = `${sign}${diff.toFixed(1)}kg over 4 weeks`;
-  }
-
-  // Fetch strength data for the four key lifts
-  const keyLifts = [
-    { displayName: 'Bench Press',    exerciseName: 'Barbell Bench Press' },
-    { displayName: 'Squat',          exerciseName: 'Squat' },
-    { displayName: 'Deadlift',       exerciseName: 'Deadlift' },
-    { displayName: 'Overhead Press', exerciseName: 'Overhead Press' },
-  ];
-  const threeWeekCutoff = Date.now() - 21 * 86400000;
-  const liftSummaries = await Promise.all(keyLifts.map(async ({ displayName, exerciseName }) => {
-    const { data: entries } = await supabaseAdmin
-      .from('lift_logs')
+    // Weight logs over last 28 days for trend
+    const { data: weightLogs } = await supabaseAdmin
+      .from('weight_logs')
       .select('weight_kg, logged_at')
       .eq('user_id', userId)
-      .eq('exercise_name', exerciseName)
-      .order('logged_at', { ascending: false })
-      .limit(30);
-    if (!entries || entries.length === 0) return `${displayName}: no data`;
-    const recent = entries[0];
-    const older  = entries.find(e => new Date(e.logged_at).getTime() < threeWeekCutoff);
-    if (!older) return `${displayName} ${recent.weight_kg}kg (no prior data to compare)`;
-    const diff = recent.weight_kg - older.weight_kg;
-    let trend;
-    if (diff > 1.0)      trend = `up ${diff.toFixed(1)}kg vs 3 weeks ago`;
-    else if (diff < -1.0) trend = `down ${Math.abs(diff).toFixed(1)}kg vs 3 weeks ago`;
-    else                   trend = 'same vs 3 weeks ago';
-    return `${displayName} ${recent.weight_kg}kg (${trend})`;
-  }));
-  const strengthStr = liftSummaries.join(', ');
+      .gte('logged_at', fourWeeksAgo)
+      .order('logged_at', { ascending: true });
 
-  const startingWeight  = intake.currentWeight || weightLogs?.[0]?.weight_kg || null;
-  const targetWeight    = intake.targetWeight || null;
-  const goal            = intake.goal || plan?.user_summary?.goal || 'muscle_building';
-  const calorieTarget   = plan?.user_summary?.calorie_target
-                       || plan?.nutrition?.training_day?.calories
-                       || null;
+    let weightTrendStr = 'insufficient data to calculate trend';
+    if (weightLogs?.length >= 2) {
+      const diff = weightLogs[weightLogs.length - 1].weight_kg - weightLogs[0].weight_kg;
+      const sign = diff > 0 ? '+' : '';
+      weightTrendStr = `${sign}${diff.toFixed(1)}kg over 4 weeks`;
+    }
 
-  const systemPrompt = `${INJECTION_GUARD}${coachingBible}
+    // Fetch strength data for the four key lifts
+    const keyLifts = [
+      { displayName: 'Bench Press',    exerciseName: 'Barbell Bench Press' },
+      { displayName: 'Squat',          exerciseName: 'Squat' },
+      { displayName: 'Deadlift',       exerciseName: 'Deadlift' },
+      { displayName: 'Overhead Press', exerciseName: 'Overhead Press' },
+    ];
+    const threeWeekCutoff = Date.now() - 21 * 86400000;
+    const liftSummaries = await Promise.all(keyLifts.map(async ({ displayName, exerciseName }) => {
+      const { data: entries } = await supabaseAdmin
+        .from('lift_logs')
+        .select('weight_kg, logged_at')
+        .eq('user_id', userId)
+        .eq('exercise_name', exerciseName)
+        .order('logged_at', { ascending: false })
+        .limit(30);
+      if (!entries || entries.length === 0) return `${displayName}: no data`;
+      const recent = entries[0];
+      const older  = entries.find(e => new Date(e.logged_at).getTime() < threeWeekCutoff);
+      if (!older) return `${displayName} ${recent.weight_kg}kg (no prior data to compare)`;
+      const diff = Number(recent.weight_kg) - Number(older.weight_kg);
+      let trend;
+      if (diff > 1.0)       trend = `up ${diff.toFixed(1)}kg vs 3 weeks ago`;
+      else if (diff < -1.0) trend = `down ${Math.abs(diff).toFixed(1)}kg vs 3 weeks ago`;
+      else                   trend = 'same vs 3 weeks ago';
+      return `${displayName} ${recent.weight_kg}kg (${trend})`;
+    }));
+    const strengthStr = liftSummaries.join(', ');
+
+    const startingWeight = intake.currentWeight || weightLogs?.[0]?.weight_kg || null;
+    const targetWeight   = intake.targetWeight || null;
+    const goal           = intake.goal || plan?.user_summary?.goal || 'muscle_building';
+    const calorieTarget  = plan?.user_summary?.calorie_target
+                         || plan?.nutrition?.training_day?.calories
+                         || null;
+
+    const systemPrompt = `${INJECTION_GUARD}${coachingBible}
 
 You are a Plus 4 Performance coach delivering a weekly check-in review. Write this as a direct message from a coach to their client. Use their first name. Be honest and direct — if they are struggling, acknowledge it and give them a path forward. If they are doing well, tell them specifically what is working. No bullet points. No section headers. Just talk to them like a coach would. Maximum 4 sentences per area. Sign off with a single motivational line that feels earned, not generic.
 
@@ -1344,7 +1355,7 @@ Calorie adjustment rules (apply strictly):
 - No data or stable weight within goal range: set calorie_adjustment to null.
 Always reference the specific weight trend numbers in the reason.`;
 
-  const userPrompt = `Weekly check-in — Week ${weekNumber} of 12
+    const userPrompt = `Weekly check-in — Week ${weekNumber} of 12
 Client first name: ${firstName}
 
 PLAN:
@@ -1368,43 +1379,49 @@ CLIENT SELF-REPORT:
 
 Apply the calorie adjustment rules precisely. Reference real numbers. Be specific. Address the client by their first name.`;
 
-  let aiResponse;
-  try {
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 800,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }],
-    });
-    const raw = message.content[0].text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
-    aiResponse = JSON.parse(raw);
+    let aiResponse;
+    try {
+      const message = await anthropic.messages.create({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 800,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+      });
+      const raw = message.content[0].text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+      aiResponse = JSON.parse(raw);
+    } catch (err) {
+      console.error('[monthly-checkin] AI error:', err);
+      return json(res, 500, { error: 'AI generation failed' });
+    }
+
+    const { data: saved, error: saveErr } = await supabaseAdmin
+      .from('monthly_checkins')
+      .insert({
+        user_id:              userId,
+        week_number:          weekNumber,
+        current_weight:       currentWeight != null ? currentWeight : null,
+        feeling,
+        energy,
+        nutrition_compliance: nutritionCompliance,
+        injuries:             injuries || null,
+        ai_feedback:          JSON.stringify(aiResponse),
+        calorie_adjustment:   aiResponse.calorie_adjustment || null,
+      })
+      .select()
+      .single();
+
+    if (saveErr) {
+      console.error('[monthly-checkin] save error:', saveErr);
+      return json(res, 500, { error: 'Failed to save check-in' });
+    }
+
+    console.log('[monthly-checkin] success for user', userId);
+    return json(res, 200, { feedback: aiResponse, checkinId: saved.id });
+
   } catch (err) {
-    console.error('[monthly-checkin] AI error:', err);
-    return json(res, 500, { error: 'AI generation failed' });
+    console.error('[monthly-checkin] unhandled error:', err);
+    return json(res, 500, { error: 'Something went wrong. Please try again.' });
   }
-
-  const { data: saved, error: saveErr } = await supabaseAdmin
-    .from('monthly_checkins')
-    .insert({
-      user_id:              userId,
-      week_number:          weekNumber,
-      current_weight:       currentWeight != null ? currentWeight : null,
-      feeling,
-      energy,
-      nutrition_compliance: nutritionCompliance,
-      injuries:             injuries || null,
-      ai_feedback:          JSON.stringify(aiResponse),
-      calorie_adjustment:   aiResponse.calorie_adjustment || null,
-    })
-    .select()
-    .single();
-
-  if (saveErr) {
-    console.error('[monthly-checkin] save error:', saveErr);
-    return json(res, 500, { error: 'Failed to save check-in' });
-  }
-
-  return json(res, 200, { feedback: aiResponse, checkinId: saved.id });
 }
 
 // ─── HTTP SERVER ──────────────────────────────────────────────────────────────
