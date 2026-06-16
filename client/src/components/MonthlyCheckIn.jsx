@@ -113,20 +113,21 @@ function Modal({ onClose, children }) {
 // ─── INPUT MODAL ──────────────────────────────────────────────────────────────
 
 function CheckInInputModal({ weekNum, prefillWeight, onClose, onSuccess }) {
-  const [weight, setWeight]     = useState(prefillWeight != null ? String(prefillWeight) : '');
-  const [feeling, setFeeling]   = useState('');
-  const [energy, setEnergy]     = useState('');
-  const [nutrition, setNutrition] = useState('');
-  const [injuries, setInjuries] = useState('');
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState('');
+  const [weight, setWeight]           = useState(prefillWeight != null ? String(prefillWeight) : '');
+  const [feeling, setFeeling]         = useState('');
+  const [energy, setEnergy]           = useState('');
+  const [nutrition, setNutrition]     = useState('');
+  const [motivationLevel, setMotivationLevel] = useState('');
+  const [injuries, setInjuries]       = useState('');
+  const [loading, setLoading]         = useState(false);
+  const [error, setError]             = useState('');
 
   const dateStr = new Date().toLocaleDateString('en-GB', {
     day: 'numeric', month: 'long', year: 'numeric',
   });
 
   async function handleSubmit() {
-    if (!feeling || !energy || !nutrition) {
+    if (!feeling || !energy || !nutrition || !motivationLevel) {
       setError('Please answer all required questions.');
       return;
     }
@@ -143,6 +144,7 @@ function CheckInInputModal({ weekNum, prefillWeight, onClose, onSuccess }) {
         feeling,
         energy,
         nutritionCompliance: nutrition,
+        motivationLevel,
         injuries:            injuries || null,
       }, session.access_token);
 
@@ -163,7 +165,7 @@ function CheckInInputModal({ weekNum, prefillWeight, onClose, onSuccess }) {
         letterSpacing: '0.3em', textTransform: 'uppercase',
         color: '#C0392B', marginBottom: 6,
       }}>
-        Monthly Check-In
+        Weekly Check-In
       </div>
       <div style={{
         fontFamily: "'Barlow Condensed', sans-serif",
@@ -217,6 +219,18 @@ function CheckInInputModal({ weekNum, prefillWeight, onClose, onSuccess }) {
           <option value="Most days">Most days</option>
           <option value="Sometimes">Sometimes</option>
           <option value="Rarely">Rarely</option>
+        </select>
+      </div>
+
+      {/* Motivation */}
+      <div style={{ marginBottom: 20 }}>
+        <label style={labelStyle}>How is your motivation right now? *</label>
+        <select value={motivationLevel} onChange={e => setMotivationLevel(e.target.value)} style={selectStyle}>
+          <option value="">Select...</option>
+          <option value="Through the roof">Through the roof</option>
+          <option value="Strong">Strong</option>
+          <option value="Starting to dip">Starting to dip</option>
+          <option value="Really struggling">Really struggling</option>
         </select>
       </div>
 
@@ -444,16 +458,20 @@ function CheckInHistoryModal({ history, onClose }) {
 // ─── MAIN EXPORT ─────────────────────────────────────────────────────────────
 
 export default function MonthlyCheckIn({ weekNum, currentWeight }) {
-  const [history, setHistory]         = useState([]);
+  const [history, setHistory]             = useState([]);
   const [historyLoaded, setHistoryLoaded] = useState(false);
-  const [showInput, setShowInput]     = useState(false);
-  const [showResults, setShowResults] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
+  const [showInput, setShowInput]         = useState(false);
+  const [showResults, setShowResults]     = useState(false);
+  const [showHistory, setShowHistory]     = useState(false);
   const [latestFeedback, setLatestFeedback] = useState(null);
 
-  const isCheckInWeek = [4, 8, 12].includes(weekNum);
+  // Show every Sunday, or if URL contains ?checkin=true for testing
+  const isSunday  = new Date().getDay() === 0;
+  const forceShow = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('checkin');
+  const showCheckIn = isSunday || forceShow;
 
   useEffect(() => {
+    if (!showCheckIn) return; // Don't fetch on non-Sundays
     async function loadHistory() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -471,10 +489,14 @@ export default function MonthlyCheckIn({ weekNum, currentWeight }) {
       }
     }
     loadHistory();
-  }, []);
+  }, [showCheckIn]);
 
-  // Nothing to show if not check-in week and no history
-  if (!isCheckInWeek && (!historyLoaded || history.length === 0)) return null;
+  // Hide entirely on non-Sundays
+  if (!showCheckIn) return null;
+
+  // Check if user already completed a check-in this week (last 7 days)
+  const sevenDaysAgo    = new Date(Date.now() - 7 * 86400000);
+  const thisWeekCheckin = history.find(h => new Date(h.created_at) > sevenDaysAgo);
 
   async function reloadHistory() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -494,10 +516,62 @@ export default function MonthlyCheckIn({ weekNum, currentWeight }) {
     reloadHistory();
   }
 
+  function handleViewFeedback() {
+    if (!thisWeekCheckin) return;
+    let fb = {};
+    try { fb = typeof thisWeekCheckin.ai_feedback === 'string' ? JSON.parse(thisWeekCheckin.ai_feedback) : thisWeekCheckin.ai_feedback; } catch {}
+    setLatestFeedback(fb);
+    setShowResults(true);
+  }
+
+  const completedDateStr = thisWeekCheckin
+    ? new Date(thisWeekCheckin.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })
+    : '';
+
   return (
     <>
-      {/* Check-in trigger button — only at weeks 4, 8, 12 */}
-      {isCheckInWeek && (
+      {/* Check-in card */}
+      {thisWeekCheckin ? (
+        /* Already completed this week */
+        <div style={{
+          width: '100%',
+          background: '#0d0d0d',
+          border: '1px solid rgba(200,200,200,0.1)',
+          padding: '18px 20px',
+          marginBottom: 10,
+          boxSizing: 'border-box',
+        }}>
+          <div style={{
+            fontFamily: "'Barlow Condensed', sans-serif",
+            fontSize: 11, fontWeight: 700,
+            letterSpacing: '0.22em', textTransform: 'uppercase',
+            color: '#4CAF50', marginBottom: 4,
+          }}>
+            Check-in complete for this week
+          </div>
+          <div style={{
+            fontFamily: "'Barlow', sans-serif",
+            fontSize: 12, color: '#444', marginBottom: 10,
+          }}>
+            Submitted {completedDateStr}
+          </div>
+          <button
+            type="button"
+            onClick={handleViewFeedback}
+            style={{
+              background: 'none', border: 'none', padding: 0,
+              color: '#C0392B',
+              fontFamily: "'Barlow Condensed', sans-serif",
+              fontSize: 11, fontWeight: 700,
+              letterSpacing: '0.14em', textTransform: 'uppercase',
+              cursor: 'pointer',
+            }}
+          >
+            View feedback →
+          </button>
+        </div>
+      ) : (
+        /* CTA — not yet completed this week */
         <button
           type="button"
           onClick={() => setShowInput(true)}
@@ -529,7 +603,7 @@ export default function MonthlyCheckIn({ weekNum, currentWeight }) {
         </button>
       )}
 
-      {/* History link — shown when at least one check-in exists */}
+      {/* History link */}
       {historyLoaded && history.length > 0 && (
         <button
           type="button"

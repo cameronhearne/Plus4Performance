@@ -1198,14 +1198,16 @@ async function handleMonthlyCheckin(req, res) {
   try { parsed = JSON.parse(body); } catch { return json(res, 400, { error: 'Invalid JSON' }); }
 
   const { weekNumber, currentWeight } = parsed;
-  const feeling            = sanitiseInput(parsed.feeling, 50);
-  const energy             = sanitiseInput(parsed.energy, 50);
+  const feeling             = sanitiseInput(parsed.feeling, 50);
+  const energy              = sanitiseInput(parsed.energy, 50);
   const nutritionCompliance = sanitiseInput(parsed.nutritionCompliance, 50);
-  const injuries           = sanitiseInput(parsed.injuries || '', 500);
+  const motivationLevel     = sanitiseInput(parsed.motivationLevel || '', 50);
+  const injuries            = sanitiseInput(parsed.injuries || '', 500);
 
-  const VALID_FEELING   = new Set(['Excellent', 'Good', 'Okay', 'Struggling']);
-  const VALID_ENERGY    = new Set(['High', 'Normal', 'Low', 'Very Low']);
-  const VALID_NUTRITION = new Set(['Always', 'Most days', 'Sometimes', 'Rarely']);
+  const VALID_FEELING    = new Set(['Excellent', 'Good', 'Okay', 'Struggling']);
+  const VALID_ENERGY     = new Set(['High', 'Normal', 'Low', 'Very Low']);
+  const VALID_NUTRITION  = new Set(['Always', 'Most days', 'Sometimes', 'Rarely']);
+  const VALID_MOTIVATION = new Set(['Through the roof', 'Strong', 'Starting to dip', 'Really struggling']);
 
   if (!weekNumber || !feeling || !energy || !nutritionCompliance) {
     return json(res, 400, { error: 'weekNumber, feeling, energy and nutritionCompliance are required' });
@@ -1213,6 +1215,7 @@ async function handleMonthlyCheckin(req, res) {
   if (!VALID_FEELING.has(feeling))   return json(res, 400, { error: 'Invalid feeling value' });
   if (!VALID_ENERGY.has(energy))     return json(res, 400, { error: 'Invalid energy value' });
   if (!VALID_NUTRITION.has(nutritionCompliance)) return json(res, 400, { error: 'Invalid nutritionCompliance value' });
+  if (motivationLevel && !VALID_MOTIVATION.has(motivationLevel)) return json(res, 400, { error: 'Invalid motivationLevel value' });
 
   // Fetch intake data
   const { data: intakeRow } = await supabaseAdmin
@@ -1222,7 +1225,8 @@ async function handleMonthlyCheckin(req, res) {
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
-  const intake = intakeRow?.data || {};
+  const intake    = intakeRow?.data || {};
+  const firstName = intake.firstName || intake.name?.split(' ')[0] || 'there';
 
   // Fetch plan data
   const { data: planRow } = await supabaseAdmin
@@ -1262,6 +1266,35 @@ async function handleMonthlyCheckin(req, res) {
     weightTrendStr = `${sign}${diff.toFixed(1)}kg over 4 weeks`;
   }
 
+  // Fetch strength data for the four key lifts
+  const keyLifts = [
+    { displayName: 'Bench Press',    exerciseName: 'Barbell Bench Press' },
+    { displayName: 'Squat',          exerciseName: 'Squat' },
+    { displayName: 'Deadlift',       exerciseName: 'Deadlift' },
+    { displayName: 'Overhead Press', exerciseName: 'Overhead Press' },
+  ];
+  const threeWeekCutoff = Date.now() - 21 * 86400000;
+  const liftSummaries = await Promise.all(keyLifts.map(async ({ displayName, exerciseName }) => {
+    const { data: entries } = await supabaseAdmin
+      .from('lift_logs')
+      .select('weight_kg, logged_at')
+      .eq('user_id', userId)
+      .eq('exercise_name', exerciseName)
+      .order('logged_at', { ascending: false })
+      .limit(30);
+    if (!entries || entries.length === 0) return `${displayName}: no data`;
+    const recent = entries[0];
+    const older  = entries.find(e => new Date(e.logged_at).getTime() < threeWeekCutoff);
+    if (!older) return `${displayName} ${recent.weight_kg}kg (no prior data to compare)`;
+    const diff = recent.weight_kg - older.weight_kg;
+    let trend;
+    if (diff > 1.0)      trend = `up ${diff.toFixed(1)}kg vs 3 weeks ago`;
+    else if (diff < -1.0) trend = `down ${Math.abs(diff).toFixed(1)}kg vs 3 weeks ago`;
+    else                   trend = 'same vs 3 weeks ago';
+    return `${displayName} ${recent.weight_kg}kg (${trend})`;
+  }));
+  const strengthStr = liftSummaries.join(', ');
+
   const startingWeight  = intake.currentWeight || weightLogs?.[0]?.weight_kg || null;
   const targetWeight    = intake.targetWeight || null;
   const goal            = intake.goal || plan?.user_summary?.goal || 'muscle_building';
@@ -1271,16 +1304,16 @@ async function handleMonthlyCheckin(req, res) {
 
   const systemPrompt = `${INJECTION_GUARD}${coachingBible}
 
-You are a Plus 4 Performance coach delivering a monthly check-in review. Tone: direct, honest, specific, zero fluff. Speak to the client as a coach who cares about real results — not as a cheerleader.
+You are a Plus 4 Performance coach delivering a weekly check-in review. Write this as a direct message from a coach to their client. Use their first name. Be honest and direct — if they are struggling, acknowledge it and give them a path forward. If they are doing well, tell them specifically what is working. No bullet points. No section headers. Just talk to them like a coach would. Maximum 4 sentences per area. Sign off with a single motivational line that feels earned, not generic.
 
 Respond with ONLY a valid JSON object, no markdown, no code fences:
 {
-  "overall_assessment": "2-3 sentences assessing overall progress and adherence based on the data",
-  "doing_well": "One specific thing they are doing well with a concrete reason why it matters",
-  "focus_next_4_weeks": "One specific, actionable thing to focus on or adjust in the next 4 weeks",
+  "overall_assessment": "2-4 sentences — honest, direct assessment using the client's first name. Reference specific numbers.",
+  "doing_well": "2-3 sentences — one specific thing that is working and exactly why it matters for their goal.",
+  "focus_next_4_weeks": "2-3 sentences — one specific, actionable focus. Weave in strength data if relevant.",
   "calorie_adjustment": null or integer (e.g. 150 or -100),
-  "calorie_adjustment_reason": null or string explaining the adjustment with reference to their weight trend,
-  "closing_line": "One short, direct motivational line in the coaching bible tone — no generic phrases"
+  "calorie_adjustment_reason": null or string in the same direct coaching tone, referencing their weight trend numbers,
+  "closing_line": "One short, earned, specific motivational sign-off — no generic phrases"
 }
 
 Calorie adjustment rules (apply strictly):
@@ -1290,7 +1323,8 @@ Calorie adjustment rules (apply strictly):
 - No data or stable weight within goal range: set calorie_adjustment to null.
 Always reference the specific weight trend numbers in the reason.`;
 
-  const userPrompt = `Monthly check-in — Week ${weekNumber} of 12
+  const userPrompt = `Weekly check-in — Week ${weekNumber} of 12
+Client first name: ${firstName}
 
 PLAN:
 - Goal: ${goal}
@@ -1302,20 +1336,22 @@ PLAN:
 LAST 4 WEEKS:
 - Sessions completed: ${sessionsCompleted} of ${targetTotal} (${completionPct}% completion rate)
 - Weight trend: ${weightTrendStr}
+- Strength progress this week: ${strengthStr}
 
 CLIENT SELF-REPORT:
 - Overall feeling: ${feeling}
 - Session energy: ${energy}
 - Nutrition compliance: ${nutritionCompliance}
+- Motivation level: ${motivationLevel || 'Not provided'}
 - Injuries / issues: ${injuries || 'None reported'}
 
-Apply the calorie adjustment rules precisely. Reference real numbers. Be specific.`;
+Apply the calorie adjustment rules precisely. Reference real numbers. Be specific. Address the client by their first name.`;
 
   let aiResponse;
   try {
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 600,
+      max_tokens: 800,
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
     });
