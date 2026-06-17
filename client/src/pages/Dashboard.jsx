@@ -455,9 +455,9 @@ const styles = {
   header: { marginBottom: 40 },
   heading: { fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(24px, 3.5vw, 40px)', letterSpacing: '0.03em', color: '#F5F3EE', marginBottom: 8 },
   headingSub: { fontSize: 15, color: '#787878', fontWeight: 300 },
-  tabBar: { display: 'flex', gap: 2, marginBottom: 32, background: '#101010', padding: 4, borderRadius: 2, overflowX: 'auto' },
-  tab: { flex: '0 0 auto', padding: '10px 20px', background: 'none', border: 'none', color: '#787878', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', cursor: 'pointer', transition: 'color 0.15s', borderRadius: 2 },
-  tabActive: { flex: '0 0 auto', padding: '10px 20px', background: '#1a1a1a', border: 'none', color: '#F5F3EE', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', cursor: 'pointer', borderRadius: 2 },
+  tabBar: { display: 'flex', gap: 2, marginBottom: 32, background: '#101010', padding: 4, borderRadius: 2, overflowX: 'auto', WebkitOverflowScrolling: 'touch' },
+  tab: { flex: '0 0 auto', padding: '10px 14px', background: 'none', border: 'none', color: '#787878', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', cursor: 'pointer', transition: 'color 0.15s', borderRadius: 2, whiteSpace: 'nowrap' },
+  tabActive: { flex: '0 0 auto', padding: '10px 14px', background: '#1a1a1a', border: 'none', color: '#F5F3EE', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', cursor: 'pointer', borderRadius: 2, whiteSpace: 'nowrap' },
   content: { minHeight: 400 },
 
   snapshotCard: { background: '#0d0d0d', border: '1px solid rgba(200,200,200,0.15)', padding: '28px 28px 24px', marginBottom: 28 },
