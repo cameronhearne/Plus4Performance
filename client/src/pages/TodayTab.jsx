@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Flame } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { unlockAchievement } from '../lib/achievements';
+import { getExerciseVideoEmbed } from '../lib/exerciseVideo';
 import MonthlyCheckIn from '../components/MonthlyCheckIn';
 
 /*
@@ -436,9 +437,10 @@ function Pill({ children }) {
   );
 }
 
-function MissionCard({ session, library, sessionLength, weekNum, onComplete, onOpenLogbook }) {
+function MissionCard({ session, library, sessionLength, weekNum, onComplete, onOpenLogbook, videoMap = {} }) {
   const [open, setOpen]             = useState(false);
   const [expandedEx, setExpandedEx] = useState(null);
+  const [watchingVideo, setWatchingVideo]   = useState(null);
   const [completing, setCompleting]         = useState(false);
   const [completed, setCompleted]           = useState(false);
   const [logNudgeDismissed, setLogNudgeDismissed] = useState(false);
@@ -532,10 +534,12 @@ function MissionCard({ session, library, sessionLength, weekNum, onComplete, onO
             </thead>
             <tbody>
               {(session.exercises || []).map((ex, i) => {
-                const info   = library[ex.ex] || {};
-                const name   = info.name || ex.ex;
-                const isOpen = expandedEx === i;
-                const hasCue = !!(info.cues || info.common_mistakes || info.injury_modifications);
+                const info       = library[ex.ex] || {};
+                const name       = info.name || ex.ex;
+                const isOpen     = expandedEx === i;
+                const hasCue     = !!(info.cues || info.common_mistakes || info.injury_modifications);
+                const videoSrc   = getExerciseVideoEmbed(videoMap[ex.ex]);
+                const isWatching = watchingVideo === i;
                 return (
                   <React.Fragment key={i}>
                     <tr
@@ -545,6 +549,15 @@ function MissionCard({ session, library, sessionLength, weekNum, onComplete, onO
                       <td style={{ fontSize: 13, color: '#CDCDC8', padding: '10px 8px 10px 0', verticalAlign: 'top' }}>
                         {name}
                         {hasCue && <span style={{ color: '#444', fontSize: 11, marginLeft: 6 }}>{isOpen ? '▲' : '▼'}</span>}
+                        {videoSrc && (
+                          <button
+                            type="button"
+                            onClick={e => { e.stopPropagation(); setWatchingVideo(isWatching ? null : i); }}
+                            style={{ display: 'block', marginTop: 6, background: 'none', border: '1px solid #C0392B', color: '#C0392B', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', padding: '4px 10px', cursor: 'pointer' }}
+                          >
+                            {isWatching ? '▼ Hide' : '▶ Watch Form'}
+                          </button>
+                        )}
                       </td>
                       <td style={{ fontSize: 13, color: '#CDCDC8', padding: '10px 8px', textAlign: 'center', verticalAlign: 'top' }}>{ex.sets}</td>
                       <td style={{ fontSize: 13, color: '#CDCDC8', padding: '10px 8px', textAlign: 'center', verticalAlign: 'top' }}>{ex.reps}</td>
@@ -556,6 +569,21 @@ function MissionCard({ session, library, sessionLength, weekNum, onComplete, onO
                           {info.cues && <div style={{ marginBottom: 4 }}><span style={{ color: '#787878', fontWeight: 700 }}>Cue: </span>{info.cues}</div>}
                           {info.common_mistakes && <div style={{ marginBottom: 4 }}><span style={{ color: '#787878', fontWeight: 700 }}>Avoid: </span>{info.common_mistakes}</div>}
                           {info.injury_modifications && <div><span style={{ color: '#787878', fontWeight: 700 }}>Mod: </span>{info.injury_modifications}</div>}
+                        </td>
+                      </tr>
+                    )}
+                    {isWatching && videoSrc && (
+                      <tr style={{ background: '#0a0a0a' }}>
+                        <td colSpan={4} style={{ padding: '0 0 14px' }}>
+                          <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden' }}>
+                            <iframe
+                              src={videoSrc}
+                              title={`${name} form guide`}
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allowFullScreen
+                              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }}
+                            />
+                          </div>
                         </td>
                       </tr>
                     )}
@@ -707,6 +735,7 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
   const [streak, setStreak]               = useState(0);
   const [showModal, setShowModal]         = useState(false);
   const [logSuccess, setLogSuccess]       = useState(false);
+  const [videoMap, setVideoMap]           = useState({});
   const [intakeSchedule, setIntakeSchedule] = useState({ scheduleType: 'rolling', trainingDays: '4', preferredDays: [], goal: null });
   // Stored as JSON { type: 'training'|'rest', session?: string } keyed to today
   const [dayOverride, setDayOverride]     = useState(() => {
@@ -769,6 +798,18 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
           .eq('user_id', user.id)
           .order('completed_at', { ascending: false });
         if (!cErr && completions) setStreak(calcStreak(completions, trainingDays));
+      } catch { /* table may not exist yet */ }
+
+      // Exercise videos — global lookup table, no user filter needed
+      try {
+        const { data: videoRows } = await supabase
+          .from('exercise_videos')
+          .select('exercise_key, youtube_id');
+        if (videoRows) {
+          const map = {};
+          for (const row of videoRows) map[row.exercise_key] = row.youtube_id;
+          setVideoMap(map);
+        }
       } catch { /* table may not exist yet */ }
     }
     load();
@@ -985,7 +1026,7 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
             {effectiveIsRestDay ? (
               <RestDayCard tomorrowSession={tomorrowSession} />
             ) : effectiveSession ? (
-              <MissionCard session={effectiveSession} library={library} sessionLength={sessionLength} weekNum={weekNum} onComplete={handleSessionComplete} onOpenLogbook={onOpenLogbook} />
+              <MissionCard session={effectiveSession} library={library} sessionLength={sessionLength} weekNum={weekNum} onComplete={handleSessionComplete} onOpenLogbook={onOpenLogbook} videoMap={videoMap} />
             ) : null}
           </>
         ) : (
