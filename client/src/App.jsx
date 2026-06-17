@@ -31,10 +31,15 @@ function RequireAdmin({ children }) {
   useEffect(() => {
     async function check() {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { setStatus('denied'); return; }
-      const { data: profile } = await supabase
+      if (!session) {
+        console.log('[RequireAdmin] no session — denying');
+        setStatus('denied');
+        return;
+      }
+      const { data: profile, error } = await supabase
         .from('profiles').select('is_admin').eq('id', session.user.id).maybeSingle();
-      setStatus(profile?.is_admin ? 'ok' : 'denied');
+      console.log('[RequireAdmin] user:', session.user.id, '| is_admin raw value:', profile?.is_admin, '| error:', error?.message ?? null);
+      setStatus(profile?.is_admin === true ? 'ok' : 'denied');
     }
     check();
   }, []);
