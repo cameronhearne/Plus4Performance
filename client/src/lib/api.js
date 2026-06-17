@@ -56,6 +56,19 @@ export async function submitMonthlyCheckin(payload, token) {
   return authedPost('/api/monthly-checkin', payload, token);
 }
 
+// ─── FOOD ─────────────────────────────────────────────────────────────────────
+export async function foodSearch(token, query)         { return authedPost('/api/food/search', { query }, token); }
+export async function foodLog(token, entry)            { return authedPost('/api/food/log', entry, token); }
+export async function foodGetDay(token, date)          { return authedGet(`/api/food/log/${date}`, token); }
+export async function foodDeleteEntry(token, id) {
+  const res = await fetch(API + `/api/food/log/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) { const e = await res.json().catch(() => ({ error: res.statusText })); throw new Error(e.error || 'Request failed'); }
+  return res.json();
+}
+
 // ─── ADMIN ────────────────────────────────────────────────────────────────────
 export async function adminGetStats(token)                   { return authedGet('/api/admin/stats', token); }
 export async function adminGetRevenue(token, period = 'daily') { return authedGet(`/api/admin/revenue?period=${period}`, token); }

@@ -7,6 +7,7 @@ import ProgressTab from './ProgressTab';
 import TodayTab from './TodayTab';
 import Logbook from './Logbook';
 import AccountTab from './AccountTab';
+import NutritionTab from './NutritionTab';
 
 const TABS = [
   { id: 'today', label: 'Today' },
@@ -95,49 +96,7 @@ function TabPlan({ plan, isUnlocked, onUnlock }) {
   );
 }
 
-function TabNutrition({ plan, isUnlocked, onUnlock }) {
-  if (!isUnlocked) return (
-    <div>
-      <LockedOverlay onUnlock={onUnlock} />
-      <BlurredCard onUnlock={onUnlock}>
-        <div style={styles.mockCard}>
-          <div style={styles.mockTitle}>Training Day</div>
-          <div style={styles.mockRow}><span>Calories</span><span>2,800 kcal</span></div>
-          <div style={styles.mockRow}><span>Protein</span><span>180g</span></div>
-        </div>
-      </BlurredCard>
-    </div>
-  );
-
-  const nut = plan?.nutrition;
-  return (
-    <div>
-      {nut && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
-          <MacroCard title="Training Day" data={nut.training_day} accent="#C8C8C8" />
-          <MacroCard title="Rest Day" data={nut.rest_day} accent="#787878" />
-        </div>
-      )}
-      {plan?.meal_plan && (
-        <div>
-          <div style={styles.sectionHead}>Meal Templates</div>
-          {plan.meal_plan.training_day?.length > 0 && (
-            <MealTemplateCard label="Training Day" meals={plan.meal_plan.training_day} />
-          )}
-          {plan.meal_plan.rest_day?.length > 0 && (
-            <MealTemplateCard label="Rest Day" meals={plan.meal_plan.rest_day} />
-          )}
-        </div>
-      )}
-      {plan?.grocery_list && (
-        <div style={{ marginTop: 24 }}>
-          <div style={styles.sectionHead}>Grocery List</div>
-          <GroceryList list={plan.grocery_list} />
-        </div>
-      )}
-    </div>
-  );
-}
+// TabNutrition replaced by NutritionTab (imported above) which adds food logging
 
 
 
@@ -464,7 +423,7 @@ export default function Dashboard() {
         <div style={styles.content}>
           {activeTab === 'today' && <TodayTab snapshot={snapshot} plan={plan} isUnlocked={isUnlocked} onUnlock={handleUnlock} onOpenLogbook={handleOpenLogbook} />}
           {activeTab === 'plan' && <TabPlan plan={plan} isUnlocked={isUnlocked} onUnlock={handleUnlock} />}
-          {activeTab === 'nutrition' && <TabNutrition plan={plan} isUnlocked={isUnlocked} onUnlock={handleUnlock} />}
+          {activeTab === 'nutrition' && <NutritionTab plan={plan} isUnlocked={isUnlocked} onUnlock={handleUnlock} />}
           {activeTab === 'progress' && <ProgressTab userId={user?.id} plan={plan} onSwitchTab={handleSwitchTab} />}
           {activeTab === 'achievements' && <AchievementsTab userId={user?.id} />}
           {activeTab === 'logbook' && <Logbook userId={user?.id} plan={plan} preselectedSession={logbookSession} />}

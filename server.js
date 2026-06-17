@@ -291,6 +291,8 @@ const LIMITS = {
   plan:    { windowMs: 60 * 60 * 1000, max: 3,   message: 'Plan generation limit reached. Please wait before trying again.', bucket: 'plan' },
   // 10 req / 15 min — auth routes
   auth:    { windowMs: 15 * 60 * 1000, max: 10,  message: 'Too many authentication attempts, please try again later', bucket: 'auth' },
+  // 30 req / min — food search (proxies external API)
+  food:    { windowMs: 60 * 1000,       max: 30,  message: 'Too many food searches, please slow down', bucket: 'food' },
 };
 
 // ── INPUT SANITISATION ────────────────────────────────────────────────────────
@@ -1347,6 +1349,30 @@ async function handleMonthlyCheckin(req, res) {
     }));
     const strengthStr = liftSummaries.join(', ');
 
+    // Nutrition adherence from food_logs over the past 7 days
+    const sevenDaysAgoDate = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10);
+    const { data: recentFoodLogs } = await supabaseAdmin
+      .from('food_logs').select('logged_at, calories, protein')
+      .eq('user_id', userId).gte('logged_at', sevenDaysAgoDate);
+
+    let nutritionAdherenceStr = 'No food tracking data this week';
+    if (recentFoodLogs?.length) {
+      const byDay = {};
+      for (const e of recentFoodLogs) {
+        if (!byDay[e.logged_at]) byDay[e.logged_at] = { calories: 0, protein: 0 };
+        byDay[e.logged_at].calories += Number(e.calories);
+        byDay[e.logged_at].protein  += Number(e.protein);
+      }
+      const daysLogged = Object.keys(byDay).length;
+      const proteinTarget  = plan?.nutrition?.training_day?.protein  || null;
+      const calorieTargetN = plan?.nutrition?.training_day?.calories || calorieTarget;
+      const proteinDaysHit  = proteinTarget  ? Object.values(byDay).filter(d => d.protein  >= proteinTarget  * 0.9).length : null;
+      const calorieDaysHit  = calorieTargetN ? Object.values(byDay).filter(d => d.calories >= calorieTargetN * 0.85 && d.calories <= calorieTargetN * 1.15).length : null;
+      nutritionAdherenceStr = `Food logged on ${daysLogged}/7 days`;
+      if (proteinDaysHit  !== null) nutritionAdherenceStr += `; protein target hit ${proteinDaysHit}/${daysLogged} days`;
+      if (calorieDaysHit !== null) nutritionAdherenceStr += `; calorie target hit ${calorieDaysHit}/${daysLogged} days`;
+    }
+
     const startingWeight = intake.currentWeight || weightLogs?.[0]?.weight_kg || null;
     const targetWeight   = intake.targetWeight || null;
     const goal           = intake.goal || plan?.user_summary?.goal || 'muscle_building';
@@ -1389,6 +1415,7 @@ LAST 4 WEEKS:
 - Sessions completed: ${sessionsCompleted} of ${targetTotal} (${completionPct}% completion rate)
 - Weight trend: ${weightTrendStr}
 - Strength progress this week: ${strengthStr}
+- Nutrition tracking adherence: ${nutritionAdherenceStr}
 
 CLIENT SELF-REPORT:
 - Overall feeling: ${feeling}
@@ -1442,6 +1469,252 @@ Apply the calorie adjustment rules precisely. Reference real numbers. Be specifi
     console.error('[monthly-checkin] unhandled error:', err);
     return json(res, 500, { error: 'Something went wrong. Please try again.' });
   }
+}
+
+// ─── FOOD TRACKING ────────────────────────────────────────────────────────────
+//
+// SQL — run once in Supabase SQL editor:
+//
+//   create table if not exists food_logs (
+//     id         uuid default gen_random_uuid() primary key,
+//     user_id    uuid references auth.users(id) on delete cascade,
+//     logged_at  date not null default current_date,
+//     meal_type  text not null check (meal_type in ('breakfast','lunch','dinner','snack')),
+//     food_name  text not null,
+//     brand      text,
+//     quantity   text not null,
+//     calories   numeric(8,1) not null,
+//     protein    numeric(8,1) not null,
+//     carbs      numeric(8,1) not null,
+//     fat        numeric(8,1) not null,
+//     created_at timestamptz not null default now()
+//   );
+//   alter table food_logs enable row level security;
+//   create policy "food_logs_own" on food_logs
+//     for all to authenticated
+//     using  (auth.uid() = user_id)
+//     with check (auth.uid() = user_id);
+//   grant all on food_logs to service_role;
+//
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── Provider abstraction ──────────────────────────────────────────────────────
+// All food search calls go through here. Swap the internals to change provider
+// without touching any calling code.
+async function searchFood(query) {
+  const encoded = encodeURIComponent(query.trim());
+  const url = `https://world.openfoodfacts.org/api/v2/search?search_terms=${encoded}&fields=code,product_name,brands,nutriments&page_size=15&sort_by=unique_scans_n`;
+  const res = await fetch(url, {
+    headers: {
+      'User-Agent': 'Plus4Performance/1.0 (plus4performance.com)',
+      'Accept': 'application/json',
+    },
+  });
+  if (!res.ok) throw new Error(`Open Food Facts returned ${res.status}`);
+  const data = await res.json();
+
+  const results = [];
+  for (const p of data.products || []) {
+    if (!p.product_name) continue;
+    const n = p.nutriments || {};
+    const calories = n['energy-kcal_100g'] ?? n['energy-kcal'] ?? null;
+    const protein  = n['proteins_100g']        ?? null;
+    const carbs    = n['carbohydrates_100g']    ?? null;
+    const fat      = n['fat_100g']              ?? null;
+    // Skip entries with no useful macro data
+    if (calories === null && protein === null) continue;
+    results.push({
+      id:       p.code || null,
+      name:     p.product_name.trim(),
+      brand:    p.brands ? p.brands.split(',')[0].trim() : null,
+      calories: Math.round((calories || 0) * 10) / 10,
+      protein:  Math.round((protein  || 0) * 10) / 10,
+      carbs:    Math.round((carbs    || 0) * 10) / 10,
+      fat:      Math.round((fat      || 0) * 10) / 10,
+    });
+    if (results.length >= 10) break;
+  }
+  return results;
+}
+
+// ── Achievement helper (server-side mirror of client lib/achievements.js) ─────
+async function unlockAchievementServer(userId, achievementId, xp) {
+  const { error } = await supabaseAdmin.from('user_achievements')
+    .upsert({ user_id: userId, achievement_id: achievementId },
+             { onConflict: 'user_id,achievement_id', ignoreDuplicates: true });
+  if (!error) {
+    await supabaseAdmin.rpc('add_xp', { p_user_id: userId, p_amount: xp })
+      .catch(e => console.error('[nutrition/xp]', e.message));
+  }
+}
+
+// Checks and awards nutrition achievements after any food log save.
+async function checkNutritionAchievements(userId, date) {
+  // Fetch user's plan targets
+  const { data: planRow } = await supabaseAdmin
+    .from('plans').select('plan_data').eq('user_id', userId)
+    .order('generated_at', { ascending: false }).limit(1).maybeSingle();
+  const targets = planRow?.plan_data?.nutrition?.training_day || null;
+
+  // Today's totals
+  const { data: dayEntries } = await supabaseAdmin
+    .from('food_logs').select('calories, protein, carbs, fat')
+    .eq('user_id', userId).eq('logged_at', date);
+  const tot = (dayEntries || []).reduce(
+    (a, e) => ({ calories: a.calories + Number(e.calories), protein: a.protein + Number(e.protein),
+                 carbs: a.carbs + Number(e.carbs), fat: a.fat + Number(e.fat) }),
+    { calories: 0, protein: 0, carbs: 0, fat: 0 }
+  );
+
+  // Protein King — daily protein target hit (≥ 90%)
+  if (targets?.protein && tot.protein >= targets.protein * 0.9) {
+    await unlockAchievementServer(userId, 'protein_king', 100);
+  }
+
+  // Dialled In — 5 consecutive days with at least one log entry
+  const { data: recentDates } = await supabaseAdmin
+    .from('food_logs').select('logged_at').eq('user_id', userId)
+    .order('logged_at', { ascending: false }).limit(200);
+  if (recentDates) {
+    const uniqueDays = [...new Set(recentDates.map(r => r.logged_at))].sort().reverse();
+    let streak = 0;
+    for (let i = 0; i < uniqueDays.length; i++) {
+      const expected = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
+      if (uniqueDays[i] === expected) { streak++; if (streak >= 5) { await unlockAchievementServer(userId, 'dialled_in', 300); break; } }
+      else break;
+    }
+  }
+
+  // Perfect Week — all 4 macros hit for 7 consecutive days
+  if (targets) {
+    const sevenDaysAgo = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10);
+    const { data: weekLogs } = await supabaseAdmin
+      .from('food_logs').select('logged_at, calories, protein, carbs, fat')
+      .eq('user_id', userId).gte('logged_at', sevenDaysAgo);
+    if (weekLogs) {
+      const byDay = {};
+      for (const e of weekLogs) {
+        if (!byDay[e.logged_at]) byDay[e.logged_at] = { calories: 0, protein: 0, carbs: 0, fat: 0 };
+        byDay[e.logged_at].calories += Number(e.calories);
+        byDay[e.logged_at].protein  += Number(e.protein);
+        byDay[e.logged_at].carbs    += Number(e.carbs);
+        byDay[e.logged_at].fat      += Number(e.fat);
+      }
+      const days = Object.values(byDay);
+      if (days.length >= 7 && days.every(d =>
+        d.protein  >= (targets.protein  || 0) * 0.9 &&
+        d.calories >= (targets.calories || 0) * 0.9 &&
+        d.carbs    >= (targets.carbs    || 0) * 0.9 &&
+        d.fat      >= (targets.fat      || 0) * 0.9
+      )) {
+        await unlockAchievementServer(userId, 'perfect_week', 200);
+      }
+    }
+  }
+}
+
+// ── Handlers ──────────────────────────────────────────────────────────────────
+
+// POST /api/food/search
+async function handleFoodSearch(req, res) {
+  const userId = await getUserIdFromToken(req.headers['authorization']);
+  if (!userId) return json(res, 401, { error: 'Unauthorized' });
+  if (rateLimit(req, res, LIMITS.food)) return;
+
+  const body = await readBody(req);
+  let parsed;
+  try { parsed = JSON.parse(body); } catch { return json(res, 400, { error: 'Invalid JSON' }); }
+  const query = sanitiseInput(String(parsed.query || ''), 200).trim();
+  if (!query || query.length < 2) return json(res, 400, { error: 'query must be at least 2 characters' });
+
+  try {
+    const results = await searchFood(query);
+    return json(res, 200, { results });
+  } catch (err) {
+    console.error('[food/search] provider error:', err.message);
+    return json(res, 200, { results: [], warning: 'Food search unavailable, try again shortly' });
+  }
+}
+
+// POST /api/food/log
+async function handleFoodLog(req, res) {
+  const userId = await getUserIdFromToken(req.headers['authorization']);
+  if (!userId) return json(res, 401, { error: 'Unauthorized' });
+
+  const body = await readBody(req);
+  let parsed;
+  try { parsed = JSON.parse(body); } catch { return json(res, 400, { error: 'Invalid JSON' }); }
+
+  const VALID_MEAL = new Set(['breakfast', 'lunch', 'dinner', 'snack']);
+  const date     = sanitiseInput(String(parsed.date     || ''), 10);
+  const mealType = sanitiseInput(String(parsed.mealType || ''), 20);
+  const foodName = sanitiseInput(String(parsed.foodName || ''), 200);
+  const brand    = parsed.brand ? sanitiseInput(String(parsed.brand), 100) : null;
+  const quantity = sanitiseInput(String(parsed.quantity || ''), 50);
+  const calories = parseFloat(parsed.calories) || 0;
+  const protein  = parseFloat(parsed.protein)  || 0;
+  const carbs    = parseFloat(parsed.carbs)    || 0;
+  const fat      = parseFloat(parsed.fat)      || 0;
+
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date))  return json(res, 400, { error: 'date must be YYYY-MM-DD' });
+  if (!VALID_MEAL.has(mealType))                      return json(res, 400, { error: 'Invalid mealType' });
+  if (!foodName)                                      return json(res, 400, { error: 'foodName required' });
+  if (!quantity)                                      return json(res, 400, { error: 'quantity required' });
+
+  const { data: saved, error: saveErr } = await supabaseAdmin
+    .from('food_logs').insert({
+      user_id: userId, logged_at: date, meal_type: mealType,
+      food_name: foodName, brand, quantity, calories, protein, carbs, fat,
+    }).select().single();
+
+  if (saveErr) {
+    console.error('[food/log] save error:', saveErr.message);
+    return json(res, 500, { error: 'Failed to save food log' });
+  }
+
+  // Check achievements non-blocking
+  checkNutritionAchievements(userId, date).catch(e => console.error('[food/achievements]', e.message));
+
+  return json(res, 200, { entry: saved });
+}
+
+// GET /api/food/log/:date
+async function handleFoodGetDay(req, res, date) {
+  const userId = await getUserIdFromToken(req.headers['authorization']);
+  if (!userId) return json(res, 401, { error: 'Unauthorized' });
+
+  const { data: entries, error } = await supabaseAdmin
+    .from('food_logs').select('*')
+    .eq('user_id', userId).eq('logged_at', date)
+    .order('created_at', { ascending: true });
+
+  if (error) return json(res, 500, { error: 'Failed to fetch food log' });
+
+  const totals = (entries || []).reduce(
+    (a, e) => ({ calories: a.calories + Number(e.calories), protein: a.protein + Number(e.protein),
+                 carbs: a.carbs + Number(e.carbs), fat: a.fat + Number(e.fat) }),
+    { calories: 0, protein: 0, carbs: 0, fat: 0 }
+  );
+  // Round totals
+  for (const k of Object.keys(totals)) totals[k] = Math.round(totals[k] * 10) / 10;
+
+  return json(res, 200, { entries: entries || [], totals });
+}
+
+// DELETE /api/food/log/:id
+async function handleFoodDelete(req, res, entryId) {
+  const userId = await getUserIdFromToken(req.headers['authorization']);
+  if (!userId) return json(res, 401, { error: 'Unauthorized' });
+
+  // Verify ownership before deleting
+  const { data: entry } = await supabaseAdmin
+    .from('food_logs').select('user_id').eq('id', entryId).maybeSingle();
+  if (!entry) return json(res, 404, { error: 'Entry not found' });
+  if (entry.user_id !== userId) return json(res, 403, { error: 'Forbidden' });
+
+  const { error } = await supabaseAdmin.from('food_logs').delete().eq('id', entryId);
+  if (error) return json(res, 500, { error: 'Failed to delete entry' });
+  return json(res, 200, { ok: true });
 }
 
 // ─── ADMIN API ────────────────────────────────────────────────────────────────
@@ -1853,6 +2126,16 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'POST' && url === '/api/monthly-checkin') {
       return await handleMonthlyCheckin(req, res);
+    }
+
+    if (url.startsWith('/api/food/')) {
+      if (url === '/api/food/search' && req.method === 'POST') return await handleFoodSearch(req, res);
+      if (url === '/api/food/log'    && req.method === 'POST') return await handleFoodLog(req, res);
+      const logDateM = url.match(/^\/api\/food\/log\/(\d{4}-\d{2}-\d{2})$/);
+      if (logDateM  && req.method === 'GET')    return await handleFoodGetDay(req, res, logDateM[1]);
+      const logIdM  = url.match(/^\/api\/food\/log\/([0-9a-f-]{36})$/);
+      if (logIdM    && req.method === 'DELETE') return await handleFoodDelete(req, res, logIdM[1]);
+      return json(res, 404, { error: 'Not found' });
     }
 
     if (url.startsWith('/api/admin/')) {
