@@ -96,7 +96,8 @@ function getWeekNum(startDateStr) {
   if (!startDateStr) return 1;
   const start = new Date(startDateStr);
   const daysIn = Math.max(0, Math.floor((Date.now() - start) / 86400000));
-  return Math.min(12, Math.floor(daysIn / 7) + 1);
+  if (daysIn >= 84) return 12;                      // only show 12 when plan is complete
+  return Math.min(11, Math.floor(daysIn / 7) + 1); // cap at 11 while still running
 }
 
 function getProgress(startDateStr) {
@@ -104,6 +105,10 @@ function getProgress(startDateStr) {
   const start = new Date(startDateStr);
   const daysIn = Math.max(0, Math.floor((Date.now() - start) / 86400000));
   return Math.min(1, daysIn / 84);
+}
+
+function daysSince(isoStr) {
+  return Math.floor((Date.now() - new Date(isoStr)) / 86400000);
 }
 
 const FOCUS_MAP = {
@@ -724,9 +729,50 @@ function LogWeightModal({ onClose, onSuccess }) {
   );
 }
 
+// ─── RENEWAL BANNER ──────────────────────────────────────────────────────────
+
+function RenewalBanner({ planGeneratedAt, onGoToAccount }) {
+  const storageKey = `renewal_dismissed_${planGeneratedAt}`;
+  const [visible, setVisible] = React.useState(
+    planGeneratedAt && !localStorage.getItem(storageKey)
+  );
+
+  if (!visible || !planGeneratedAt || daysSince(planGeneratedAt) < 84) return null;
+
+  function handleDismiss() {
+    localStorage.setItem(storageKey, '1');
+    setVisible(false);
+  }
+
+  return (
+    <div style={{ background: 'rgba(192,57,43,0.08)', border: '1px solid #C0392B', padding: '20px 24px', marginBottom: 28, position: 'relative' }}>
+      <button
+        onClick={handleDismiss}
+        aria-label="Dismiss"
+        style={{ position: 'absolute', top: 12, right: 14, background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}
+      >✕</button>
+      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.28em', textTransform: 'uppercase', color: '#C0392B', marginBottom: 10 }}>
+        Plan Complete
+      </div>
+      <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(22px, 3vw, 28px)', letterSpacing: '0.04em', color: '#F5F3EE', lineHeight: 1, marginBottom: 12 }}>
+        12 Weeks Done. Ready for What's Next?
+      </div>
+      <p style={{ fontFamily: "'Barlow', sans-serif", fontSize: 14, fontWeight: 300, color: '#787878', lineHeight: 1.65, marginBottom: 18, maxWidth: 480 }}>
+        You've completed your full 12-week programme. Head to My Plan to generate your next cycle — same goal with a fresh structure, or a new direction entirely.
+      </p>
+      <button
+        onClick={() => { onGoToAccount?.(); handleDismiss(); }}
+        style={{ background: '#C0392B', border: 'none', color: '#fff', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', padding: '13px 24px', cursor: 'pointer' }}
+      >
+        Go to My Plan →
+      </button>
+    </div>
+  );
+}
+
 // ─── MAIN EXPORT ─────────────────────────────────────────────────────────────
 
-export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenLogbook }) {
+export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenLogbook, planGeneratedAt, onGoToAccount }) {
   const [currentWeight, setCurrentWeight] = useState(null);
   const [startingWeight, setStartingWeight] = useState(null);
   const [targetWeight, setTargetWeight]   = useState(null);
@@ -937,6 +983,9 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
         .override-link { background:none; border:none; color:#555; font-family:'Barlow Condensed',sans-serif; font-size:12px; letter-spacing:0.06em; cursor:pointer; padding:0; text-decoration:none; }
         .override-link:hover { text-decoration:underline; color:#787878; }
       `}</style>
+
+      {/* ── Renewal banner (shown after 84 days on current plan) ─ */}
+      <RenewalBanner planGeneratedAt={planGeneratedAt} onGoToAccount={onGoToAccount} />
 
       {/* ── Stats row ─────────────────────────────────────────── */}
       <div className="today-stats-row">

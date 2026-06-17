@@ -239,7 +239,7 @@ const RENEWAL_GOALS = [
   { value: 'maintenance',     label: 'Recomposition' },
 ];
 
-function MyPlanSection({ plan, intake, intakeLoading }) {
+function MyPlanSection({ plan, intake, intakeLoading, planGeneratedAt }) {
   const [step,      setStep]      = useState('idle'); // idle | picking | new_direction | submitting | queued | error
   const [err,       setErr]       = useState('');
   const [newGoal,   setNewGoal]   = useState('fat_loss');
@@ -263,7 +263,11 @@ function MyPlanSection({ plan, intake, intakeLoading }) {
   const daysElapsed   = startDate ? Math.max(0, Math.floor((today - startDate) / 86400000)) : 0;
   const weeksComplete = Math.min(12, Math.floor(daysElapsed / 7));
   const weeksRemaining = Math.max(0, 12 - weeksComplete);
-  const planComplete  = weeksComplete >= 12;
+  // Use planGeneratedAt (how long *this specific plan* has run) so renewal resets the clock.
+  // Falls back to the intake-startDate calculation if planGeneratedAt isn't loaded yet.
+  const planComplete  = planGeneratedAt
+    ? Math.floor((Date.now() - new Date(planGeneratedAt)) / 86400000) >= 84
+    : weeksComplete >= 12;
 
   const fmt = d => d ? d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '—';
 
@@ -887,7 +891,7 @@ function SettingsSection({ user }) {
 
 // ─── MAIN EXPORT ─────────────────────────────────────────────────────────────
 
-export default function AccountTab({ user, plan, isUnlocked, subRow, onUnlock, onPlanSwitch }) {
+export default function AccountTab({ user, plan, isUnlocked, subRow, onUnlock, onPlanSwitch, planGeneratedAt }) {
   const [intake,        setIntake]        = useState(null);
   const [intakeLoading, setIntakeLoading] = useState(true);
 
@@ -919,7 +923,7 @@ export default function AccountTab({ user, plan, isUnlocked, subRow, onUnlock, o
   return (
     <div>
       <ProfileSection      user={user} intake={intake} intakeLoading={intakeLoading} />
-      <MyPlanSection       plan={plan} intake={intake} intakeLoading={intakeLoading} />
+      <MyPlanSection       plan={plan} intake={intake} intakeLoading={intakeLoading} planGeneratedAt={planGeneratedAt} />
       <MyPlansSection      isUnlocked={isUnlocked} onPlanSwitch={onPlanSwitch} />
       <SubscriptionSection isUnlocked={isUnlocked} subRow={subRow} user={user} onUnlock={onUnlock} />
       <SettingsSection    user={user} />

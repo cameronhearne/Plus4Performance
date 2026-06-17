@@ -265,7 +265,8 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('today');
   const [user, setUser] = useState(null);
   const [snapshot, setSnapshot] = useState(null);
-  const [plan, setPlan] = useState(null);
+  const [plan, setPlan]                       = useState(null);
+  const [planGeneratedAt, setPlanGeneratedAt] = useState(null);
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [subRow, setSubRow] = useState(null);
   const [loadingUnlock, setLoadingUnlock] = useState(false);
@@ -320,12 +321,12 @@ export default function Dashboard() {
       if (subscribed) {
         const { data: planRow, error: planErr } = await supabase
           .from('plans')
-          .select('plan_data')
+          .select('plan_data, generated_at')
           .eq('user_id', user.id)
           .eq('is_active', true)
           .maybeSingle();
         if (planErr) console.error('[Dashboard] plans error:', planErr);
-        if (planRow) setPlan(planRow.plan_data);
+        if (planRow) { setPlan(planRow.plan_data); setPlanGeneratedAt(planRow.generated_at); }
       }
     }
     load();
@@ -350,8 +351,8 @@ export default function Dashboard() {
           setIsUnlocked(true);
           clearInterval(poll);
           // Load plan
-          const { data: planRow } = await supabase.from('plans').select('plan_data').eq('user_id', user.id).eq('is_active', true).maybeSingle();
-          if (planRow) setPlan(planRow.plan_data);
+          const { data: planRow } = await supabase.from('plans').select('plan_data, generated_at').eq('user_id', user.id).eq('is_active', true).maybeSingle();
+          if (planRow) { setPlan(planRow.plan_data); setPlanGeneratedAt(planRow.generated_at); }
         }
         if (++attempts >= 20) clearInterval(poll);
       }, 3000);
@@ -363,9 +364,9 @@ export default function Dashboard() {
     const { data: { user: currentUser } } = await supabase.auth.getUser();
     if (!currentUser) return;
     const { data: planRow } = await supabase
-      .from('plans').select('plan_data')
+      .from('plans').select('plan_data, generated_at')
       .eq('user_id', currentUser.id).eq('is_active', true).maybeSingle();
-    if (planRow) setPlan(planRow.plan_data);
+    if (planRow) { setPlan(planRow.plan_data); setPlanGeneratedAt(planRow.generated_at); }
   }
 
   async function handleUnlock() {
@@ -439,7 +440,7 @@ export default function Dashboard() {
 
         {/* Tab content */}
         <div style={styles.content}>
-          {activeTab === 'today' && <TodayTab snapshot={snapshot} plan={plan} isUnlocked={isUnlocked} onUnlock={handleUnlock} onOpenLogbook={handleOpenLogbook} />}
+          {activeTab === 'today' && <TodayTab snapshot={snapshot} plan={plan} isUnlocked={isUnlocked} onUnlock={handleUnlock} onOpenLogbook={handleOpenLogbook} planGeneratedAt={planGeneratedAt} onGoToAccount={() => setActiveTab('account')} />}
           {activeTab === 'plan' && <TabPlan plan={plan} isUnlocked={isUnlocked} onUnlock={handleUnlock} />}
           {activeTab === 'nutrition' && <NutritionTab plan={plan} isUnlocked={isUnlocked} onUnlock={handleUnlock} />}
           {activeTab === 'progress' && <ProgressTab userId={user?.id} plan={plan} onSwitchTab={handleSwitchTab} />}
@@ -448,7 +449,7 @@ export default function Dashboard() {
           {activeTab === 'community'   && <CommunityTab />}
           {activeTab === 'marketplace'  && <MarketplaceTab />}
           {activeTab === 'supplements'  && <SupplementsTab />}
-          {activeTab === 'account' && <AccountTab user={user} plan={plan} isUnlocked={isUnlocked} subRow={subRow} onUnlock={handleUnlock} onPlanSwitch={refreshActivePlan} />}
+          {activeTab === 'account' && <AccountTab user={user} plan={plan} isUnlocked={isUnlocked} subRow={subRow} onUnlock={handleUnlock} onPlanSwitch={refreshActivePlan} planGeneratedAt={planGeneratedAt} />}
         </div>
       </div>
     </div>
