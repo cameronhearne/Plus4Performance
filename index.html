@@ -238,6 +238,10 @@ footer{background:var(--dark-2);border-top:1px solid rgba(200,200,200,0.1);paddi
   footer{padding:32px 24px;flex-direction:column;align-items:flex-start;gap:20px;}
 }
 </style>
+<script>
+// Capture ?ref=CODE on the marketing homepage so it survives navigation to /signup
+(function(){var r=new URLSearchParams(location.search).get('ref');if(r)sessionStorage.setItem('p4p_ref',r.toUpperCase().trim());})();
+</script>
 </head>
 <body>
 

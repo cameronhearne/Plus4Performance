@@ -10,6 +10,8 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import CookieBanner from './components/CookieBanner';
 import AdminDashboard from './pages/admin/AdminDashboard';
+import AffiliateLogin from './pages/AffiliateLogin';
+import AffiliateDashboard from './pages/AffiliateDashboard';
 
 function RequireAuth({ children }) {
   const [session, setSession] = useState(undefined);
@@ -79,6 +81,8 @@ export default function App() {
       <Route path="/admin/*" element={
         <RequireAdmin><AdminDashboard /></RequireAdmin>
       } />
+      <Route path="/affiliate/login"     element={<AffiliateLogin />} />
+      <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
       {/* Catch-all for the app shell */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>

@@ -70,6 +70,12 @@ export async function foodDeleteEntry(token, id) {
 }
 
 // ─── ADMIN ────────────────────────────────────────────────────────────────────
+// ─── AFFILIATE (admin) ────────────────────────────────────────────────────────
+export async function adminListAffiliates(token)               { return authedGet('/api/admin/affiliates', token); }
+export async function adminCreateAffiliate(token, data)        { return authedPost('/api/admin/affiliates', data, token); }
+export async function adminMarkAffiliatePaid(token, id)        { return authedPost(`/api/admin/affiliates/${id}/mark-paid`, {}, token); }
+
+// ─── ADMIN ────────────────────────────────────────────────────────────────────
 export async function adminGetStats(token)                   { return authedGet('/api/admin/stats', token); }
 export async function adminGetRevenue(token, period = 'daily') { return authedGet(`/api/admin/revenue?period=${period}`, token); }
 export async function adminListUsers(token, params = {}) {

@@ -100,3 +100,13 @@
   from = "/admin/*"
   to = "/app.html"
   status = 200
+
+[[redirects]]
+  from = "/affiliate/login"
+  to = "/app.html"
+  status = 200
+
+[[redirects]]
+  from = "/affiliate/dashboard"
+  to = "/app.html"
+  status = 200

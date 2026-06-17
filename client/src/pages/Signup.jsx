@@ -1,12 +1,22 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+
+const API = import.meta.env.VITE_API_URL || '';
 
 export default function Signup() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Capture ?ref=CODE from URL and persist in sessionStorage so it survives
+  // navigation (e.g. homepage ?ref= → /signup without the param).
+  useEffect(() => {
+    const code = searchParams.get('ref');
+    if (code) sessionStorage.setItem('p4p_ref', code.toUpperCase().trim());
+  }, [searchParams]);
 
   function set(field) {
     return e => setForm(f => ({ ...f, [field]: e.target.value }));
@@ -17,22 +27,38 @@ export default function Signup() {
     setError('');
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signUp({
+      const { error: signUpErr } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
         options: {
           data: { first_name: form.firstName, last_name: form.lastName },
         },
       });
-      if (error) throw error;
+      if (signUpErr) throw signUpErr;
 
-      // Update profile with name
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         await supabase.from('profiles').update({
           first_name: form.firstName,
           last_name: form.lastName,
         }).eq('id', session.user.id);
+
+        // If user arrived via a referral link, attribute them to the affiliate.
+        const refCode = searchParams.get('ref')?.toUpperCase().trim()
+          || sessionStorage.getItem('p4p_ref');
+        if (refCode) {
+          try {
+            await fetch(API + '/api/affiliate/record-referral', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.access_token}`,
+              },
+              body: JSON.stringify({ referral_code: refCode }),
+            });
+            sessionStorage.removeItem('p4p_ref');
+          } catch { /* non-fatal — referral recording failing must not block signup */ }
+        }
       }
 
       navigate('/intake');

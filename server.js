@@ -1,5 +1,6 @@
-const http  = require('http');
-const https = require('https');
+const http   = require('http');
+const https  = require('https');
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const Anthropic = require('@anthropic-ai/sdk');
@@ -2144,7 +2145,201 @@ function routeAdmin(req, res, url) {
     if (req.method === 'POST' && action === 'regenerate-plan')    return handleAdminRegeneratePlan(req, res, uid);
   }
 
+  if (req.method === 'GET'  && url === '/api/admin/affiliates') return handleAdminListAffiliates(req, res);
+  if (req.method === 'POST' && url === '/api/admin/affiliates') return handleAdminCreateAffiliate(req, res);
+  const affM = url.match(/^\/api\/admin\/affiliates\/([a-f0-9-]+)\/mark-paid$/);
+  if (affM && req.method === 'POST') return handleAdminMarkAffiliatePaid(req, res, affM[1]);
+
   return json(res, 404, { error: 'Not found' });
+}
+
+// ─── AFFILIATE SYSTEM ─────────────────────────────────────────────────────────
+
+// Generates an 8-char uppercase alphanumeric code; excludes O/0/I/1 for clarity.
+function generateReferralCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const bytes = crypto.randomBytes(8);
+  return Array.from(bytes, b => chars[b % chars.length]).join('');
+}
+
+// Returns the affiliate row for the authenticated user, or sends 401/403.
+// Security: the affiliate's identity is derived entirely from the verified JWT
+// email — the caller never supplies an affiliate id directly.
+async function requireAffiliate(req, res) {
+  const userId = await getUserIdFromToken(req.headers['authorization']);
+  if (!userId) { json(res, 401, { error: 'Unauthorized' }); return null; }
+  const { data: { user } } = await supabaseAdmin.auth.admin.getUserById(userId);
+  if (!user?.email) { json(res, 403, { error: 'Forbidden' }); return null; }
+  const { data: affiliate } = await supabaseAdmin
+    .from('affiliates').select('*').eq('email', user.email).eq('status', 'active').maybeSingle();
+  if (!affiliate) { json(res, 403, { error: 'Not an affiliate' }); return null; }
+  return affiliate;
+}
+
+// POST /api/affiliate/check-email — unauthenticated, tells client whether an
+// email is a registered active affiliate before requesting a magic link.
+async function handleAffiliateCheckEmail(req, res) {
+  const body = await readBody(req);
+  let parsed;
+  try { parsed = JSON.parse(body); } catch { return json(res, 400, { error: 'Invalid JSON' }); }
+  const email = sanitiseInput(String(parsed.email || ''), 200).toLowerCase().trim();
+  if (!email) return json(res, 400, { error: 'email required' });
+  const { data: aff } = await supabaseAdmin
+    .from('affiliates').select('id').eq('email', email).eq('status', 'active').maybeSingle();
+  return json(res, 200, { registered: !!aff });
+}
+
+// GET /api/affiliate/me
+async function handleAffiliateMe(req, res) {
+  const affiliate = await requireAffiliate(req, res);
+  if (!affiliate) return;
+  const { id, name, email, referral_code, commission_type, commission_value, created_at } = affiliate;
+  return json(res, 200, { affiliate: { id, name, email, referral_code, commission_type, commission_value, created_at } });
+}
+
+// GET /api/affiliate/stats
+async function handleAffiliateStats(req, res) {
+  const affiliate = await requireAffiliate(req, res);
+  if (!affiliate) return;
+  const { data: refs } = await supabaseAdmin
+    .from('referrals').select('subscription_status, commission_owed, commission_paid').eq('affiliate_id', affiliate.id);
+  const referrals = refs || [];
+  const totalReferrals       = referrals.length;
+  const activeSubscribers    = referrals.filter(r => r.subscription_status === 'active').length;
+  const totalCommissionEarned = referrals.reduce((s, r) => s + Number(r.commission_owed), 0);
+  const commissionPaid       = referrals.filter(r => r.commission_paid).reduce((s, r) => s + Number(r.commission_owed), 0);
+  const commissionPending    = Math.round((totalCommissionEarned - commissionPaid) * 100) / 100;
+  return json(res, 200, {
+    totalReferrals, activeSubscribers,
+    totalCommissionEarned: Math.round(totalCommissionEarned * 100) / 100,
+    commissionPaid: Math.round(commissionPaid * 100) / 100,
+    commissionPending,
+  });
+}
+
+// GET /api/affiliate/referrals
+async function handleAffiliateReferrals(req, res) {
+  const affiliate = await requireAffiliate(req, res);
+  if (!affiliate) return;
+  const { data: refs } = await supabaseAdmin
+    .from('referrals')
+    .select('id, signup_date, subscription_status, commission_owed, commission_paid, created_at')
+    .eq('affiliate_id', affiliate.id)
+    .order('created_at', { ascending: false });
+  return json(res, 200, { referrals: refs || [] });
+}
+
+// POST /api/affiliate/record-referral — called by client right after signup with
+// the referral_code captured from ?ref= URL param.
+async function handleAffiliateRecordReferral(req, res) {
+  const userId = await getUserIdFromToken(req.headers['authorization']);
+  if (!userId) return json(res, 401, { error: 'Unauthorized' });
+  const body = await readBody(req);
+  let parsed;
+  try { parsed = JSON.parse(body); } catch { return json(res, 400, { error: 'Invalid JSON' }); }
+  const code = sanitiseInput(String(parsed.referral_code || ''), 20).toUpperCase().trim();
+  if (!code) return json(res, 400, { error: 'referral_code required' });
+
+  const { data: affiliate } = await supabaseAdmin
+    .from('affiliates').select('id, commission_type, commission_value')
+    .eq('referral_code', code).eq('status', 'active').maybeSingle();
+  if (!affiliate) return json(res, 404, { error: 'Invalid referral code' });
+
+  // Idempotent — a user can only be attributed to one affiliate.
+  const { data: existing } = await supabaseAdmin
+    .from('referrals').select('id').eq('referred_user_id', userId).maybeSingle();
+  if (existing) return json(res, 200, { ok: true });
+
+  const SUBSCRIPTION_PRICE = 9.99;
+  const commission_owed = affiliate.commission_type === 'flat'
+    ? Number(affiliate.commission_value)
+    : Math.round(Number(affiliate.commission_value) / 100 * SUBSCRIPTION_PRICE * 100) / 100;
+
+  await supabaseAdmin.from('profiles').update({ referred_by: code }).eq('id', userId);
+
+  const { error: insErr } = await supabaseAdmin.from('referrals').insert({
+    affiliate_id: affiliate.id,
+    referred_user_id: userId,
+    signup_date: new Date().toISOString().split('T')[0],
+    subscription_status: 'pending',
+    commission_owed,
+    commission_paid: false,
+  });
+  if (insErr) {
+    console.error('[affiliate/record-referral]', insErr.message);
+    return json(res, 500, { error: 'Failed to record referral' });
+  }
+  return json(res, 200, { ok: true });
+}
+
+// ── Admin affiliate handlers ───────────────────────────────────────────────────
+
+// GET /api/admin/affiliates
+async function handleAdminListAffiliates(req, res) {
+  if (!await requireAdmin(req, res)) return;
+  const { data: affiliates } = await supabaseAdmin
+    .from('affiliates').select('*').order('created_at', { ascending: false });
+  // Attach per-affiliate summary counts
+  const { data: refs } = await supabaseAdmin.from('referrals').select('affiliate_id, commission_owed, commission_paid');
+  const refsByAffiliate = {};
+  for (const r of refs || []) {
+    if (!refsByAffiliate[r.affiliate_id]) refsByAffiliate[r.affiliate_id] = { total: 0, paid: 0 };
+    refsByAffiliate[r.affiliate_id].total += Number(r.commission_owed);
+    if (r.commission_paid) refsByAffiliate[r.affiliate_id].paid += Number(r.commission_owed);
+  }
+  const enriched = (affiliates || []).map(a => ({
+    ...a,
+    total_commission: Math.round((refsByAffiliate[a.id]?.total || 0) * 100) / 100,
+    paid_commission:  Math.round((refsByAffiliate[a.id]?.paid  || 0) * 100) / 100,
+  }));
+  return json(res, 200, { affiliates: enriched });
+}
+
+// POST /api/admin/affiliates
+async function handleAdminCreateAffiliate(req, res) {
+  if (!await requireAdmin(req, res)) return;
+  const body = await readBody(req);
+  let parsed;
+  try { parsed = JSON.parse(body); } catch { return json(res, 400, { error: 'Invalid JSON' }); }
+  const name             = sanitiseInput(String(parsed.name || ''), 100).trim();
+  const email            = sanitiseInput(String(parsed.email || ''), 200).toLowerCase().trim();
+  const commission_type  = parsed.commission_type === 'percentage' ? 'percentage' : 'flat';
+  const commission_value = Math.max(0, parseFloat(parsed.commission_value) || 0);
+  if (!name)  return json(res, 400, { error: 'name required' });
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json(res, 400, { error: 'valid email required' });
+
+  // Generate a collision-free referral code
+  let referral_code;
+  for (let i = 0; i < 10; i++) {
+    const candidate = generateReferralCode();
+    const { data: dup } = await supabaseAdmin.from('affiliates').select('id').eq('referral_code', candidate).maybeSingle();
+    if (!dup) { referral_code = candidate; break; }
+  }
+  if (!referral_code) return json(res, 500, { error: 'Could not generate unique code — try again' });
+
+  const { data: affiliate, error } = await supabaseAdmin
+    .from('affiliates')
+    .insert({ name, email, referral_code, commission_type, commission_value, status: 'active' })
+    .select().single();
+  if (error) {
+    if (error.code === '23505') return json(res, 409, { error: 'Email already registered as affiliate' });
+    console.error('[admin/affiliates] create error:', error.message);
+    return json(res, 500, { error: 'Failed to create affiliate' });
+  }
+  return json(res, 201, { affiliate });
+}
+
+// POST /api/admin/affiliates/:id/mark-paid — marks all unpaid referrals paid.
+async function handleAdminMarkAffiliatePaid(req, res, affiliateId) {
+  if (!await requireAdmin(req, res)) return;
+  const { error } = await supabaseAdmin
+    .from('referrals').update({ commission_paid: true })
+    .eq('affiliate_id', affiliateId).eq('commission_paid', false);
+  if (error) {
+    console.error('[admin/affiliates] mark-paid error:', error.message);
+    return json(res, 500, { error: 'Failed to update' });
+  }
+  return json(res, 200, { ok: true });
 }
 
 // ─── HTTP SERVER ──────────────────────────────────────────────────────────────
@@ -2227,6 +2422,15 @@ const server = http.createServer(async (req, res) => {
       if (logDateM  && req.method === 'GET')    return await handleFoodGetDay(req, res, logDateM[1]);
       const logIdM  = url.match(/^\/api\/food\/log\/([0-9a-f-]{36})$/);
       if (logIdM    && req.method === 'DELETE') return await handleFoodDelete(req, res, logIdM[1]);
+      return json(res, 404, { error: 'Not found' });
+    }
+
+    if (url.startsWith('/api/affiliate/')) {
+      if (req.method === 'POST' && url === '/api/affiliate/check-email')     return await handleAffiliateCheckEmail(req, res);
+      if (req.method === 'GET'  && url === '/api/affiliate/me')              return await handleAffiliateMe(req, res);
+      if (req.method === 'GET'  && url === '/api/affiliate/stats')           return await handleAffiliateStats(req, res);
+      if (req.method === 'GET'  && url === '/api/affiliate/referrals')       return await handleAffiliateReferrals(req, res);
+      if (req.method === 'POST' && url === '/api/affiliate/record-referral') return await handleAffiliateRecordReferral(req, res);
       return json(res, 404, { error: 'Not found' });
     }
 
