@@ -1,0 +1,76 @@
+import React, { useEffect, useState } from 'react';
+
+const API = import.meta.env.VITE_API_URL || '';
+
+export default function MarketplaceTab() {
+  const [creators, setCreators] = useState([]);
+  const [loading, setLoading]   = useState(true);
+
+  useEffect(() => {
+    fetch(`${API}/api/marketplace/creators`)
+      .then(r => r.json())
+      .then(data => { setCreators(data.creators || []); })
+      .catch(() => { setCreators([]); })
+      .finally(() => setLoading(false));
+  }, []);
+
+  return (
+    <div>
+      <div style={S.eyebrow}>Marketplace</div>
+      <h2 style={S.heading}>Creator Plans</h2>
+      <p style={S.sub}>
+        Specialist coaching programmes from expert creators, all powered by the Plus 4 Performance platform.
+      </p>
+
+      {loading ? (
+        <p style={S.empty}>Loading…</p>
+      ) : creators.length === 0 ? (
+        <div style={S.emptyState}>
+          <div style={S.emptyHeading}>No creator plans available yet</div>
+          <p style={S.emptyBody}>Check back soon — we're onboarding specialist coaches and creators to the platform.</p>
+        </div>
+      ) : (
+        <div style={S.grid}>
+          {creators.map(c => (
+            <a
+              key={c.id}
+              href={`https://${c.slug}.plus4performance.com/signup`}
+              style={S.card}
+              onMouseEnter={e => e.currentTarget.style.borderColor = c.primary_color || '#C0392B'}
+              onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(200,200,200,0.12)'}
+            >
+              <div style={{ ...S.cardAccent, background: c.primary_color || '#C0392B' }} />
+              <div style={S.cardInner}>
+                {c.logo_url
+                  ? <img src={c.logo_url} alt={c.name} style={S.logo} />
+                  : <div style={{ ...S.logoPlaceholder, color: c.primary_color || '#C0392B' }}>
+                      {c.name.slice(0, 2).toUpperCase()}
+                    </div>}
+                <div style={S.cardName}>{c.name}</div>
+                <div style={S.cardCta}>View Programme →</div>
+              </div>
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const S = {
+  eyebrow:      { fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.3em', textTransform: 'uppercase', color: '#C0392B', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10 },
+  heading:      { fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(36px,5vw,56px)', letterSpacing: '0.03em', color: '#F5F3EE', marginBottom: 12, lineHeight: 1 },
+  sub:          { fontSize: 14, color: '#787878', lineHeight: 1.7, maxWidth: 560, marginBottom: 40 },
+  empty:        { color: '#555', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, letterSpacing: '0.06em' },
+  emptyState:   { background: '#0d0d0d', border: '1px solid rgba(200,200,200,0.1)', padding: '48px 40px', maxWidth: 480 },
+  emptyHeading: { fontFamily: "'Bebas Neue', sans-serif", fontSize: 28, letterSpacing: '0.04em', color: '#F5F3EE', marginBottom: 12 },
+  emptyBody:    { fontSize: 14, color: '#555', lineHeight: 1.7 },
+  grid:         { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 1, background: 'rgba(200,200,200,0.08)' },
+  card:         { background: '#0d0d0d', border: '1px solid rgba(200,200,200,0.12)', textDecoration: 'none', display: 'block', position: 'relative', overflow: 'hidden', transition: 'border-color 0.2s' },
+  cardAccent:   { height: 3, width: '100%' },
+  cardInner:    { padding: '28px 24px 24px' },
+  logo:         { height: 44, objectFit: 'contain', marginBottom: 16 },
+  logoPlaceholder: { width: 44, height: 44, background: '#1a1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Bebas Neue', sans-serif", fontSize: 20, marginBottom: 16 },
+  cardName:     { fontFamily: "'Bebas Neue', sans-serif", fontSize: 24, letterSpacing: '0.04em', color: '#F5F3EE', marginBottom: 16, lineHeight: 1 },
+  cardCta:      { fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#787878' },
+};

@@ -9,16 +9,19 @@ import Logbook from './Logbook';
 import AccountTab from './AccountTab';
 import NutritionTab from './NutritionTab';
 import CommunityTab from './CommunityTab';
+import MarketplaceTab from './MarketplaceTab';
+import { useBranding } from '../lib/BrandingContext';
 
 const TABS = [
-  { id: 'today', label: 'Today' },
-  { id: 'plan', label: 'Plan' },
-  { id: 'nutrition', label: 'Nutrition' },
-  { id: 'progress', label: 'Progress' },
-  { id: 'achievements', label: 'Achievements' },
-  { id: 'logbook', label: 'Logbook' },
-  { id: 'community', label: 'Community' },
-  { id: 'account', label: 'Account' },
+  { id: 'today',       label: 'Today' },
+  { id: 'plan',        label: 'Plan' },
+  { id: 'nutrition',   label: 'Nutrition' },
+  { id: 'progress',    label: 'Progress' },
+  { id: 'achievements',label: 'Achievements' },
+  { id: 'logbook',     label: 'Logbook' },
+  { id: 'community',   label: 'Community' },
+  { id: 'marketplace', label: 'Marketplace', mainSiteOnly: true },
+  { id: 'account',     label: 'Account' },
 ];
 
 // ─── LOCKED OVERLAY ──────────────────────────────────────────────────────────
@@ -254,7 +257,8 @@ function GroceryList({ list }) {
 // ─── MAIN DASHBOARD ──────────────────────────────────────────────────────────
 
 export default function Dashboard() {
-  const navigate = useNavigate();
+  const navigate  = useNavigate();
+  const branding  = useBranding();
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState('today');
   const [user, setUser] = useState(null);
@@ -379,7 +383,9 @@ export default function Dashboard() {
     <div style={styles.page}>
       {/* Nav */}
       <nav style={styles.nav}>
-        <div style={styles.navLogo}>PLUS 4 PERFORMANCE</div>
+        {branding.logo_url
+          ? <img src={branding.logo_url} alt={branding.name} style={{ height: 32, objectFit: 'contain' }} />
+          : <div style={styles.navLogo}>{branding.name.toUpperCase()}</div>}
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           {isAdmin && (
             <a href="/admin" style={{ color: '#555', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase', textDecoration: 'none' }}>
@@ -410,9 +416,9 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Tabs */}
+        {/* Tabs — marketplace only shown on main site (branding.slug === null) */}
         <div style={styles.tabBar}>
-          {TABS.map(tab => (
+          {TABS.filter(t => !t.mainSiteOnly || branding.slug === null).map(tab => (
             <button key={tab.id} type="button"
               style={activeTab === tab.id ? styles.tabActive : styles.tab}
               onClick={() => setActiveTab(tab.id)}>
@@ -429,7 +435,8 @@ export default function Dashboard() {
           {activeTab === 'progress' && <ProgressTab userId={user?.id} plan={plan} onSwitchTab={handleSwitchTab} />}
           {activeTab === 'achievements' && <AchievementsTab userId={user?.id} />}
           {activeTab === 'logbook' && <Logbook userId={user?.id} plan={plan} preselectedSession={logbookSession} />}
-          {activeTab === 'community' && <CommunityTab />}
+          {activeTab === 'community'   && <CommunityTab />}
+          {activeTab === 'marketplace' && <MarketplaceTab />}
           {activeTab === 'account' && <AccountTab user={user} plan={plan} isUnlocked={isUnlocked} subRow={subRow} onUnlock={handleUnlock} />}
         </div>
       </div>

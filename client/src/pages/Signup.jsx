@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { useBranding } from '../lib/BrandingContext';
 
 const API = import.meta.env.VITE_API_URL || '';
 
 export default function Signup() {
-  const navigate = useNavigate();
+  const navigate  = useNavigate();
+  const branding  = useBranding();
   const [searchParams] = useSearchParams();
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', password: '' });
   const [error, setError] = useState('');
@@ -57,7 +59,18 @@ export default function Signup() {
               body: JSON.stringify({ referral_code: refCode }),
             });
             sessionStorage.removeItem('p4p_ref');
-          } catch { /* non-fatal — referral recording failing must not block signup */ }
+          } catch { /* non-fatal */ }
+        }
+
+        // Associate user with creator if they signed up on a creator subdomain.
+        if (branding.slug) {
+          try {
+            await fetch(API + '/api/creator/associate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+              body: JSON.stringify({ slug: branding.slug }),
+            });
+          } catch { /* non-fatal */ }
         }
       }
 
@@ -72,7 +85,9 @@ export default function Signup() {
   return (
     <div style={styles.page}>
       <div style={styles.card}>
-        <div style={styles.logo}>PLUS 4 PERFORMANCE</div>
+        {branding.logo_url
+          ? <img src={branding.logo_url} alt={branding.name} style={{ height: 40, objectFit: 'contain', marginBottom: 32 }} />
+          : <div style={styles.logo}>{branding.name.toUpperCase()}</div>}
         <h1 style={styles.heading}>Create your account</h1>
         <p style={styles.sub}>Free to start. No card required.</p>
 

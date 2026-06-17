@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { useBranding } from '../lib/BrandingContext';
 
 export default function Login() {
-  const navigate = useNavigate();
+  const navigate  = useNavigate();
+  const branding  = useBranding();
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -33,7 +35,9 @@ export default function Login() {
   return (
     <div style={styles.page}>
       <div style={styles.card}>
-        <div style={styles.logo}>PLUS 4 PERFORMANCE</div>
+        {branding.logo_url
+          ? <img src={branding.logo_url} alt={branding.name} style={{ height: 40, objectFit: 'contain', marginBottom: 32 }} />
+          : <div style={styles.logo}>{branding.name.toUpperCase()}</div>}
         <h1 style={styles.heading}>Welcome back</h1>
 
         <form onSubmit={handleSubmit}>
