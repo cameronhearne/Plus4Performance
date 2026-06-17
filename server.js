@@ -1228,12 +1228,12 @@ async function handleAdminActivateSubscription(req, res) {
   if (existing) {
     ({ error } = await supabaseAdmin
       .from('subscriptions')
-      .update({ status: 'active', stripe_price_id: process.env.STRIPE_PRICE_ID })
+      .update({ status: 'active', stripe_price_id: process.env.STRIPE_PRICE_ID, current_period_end: null })
       .eq('id', existing.id));
   } else {
     ({ error } = await supabaseAdmin
       .from('subscriptions')
-      .insert({ user_id, stripe_price_id: process.env.STRIPE_PRICE_ID, status: 'active' }));
+      .insert({ user_id, stripe_price_id: process.env.STRIPE_PRICE_ID, status: 'active', current_period_end: null }));
   }
 
   if (error) {
