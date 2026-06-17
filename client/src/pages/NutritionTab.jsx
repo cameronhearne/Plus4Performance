@@ -4,8 +4,22 @@ import { foodSearch, foodLog, foodGetDay, foodDeleteEntry } from '../lib/api';
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 
-const MEALS = ['breakfast', 'lunch', 'dinner', 'snack'];
-const MEAL_LABELS = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snack: 'Snack' };
+// Derive meal slots from plan data. Each slot has a stable `key` (stored in
+// food_logs.meal_type) and a human `label` from the plan's meal names.
+// Falls back to generic "Meal 1…N" if no plan meal_plan exists.
+function getMealSlots(plan, defaultCount = 4) {
+  const meals = plan?.meal_plan?.training_day;
+  if (meals?.length) {
+    return meals.map((m, i) => ({
+      key:   m.name || `Meal ${i + 1}`,
+      label: m.name || `Meal ${i + 1}`,
+    }));
+  }
+  return Array.from({ length: defaultCount }, (_, i) => ({
+    key:   `Meal ${i + 1}`,
+    label: `Meal ${i + 1}`,
+  }));
+}
 
 function todayStr() { return new Date().toISOString().slice(0, 10); }
 
@@ -106,7 +120,7 @@ function FoodEntry({ entry, onDelete }) {
 
 // ─── SEARCH MODAL ─────────────────────────────────────────────────────────────
 
-function SearchModal({ defaultMealType, date, onClose, onSaved }) {
+function SearchModal({ defaultMealType, mealSlots, date, onClose, onSaved }) {
   const [step,          setStep]         = useState('search'); // 'search' | 'quantity'
   const [query,         setQuery]        = useState('');
   const [results,       setResults]      = useState([]);
@@ -181,15 +195,15 @@ function SearchModal({ defaultMealType, date, onClose, onSaved }) {
 
             {/* Meal type selector */}
             <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
-              {MEALS.map(m => (
-                <button key={m} onClick={() => setMealType(m)} style={{
+              {mealSlots.map(slot => (
+                <button key={slot.key} onClick={() => setMealType(slot.key)} style={{
                   padding: '6px 12px', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700,
                   letterSpacing: '0.14em', textTransform: 'uppercase', cursor: 'pointer',
-                  background: mealType === m ? '#C0392B' : 'transparent',
-                  color: mealType === m ? '#fff' : '#555',
-                  border: mealType === m ? 'none' : '1px solid rgba(200,200,200,0.12)',
+                  background: mealType === slot.key ? '#C0392B' : 'transparent',
+                  color: mealType === slot.key ? '#fff' : '#555',
+                  border: mealType === slot.key ? 'none' : '1px solid rgba(200,200,200,0.12)',
                 }}>
-                  {MEAL_LABELS[m]}
+                  {slot.label}
                 </button>
               ))}
             </div>
@@ -299,7 +313,7 @@ function SearchModal({ defaultMealType, date, onClose, onSaved }) {
                 disabled={saving || grams <= 0}
                 style={{ ...S.redBtn, flex: 1, opacity: saving || grams <= 0 ? 0.6 : 1 }}
               >
-                {saving ? 'Saving…' : `Save to ${MEAL_LABELS[mealType]}`}
+                {saving ? 'Saving…' : `Save to ${mealSlots.find(s => s.key === mealType)?.label || mealType}`}
               </button>
             </div>
           </>
@@ -344,7 +358,8 @@ export default function NutritionTab({ plan, isUnlocked, onUnlock }) {
   const [showSearch,    setShowSearch]    = useState(false);
   const [searchMeal,    setSearchMeal]    = useState('lunch');
 
-  const targets = plan?.nutrition?.training_day || null;
+  const targets   = plan?.nutrition?.training_day || null;
+  const mealSlots = getMealSlots(plan);
 
   const loadDay = useCallback(async () => {
     setDayLoading(true);
@@ -377,8 +392,8 @@ export default function NutritionTab({ plan, isUnlocked, onUnlock }) {
 
   if (!isUnlocked) return <LockedState onUnlock={onUnlock} />;
 
-  const entriesByMeal = MEALS.reduce((acc, m) => {
-    acc[m] = entries.filter(e => e.meal_type === m);
+  const entriesByMeal = mealSlots.reduce((acc, slot) => {
+    acc[slot.key] = entries.filter(e => e.meal_type === slot.key);
     return acc;
   }, {});
 
@@ -456,24 +471,24 @@ export default function NutritionTab({ plan, isUnlocked, onUnlock }) {
       )}
 
       {/* Meals */}
-      {MEALS.map(meal => (
-        <div key={meal} style={{ ...S.card, marginBottom: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: entriesByMeal[meal].length > 0 ? 12 : 0 }}>
-            <div style={S.eyebrow}>{MEAL_LABELS[meal]}</div>
-            {entriesByMeal[meal].length > 0 && (
+      {mealSlots.map(slot => (
+        <div key={slot.key} style={{ ...S.card, marginBottom: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: entriesByMeal[slot.key]?.length > 0 ? 12 : 0 }}>
+            <div style={S.eyebrow}>{slot.label}</div>
+            {entriesByMeal[slot.key]?.length > 0 && (
               <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, color: '#444', letterSpacing: '0.04em' }}>
-                {Math.round(entriesByMeal[meal].reduce((s, e) => s + Number(e.calories), 0))} kcal
+                {Math.round(entriesByMeal[slot.key].reduce((s, e) => s + Number(e.calories), 0))} kcal
               </span>
             )}
           </div>
-          {entriesByMeal[meal].map(entry => (
+          {(entriesByMeal[slot.key] || []).map(entry => (
             <FoodEntry key={entry.id} entry={entry} onDelete={handleDelete} />
           ))}
           <button
             style={S.addBtn}
-            onClick={() => { setSearchMeal(meal); setShowSearch(true); }}
+            onClick={() => { setSearchMeal(slot.key); setShowSearch(true); }}
           >
-            + Add food to {MEAL_LABELS[meal].toLowerCase()}
+            + Add food to {slot.label.toLowerCase()}
           </button>
         </div>
       ))}
@@ -482,6 +497,7 @@ export default function NutritionTab({ plan, isUnlocked, onUnlock }) {
       {showSearch && (
         <SearchModal
           defaultMealType={searchMeal}
+          mealSlots={mealSlots}
           date={selectedDate}
           onClose={() => setShowSearch(false)}
           onSaved={() => { setShowSearch(false); loadDay(); }}

@@ -1,4 +1,5 @@
-const http = require('http');
+const http  = require('http');
+const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const Anthropic = require('@anthropic-ai/sdk');
@@ -1479,7 +1480,7 @@ Apply the calorie adjustment rules precisely. Reference real numbers. Be specifi
 //     id         uuid default gen_random_uuid() primary key,
 //     user_id    uuid references auth.users(id) on delete cascade,
 //     logged_at  date not null default current_date,
-//     meal_type  text not null check (meal_type in ('breakfast','lunch','dinner','snack')),
+//     meal_type  text not null,   -- free-text slot label e.g. "M3 — Post Workout" or "Meal 1"
 //     food_name  text not null,
 //     brand      text,
 //     quantity   text not null,
@@ -1496,22 +1497,48 @@ Apply the calorie adjustment rules precisely. Reference real numbers. Be specifi
 //     with check (auth.uid() = user_id);
 //   grant all on food_logs to service_role;
 //
+//   -- If the table already exists with the old enum CHECK constraint, remove it:
+//   alter table food_logs drop constraint if exists food_logs_meal_type_check;
+//
 // ─────────────────────────────────────────────────────────────────────────────
+
+// ── httpsGet helper ───────────────────────────────────────────────────────────
+// Uses Node's built-in https module (HTTP/1.1) rather than global fetch (HTTP/2).
+// fetch triggers Cloudflare bot-detection on the Open Food Facts CDN; https.get does not.
+function httpsGet(url, extraHeaders = {}) {
+  return new Promise((resolve, reject) => {
+    const u = new URL(url);
+    const opts = {
+      hostname: u.hostname,
+      path:     u.pathname + u.search,
+      headers:  {
+        'User-Agent':      'Plus4Performance/1.0 (plus4performance.com)',
+        'Accept':          'application/json',
+        'Accept-Language': 'en',
+        ...extraHeaders,
+      },
+    };
+    const req = https.get(opts, (res) => {
+      let body = '';
+      res.on('data', c => { body += c; });
+      res.on('end', () => resolve({ status: res.statusCode, body }));
+    });
+    req.on('error', reject);
+    req.setTimeout(12000, () => { req.destroy(new Error('Open Food Facts request timed out')); });
+  });
+}
 
 // ── Provider abstraction ──────────────────────────────────────────────────────
 // All food search calls go through here. Swap the internals to change provider
 // without touching any calling code.
 async function searchFood(query) {
   const encoded = encodeURIComponent(query.trim());
-  const url = `https://world.openfoodfacts.org/api/v2/search?search_terms=${encoded}&fields=code,product_name,brands,nutriments&page_size=15&sort_by=unique_scans_n`;
-  const res = await fetch(url, {
-    headers: {
-      'User-Agent': 'Plus4Performance/1.0 (plus4performance.com)',
-      'Accept': 'application/json',
-    },
-  });
-  if (!res.ok) throw new Error(`Open Food Facts returned ${res.status}`);
-  const data = await res.json();
+  const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encoded}&search_simple=1&action=process&json=1&fields=code,product_name,brands,nutriments&page_size=15`;
+  const { status, body } = await httpsGet(url);
+  if (status !== 200) throw new Error(`Open Food Facts returned ${status}`);
+  let data;
+  try { data = JSON.parse(body); } catch { throw new Error('Open Food Facts returned non-JSON response'); }
+  if (!data.products) throw new Error('Unexpected Open Food Facts response structure');
 
   const results = [];
   for (const p of data.products || []) {
@@ -1645,9 +1672,8 @@ async function handleFoodLog(req, res) {
   let parsed;
   try { parsed = JSON.parse(body); } catch { return json(res, 400, { error: 'Invalid JSON' }); }
 
-  const VALID_MEAL = new Set(['breakfast', 'lunch', 'dinner', 'snack']);
   const date     = sanitiseInput(String(parsed.date     || ''), 10);
-  const mealType = sanitiseInput(String(parsed.mealType || ''), 20);
+  const mealType = sanitiseInput(String(parsed.mealType || ''), 80);
   const foodName = sanitiseInput(String(parsed.foodName || ''), 200);
   const brand    = parsed.brand ? sanitiseInput(String(parsed.brand), 100) : null;
   const quantity = sanitiseInput(String(parsed.quantity || ''), 50);
@@ -1657,7 +1683,7 @@ async function handleFoodLog(req, res) {
   const fat      = parseFloat(parsed.fat)      || 0;
 
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date))  return json(res, 400, { error: 'date must be YYYY-MM-DD' });
-  if (!VALID_MEAL.has(mealType))                      return json(res, 400, { error: 'Invalid mealType' });
+  if (!mealType)                                      return json(res, 400, { error: 'mealType required' });
   if (!foodName)                                      return json(res, 400, { error: 'foodName required' });
   if (!quantity)                                      return json(res, 400, { error: 'quantity required' });
 
