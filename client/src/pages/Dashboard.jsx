@@ -303,6 +303,7 @@ export default function Dashboard() {
   const [subRow, setSubRow] = useState(null);
   const [loadingUnlock, setLoadingUnlock] = useState(false);
   const [logbookSession, setLogbookSession] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   function handleOpenLogbook(sessionName) {
     setLogbookSession(sessionName);
@@ -322,6 +323,9 @@ export default function Dashboard() {
       if (userErr) console.error('[Dashboard] getUser error:', userErr);
       if (!user) { navigate('/login'); return; }
       setUser(user);
+
+      supabase.from('profiles').select('is_admin').eq('id', user.id).maybeSingle()
+        .then(({ data }) => { if (data?.is_admin) setIsAdmin(true); });
 
       const { data: snap, error: snapErr } = await supabase
         .from('snapshots')
@@ -416,6 +420,11 @@ export default function Dashboard() {
       <nav style={styles.nav}>
         <div style={styles.navLogo}>PLUS 4 PERFORMANCE</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          {isAdmin && (
+            <a href="/admin" style={{ color: '#555', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase', textDecoration: 'none' }}>
+              Admin
+            </a>
+          )}
           {!isUnlocked && (
             <button className="btn-primary" onClick={handleUnlock} disabled={loadingUnlock}
               style={{ fontSize: 12, padding: '10px 20px' }}>

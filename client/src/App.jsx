@@ -9,6 +9,7 @@ import Dashboard from './pages/Dashboard';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import CookieBanner from './components/CookieBanner';
+import AdminDashboard from './pages/admin/AdminDashboard';
 
 function RequireAuth({ children }) {
   const [session, setSession] = useState(undefined);
@@ -21,6 +22,25 @@ function RequireAuth({ children }) {
 
   if (session === undefined) return null; // loading
   if (!session) return <Navigate to="/login" replace />;
+  return children;
+}
+
+function RequireAdmin({ children }) {
+  const [status, setStatus] = useState('loading'); // loading | ok | denied
+
+  useEffect(() => {
+    async function check() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { setStatus('denied'); return; }
+      const { data: profile } = await supabase
+        .from('profiles').select('is_admin').eq('id', session.user.id).maybeSingle();
+      setStatus(profile?.is_admin ? 'ok' : 'denied');
+    }
+    check();
+  }, []);
+
+  if (status === 'loading') return null;
+  if (status === 'denied')  return <Navigate to="/dashboard" replace />;
   return children;
 }
 
@@ -50,6 +70,9 @@ export default function App() {
       } />
       <Route path="/dashboard/*" element={
         <RequireAuth><Dashboard /></RequireAuth>
+      } />
+      <Route path="/admin/*" element={
+        <RequireAdmin><AdminDashboard /></RequireAdmin>
       } />
       {/* Catch-all for the app shell */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

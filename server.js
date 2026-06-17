@@ -346,6 +346,26 @@ async function getUserIdFromToken(authHeader) {
   return data.user.id;
 }
 
+// Returns the verified admin userId, or writes 401/403 and returns null.
+async function requireAdmin(req, res) {
+  const userId = await getUserIdFromToken(req.headers['authorization']);
+  if (!userId) { json(res, 401, { error: 'Unauthorized' }); return null; }
+  const { data: profile } = await supabaseAdmin
+    .from('profiles').select('is_admin').eq('id', userId).maybeSingle();
+  if (!profile?.is_admin) { json(res, 403, { error: 'Forbidden' }); return null; }
+  return userId;
+}
+
+async function logAdminAction(adminUserId, targetUserId, actionType, details = {}) {
+  await supabaseAdmin.from('admin_actions').insert({
+    admin_user_id:  adminUserId,
+    target_user_id: targetUserId,
+    action_type:    actionType,
+    details,
+    created_at:     new Date().toISOString(),
+  }).catch(err => console.error('[admin_actions] log error:', err.message));
+}
+
 async function sendWelcomeEmail(email, firstName) {
   try {
     await fetch('https://api.resend.com/emails', {
@@ -1424,6 +1444,344 @@ Apply the calorie adjustment rules precisely. Reference real numbers. Be specifi
   }
 }
 
+// ─── ADMIN API ────────────────────────────────────────────────────────────────
+//
+// SQL — run once in Supabase SQL editor:
+//
+//   alter table profiles add column if not exists is_admin boolean not null default false;
+//
+//   create table if not exists admin_actions (
+//     id             uuid default gen_random_uuid() primary key,
+//     admin_user_id  uuid references auth.users(id) on delete set null,
+//     target_user_id uuid references auth.users(id) on delete set null,
+//     action_type    text not null,
+//     details        jsonb,
+//     created_at     timestamptz not null default now()
+//   );
+//   alter table admin_actions enable row level security;
+//   create policy "admin_actions_select" on admin_actions for select to authenticated
+//     using (exists (select 1 from profiles where id = auth.uid() and is_admin = true));
+//   create policy "admin_actions_insert" on admin_actions for insert to authenticated
+//     with check (auth.uid() = admin_user_id);
+//   grant all on admin_actions to authenticated;
+//
+//   -- After running the above, set yourself as admin:
+//   update profiles set is_admin = true where email = 'cameronhearne@gmail.com';
+//
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Helper: parse URL query string into an object
+function parseQuery(reqUrl) {
+  try {
+    return Object.fromEntries(new URL(reqUrl, 'http://localhost').searchParams);
+  } catch { return {}; }
+}
+
+// GET /api/admin/stats
+async function handleAdminStats(req, res) {
+  const adminId = await requireAdmin(req, res);
+  if (!adminId) return;
+  try {
+    const [
+      { count: totalUsers },
+      { count: activeSubscribers },
+      { count: cancelledThisMonth },
+    ] = await Promise.all([
+      supabaseAdmin.from('profiles').select('*', { count: 'exact', head: true }),
+      supabaseAdmin.from('subscriptions').select('*', { count: 'exact', head: true }).eq('status', 'active'),
+      supabaseAdmin.from('subscriptions').select('*', { count: 'exact', head: true })
+        .eq('status', 'canceled')
+        .gte('updated_at', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()),
+    ]);
+    const active = activeSubscribers || 0;
+    const cancelled = cancelledThisMonth || 0;
+    const activeAtMonthStart = active + cancelled;
+    return json(res, 200, {
+      totalUsers:        totalUsers || 0,
+      activeSubscribers: active,
+      mrr:               Math.round(active * 9.99 * 100) / 100,
+      churnThisMonth:    activeAtMonthStart > 0 ? Math.round((cancelled / activeAtMonthStart) * 1000) / 10 : 0,
+    });
+  } catch (err) {
+    console.error('[admin/stats]', err);
+    return json(res, 500, { error: 'Failed to fetch stats' });
+  }
+}
+
+// GET /api/admin/revenue?period=daily|weekly|monthly
+async function handleAdminRevenue(req, res) {
+  const adminId = await requireAdmin(req, res);
+  if (!adminId) return;
+  const { period = 'daily' } = parseQuery(req.url);
+  try {
+    const thirtyDaysAgo = Math.floor((Date.now() - 30 * 86400000) / 1000);
+    const charges = await stripe.charges.list({ limit: 100, created: { gte: thirtyDaysAgo } });
+
+    const buckets = {};
+    for (const ch of charges.data) {
+      if (ch.status !== 'succeeded') continue;
+      const d = new Date(ch.created * 1000);
+      let key;
+      if (period === 'monthly') {
+        key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      } else if (period === 'weekly') {
+        // ISO week key: find the Monday
+        const day = d.getDay() || 7;
+        const mon = new Date(d); mon.setDate(d.getDate() - day + 1);
+        key = mon.toISOString().slice(0, 10);
+      } else {
+        key = d.toISOString().slice(0, 10);
+      }
+      buckets[key] = (buckets[key] || 0) + ch.amount / 100;
+    }
+    const data = Object.entries(buckets)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, amount]) => ({ date, amount: Math.round(amount * 100) / 100 }));
+    return json(res, 200, { data });
+  } catch (err) {
+    console.error('[admin/revenue]', err);
+    return json(res, 500, { error: 'Failed to fetch revenue' });
+  }
+}
+
+// GET /api/admin/users?page=1&search=&sort=createdAt&dir=desc
+async function handleAdminListUsers(req, res) {
+  const adminId = await requireAdmin(req, res);
+  if (!adminId) return;
+  const { page = '1', search = '', sort = 'createdAt', dir = 'desc' } = parseQuery(req.url);
+  const perPage = 50;
+  try {
+    const [
+      { data: { users: authUsers } },
+      { data: profiles },
+      { data: subscriptions },
+      { data: intakes },
+    ] = await Promise.all([
+      supabaseAdmin.auth.admin.listUsers({ perPage: 1000 }),
+      supabaseAdmin.from('profiles').select('id, first_name, last_name, is_admin'),
+      supabaseAdmin.from('subscriptions').select('user_id, status, current_period_end, stripe_subscription_id'),
+      supabaseAdmin.from('intake_submissions').select('user_id, data').order('created_at', { ascending: false }),
+    ]);
+
+    const profileMap = Object.fromEntries((profiles || []).map(p => [p.id, p]));
+    const subMap     = Object.fromEntries((subscriptions || []).map(s => [s.user_id, s]));
+    // Only take the most recent intake per user
+    const intakeMap  = {};
+    for (const r of (intakes || [])) {
+      if (!intakeMap[r.user_id]) intakeMap[r.user_id] = r.data?.startDate || null;
+    }
+
+    let users = (authUsers || []).map(u => {
+      const p = profileMap[u.id] || {};
+      return {
+        id:           u.id,
+        email:        u.email || '',
+        firstName:    p.first_name || u.user_metadata?.first_name || '',
+        lastName:     p.last_name  || u.user_metadata?.last_name  || '',
+        createdAt:    u.created_at,
+        lastSignIn:   u.last_sign_in_at,
+        subscription: subMap[u.id] || null,
+        planStartDate: intakeMap[u.id] || null,
+        isAdmin:      p.is_admin || false,
+      };
+    });
+
+    if (search) {
+      const s = search.toLowerCase();
+      users = users.filter(u =>
+        u.email.toLowerCase().includes(s) ||
+        u.firstName.toLowerCase().includes(s) ||
+        u.lastName.toLowerCase().includes(s)
+      );
+    }
+
+    const sortFn = (a, b) => {
+      const va = String(a[sort] || '');
+      const vb = String(b[sort] || '');
+      const cmp = va.localeCompare(vb);
+      return dir === 'asc' ? cmp : -cmp;
+    };
+    users.sort(sortFn);
+
+    const total = users.length;
+    const p = Math.max(1, parseInt(page, 10));
+    const paged = users.slice((p - 1) * perPage, p * perPage);
+    return json(res, 200, { users: paged, total, page: p, perPage });
+  } catch (err) {
+    console.error('[admin/list-users]', err);
+    return json(res, 500, { error: 'Failed to fetch users' });
+  }
+}
+
+// GET /api/admin/users/:id
+async function handleAdminGetUser(req, res, targetUserId) {
+  const adminId = await requireAdmin(req, res);
+  if (!adminId) return;
+  try {
+    const [
+      { data: { user: authUser } },
+      { data: profile },
+      { data: sub },
+      { data: intakeRow },
+      { data: planRow },
+      { data: checkins },
+      { data: weightLogs },
+      { data: liftLogs },
+      { data: adminActions },
+    ] = await Promise.all([
+      supabaseAdmin.auth.admin.getUserById(targetUserId),
+      supabaseAdmin.from('profiles').select('*').eq('id', targetUserId).maybeSingle(),
+      supabaseAdmin.from('subscriptions').select('*').eq('user_id', targetUserId).maybeSingle(),
+      supabaseAdmin.from('intake_submissions').select('data').eq('user_id', targetUserId).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+      supabaseAdmin.from('plans').select('plan_data, generated_at').eq('user_id', targetUserId).order('generated_at', { ascending: false }).limit(1).maybeSingle(),
+      supabaseAdmin.from('monthly_checkins').select('*').eq('user_id', targetUserId).order('created_at', { ascending: false }),
+      supabaseAdmin.from('weight_logs').select('weight_kg, logged_at').eq('user_id', targetUserId).order('logged_at', { ascending: true }),
+      supabaseAdmin.from('one_rep_maxes').select('lift, weight_kg, logged_at, is_calculated').eq('user_id', targetUserId).order('logged_at', { ascending: true }),
+      supabaseAdmin.from('admin_actions').select('*').eq('target_user_id', targetUserId).order('created_at', { ascending: false }).limit(50),
+    ]);
+
+    if (!authUser) return json(res, 404, { error: 'User not found' });
+
+    return json(res, 200, {
+      user: {
+        id:         authUser.id,
+        email:      authUser.email,
+        firstName:  profile?.first_name || authUser.user_metadata?.first_name || '',
+        lastName:   profile?.last_name  || authUser.user_metadata?.last_name  || '',
+        createdAt:  authUser.created_at,
+        lastSignIn: authUser.last_sign_in_at,
+        isAdmin:    profile?.is_admin || false,
+      },
+      subscription:  sub || null,
+      intake:        intakeRow?.data || null,
+      plan:          planRow?.plan_data || null,
+      planGeneratedAt: planRow?.generated_at || null,
+      checkins:      checkins || [],
+      weightLogs:    weightLogs || [],
+      liftLogs:      liftLogs || [],
+      adminActions:  adminActions || [],
+    });
+  } catch (err) {
+    console.error('[admin/get-user]', err);
+    return json(res, 500, { error: 'Failed to fetch user' });
+  }
+}
+
+// GET /api/admin/users/:id/last-charge
+async function handleAdminLastCharge(req, res, targetUserId) {
+  const adminId = await requireAdmin(req, res);
+  if (!adminId) return;
+  try {
+    const { data: sub } = await supabaseAdmin
+      .from('subscriptions').select('stripe_customer_id').eq('user_id', targetUserId).maybeSingle();
+    if (!sub?.stripe_customer_id) return json(res, 200, { charge: null });
+    const charges = await stripe.charges.list({ customer: sub.stripe_customer_id, limit: 1 });
+    const ch = charges.data[0] || null;
+    return json(res, 200, {
+      charge: ch ? {
+        id:       ch.id,
+        amount:   ch.amount,
+        currency: ch.currency,
+        last4:    ch.payment_method_details?.card?.last4 || null,
+        created:  ch.created,
+        status:   ch.status,
+      } : null,
+    });
+  } catch (err) {
+    console.error('[admin/last-charge]', err);
+    return json(res, 500, { error: 'Failed to fetch charge' });
+  }
+}
+
+// POST /api/admin/users/:id/cancel-subscription
+// Body: { mode: 'at_period_end' | 'immediately' }
+async function handleAdminCancelSub(req, res, targetUserId) {
+  const adminId = await requireAdmin(req, res);
+  if (!adminId) return;
+  const body = await readBody(req);
+  let parsed;
+  try { parsed = JSON.parse(body); } catch { return json(res, 400, { error: 'Invalid JSON' }); }
+  const { mode } = parsed;
+  if (!['at_period_end', 'immediately'].includes(mode))
+    return json(res, 400, { error: 'mode must be at_period_end or immediately' });
+  try {
+    const { data: sub } = await supabaseAdmin
+      .from('subscriptions').select('stripe_subscription_id')
+      .eq('user_id', targetUserId).eq('status', 'active').maybeSingle();
+    if (!sub?.stripe_subscription_id) return json(res, 404, { error: 'No active subscription found' });
+    if (mode === 'immediately') {
+      await stripe.subscriptions.cancel(sub.stripe_subscription_id);
+    } else {
+      await stripe.subscriptions.update(sub.stripe_subscription_id, { cancel_at_period_end: true });
+    }
+    await logAdminAction(adminId, targetUserId, 'cancel_subscription', { mode, subscriptionId: sub.stripe_subscription_id });
+    return json(res, 200, { ok: true });
+  } catch (err) {
+    console.error('[admin/cancel-sub]', err);
+    return json(res, 500, { error: err.message || 'Stripe cancel failed' });
+  }
+}
+
+// POST /api/admin/users/:id/refund
+// Body: { chargeId: string, amount: number (pence) }
+async function handleAdminRefund(req, res, targetUserId) {
+  const adminId = await requireAdmin(req, res);
+  if (!adminId) return;
+  const body = await readBody(req);
+  let parsed;
+  try { parsed = JSON.parse(body); } catch { return json(res, 400, { error: 'Invalid JSON' }); }
+  const { chargeId, amount } = parsed;
+  if (!chargeId) return json(res, 400, { error: 'chargeId required' });
+  try {
+    const params = { charge: chargeId };
+    if (amount) params.amount = parseInt(amount, 10);
+    const refund = await stripe.refunds.create(params);
+    await logAdminAction(adminId, targetUserId, 'refund', { chargeId, amount, refundId: refund.id });
+    return json(res, 200, { ok: true, refundId: refund.id });
+  } catch (err) {
+    console.error('[admin/refund]', err);
+    return json(res, 500, { error: err.message || 'Stripe refund failed' });
+  }
+}
+
+// POST /api/admin/users/:id/regenerate-plan
+async function handleAdminRegeneratePlan(req, res, targetUserId) {
+  const adminId = await requireAdmin(req, res);
+  if (!adminId) return;
+  try {
+    const { data: intakeRow } = await supabaseAdmin
+      .from('intake_submissions').select('data')
+      .eq('user_id', targetUserId).order('created_at', { ascending: false }).limit(1).maybeSingle();
+    if (!intakeRow?.data) return json(res, 404, { error: 'No intake data found for this user' });
+    await handleGeneratePlan(targetUserId, intakeRow.data);
+    await logAdminAction(adminId, targetUserId, 'regenerate_plan', {});
+    return json(res, 200, { ok: true });
+  } catch (err) {
+    console.error('[admin/regenerate-plan]', err);
+    return json(res, 500, { error: err.message || 'Plan generation failed' });
+  }
+}
+
+// ─── ADMIN ROUTE DISPATCHER ───────────────────────────────────────────────────
+
+function routeAdmin(req, res, url) {
+  if (req.method === 'GET'  && url === '/api/admin/stats')   return handleAdminStats(req, res);
+  if (req.method === 'GET'  && url.startsWith('/api/admin/revenue')) return handleAdminRevenue(req, res);
+  if (req.method === 'GET'  && url === '/api/admin/users')   return handleAdminListUsers(req, res);
+
+  const um = url.match(/^\/api\/admin\/users\/([a-f0-9-]+)(?:\/([a-z-]+))?$/);
+  if (um) {
+    const [, uid, action] = um;
+    if (req.method === 'GET'  && !action)                         return handleAdminGetUser(req, res, uid);
+    if (req.method === 'GET'  && action === 'last-charge')        return handleAdminLastCharge(req, res, uid);
+    if (req.method === 'POST' && action === 'cancel-subscription') return handleAdminCancelSub(req, res, uid);
+    if (req.method === 'POST' && action === 'refund')             return handleAdminRefund(req, res, uid);
+    if (req.method === 'POST' && action === 'regenerate-plan')    return handleAdminRegeneratePlan(req, res, uid);
+  }
+
+  return json(res, 404, { error: 'Not found' });
+}
+
 // ─── HTTP SERVER ──────────────────────────────────────────────────────────────
 
 const server = http.createServer(async (req, res) => {
@@ -1495,6 +1853,10 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'POST' && url === '/api/monthly-checkin') {
       return await handleMonthlyCheckin(req, res);
+    }
+
+    if (url.startsWith('/api/admin/')) {
+      return await routeAdmin(req, res, url);
     }
 
     json(res, 404, { error: 'Not found' });

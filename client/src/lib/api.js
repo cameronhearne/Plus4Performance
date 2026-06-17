@@ -56,6 +56,19 @@ export async function submitMonthlyCheckin(payload, token) {
   return authedPost('/api/monthly-checkin', payload, token);
 }
 
+// ─── ADMIN ────────────────────────────────────────────────────────────────────
+export async function adminGetStats(token)                   { return authedGet('/api/admin/stats', token); }
+export async function adminGetRevenue(token, period = 'daily') { return authedGet(`/api/admin/revenue?period=${period}`, token); }
+export async function adminListUsers(token, params = {}) {
+  const qs = new URLSearchParams(params).toString();
+  return authedGet(`/api/admin/users${qs ? '?' + qs : ''}`, token);
+}
+export async function adminGetUser(token, userId)            { return authedGet(`/api/admin/users/${userId}`, token); }
+export async function adminGetLastCharge(token, userId)      { return authedGet(`/api/admin/users/${userId}/last-charge`, token); }
+export async function adminCancelSub(token, userId, mode)    { return authedPost(`/api/admin/users/${userId}/cancel-subscription`, { mode }, token); }
+export async function adminRefund(token, userId, chargeId, amount) { return authedPost(`/api/admin/users/${userId}/refund`, { chargeId, amount }, token); }
+export async function adminRegeneratePlan(token, userId)     { return authedPost(`/api/admin/users/${userId}/regenerate-plan`, {}, token); }
+
 export async function deleteAccount(token) {
   const res = await fetch((import.meta.env.VITE_API_URL || '') + '/delete-account', {
     method: 'DELETE',
