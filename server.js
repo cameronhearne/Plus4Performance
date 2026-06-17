@@ -1531,14 +1531,40 @@ function httpsGet(url, extraHeaders = {}) {
 // ── Provider abstraction ──────────────────────────────────────────────────────
 // All food search calls go through here. Swap the internals to change provider
 // without touching any calling code.
+//
+// Cloudflare note: world.openfoodfacts.org applies burst rate-limiting to
+// cloud-server IPs (Railway shares IP ranges that Cloudflare flags). The first
+// request in a burst window sometimes gets a 503 HTML page rather than JSON.
+// One retry after 1500ms reliably clears the window. This is the documented
+// workaround while keeping OFF as the provider.
 async function searchFood(query) {
   const encoded = encodeURIComponent(query.trim());
-  const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encoded}&search_simple=1&action=process&json=1&fields=code,product_name,brands,nutriments&page_size=15`;
-  const { status, body } = await httpsGet(url);
-  if (status !== 200) throw new Error(`Open Food Facts returned ${status}`);
+  // countries_tags + lang/lc restrict to UK English products; sort_by=unique_scans_n
+  // ranks by real-world scan popularity which strongly correlates with relevance.
+  const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encoded}&search_simple=1&action=process&json=1&fields=code,product_name,brands,nutriments&page_size=20&sort_by=unique_scans_n&countries_tags=en:united-kingdom&lang=en&lc=en`;
+
+  async function attempt() {
+    const { status, body } = await httpsGet(url);
+    if (status !== 200) {
+      const isHtml = body.trim().startsWith('<');
+      throw Object.assign(new Error(`Open Food Facts returned ${status}${isHtml ? ' (HTML/Cloudflare block)' : ''}`), { status, retryable: status === 503 });
+    }
+    let data;
+    try { data = JSON.parse(body); } catch { throw Object.assign(new Error('Open Food Facts returned non-JSON response'), { retryable: false }); }
+    if (!data.products) throw Object.assign(new Error('Unexpected Open Food Facts response structure'), { retryable: false });
+    return data;
+  }
+
   let data;
-  try { data = JSON.parse(body); } catch { throw new Error('Open Food Facts returned non-JSON response'); }
-  if (!data.products) throw new Error('Unexpected Open Food Facts response structure');
+  try {
+    data = await attempt();
+  } catch (firstErr) {
+    if (!firstErr.retryable) throw firstErr;
+    // Single retry after 1500ms — clears Cloudflare's burst window on Railway IPs
+    console.warn('[food/search] first attempt got', firstErr.message, '— retrying in 1500ms');
+    await new Promise(r => setTimeout(r, 1500));
+    data = await attempt(); // let this throw if retry also fails — caller logs it
+  }
 
   const results = [];
   for (const p of data.products || []) {
@@ -1658,8 +1684,8 @@ async function handleFoodSearch(req, res) {
     const results = await searchFood(query);
     return json(res, 200, { results });
   } catch (err) {
-    console.error('[food/search] provider error:', err.message);
-    return json(res, 200, { results: [], warning: 'Food search unavailable, try again shortly' });
+    console.error('[food/search] provider error after retry:', err.message);
+    return json(res, 200, { results: [], warning: 'No results found — please try a different search term or try again in a moment' });
   }
 }
 
