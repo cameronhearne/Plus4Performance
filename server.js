@@ -184,6 +184,83 @@ Client data:
 ${JSON.stringify(intakeData, null, 2)}`;
 }
 
+function buildRenewalUserPrompt(intakeData, ctx) {
+  const weightLine = [
+    ctx.startingWeight != null ? `Starting weight: ${ctx.startingWeight} kg` : null,
+    ctx.currentWeight  != null ? `Current weight: ${ctx.currentWeight} kg`   : null,
+  ].filter(Boolean).join(' → ') || 'Weight records not available';
+
+  const completionLine = `Session completion over 12 weeks: ${ctx.sessionsCompleted} of ${ctx.sessionsTarget} scheduled (${ctx.sessionCompletionRate}%)`;
+
+  const liftSection = [
+    ctx.startingLifts.length ? `Starting lift records:\n${ctx.startingLifts.join('\n')}` : null,
+    ctx.currentLifts.length  ? `Current lift records:\n${ctx.currentLifts.join('\n')}`   : null,
+  ].filter(Boolean).join('\n');
+
+  const option2Rule = ctx.option === 2
+    ? '\n(3) New direction — the user has chosen a new goal. This must drive genuinely different training emphasis, session structure, and nutrition targets. Do not relabel the previous plan with a new goal header.'
+    : '';
+
+  return `MANDATORY RENEWAL VARIATION REQUIREMENTS — Read before generating anything.
+This is a renewal plan for a user who has completed a previous 12-week plan. The new plan MUST differ from the previous one in at least two ways:
+(1) Weekly split structure — the previous plan used a "${ctx.previousSplit}" split. Use a different valid split (e.g. Upper/Lower, Full Body, or a different day arrangement) where the coaching bible's programme structure rules permit. Do not repeat the same split.
+(2) Exercise selection — deliberately choose different primary and secondary exercises within the same muscle groups, using available substitutions from the exercise library. The plan must not be recognisably the same structure as the previous one with only numbers changed.${option2Rule}
+
+Progressive overload MUST be grounded in the user's actual documented progress below — not a generic percentage increase applied to intake values.
+
+PREVIOUS PLAN SUMMARY:
+Split: ${ctx.previousSplit}
+Training days per week: ${ctx.previousTrainingDays}
+Session structure: ${ctx.previousSessionNames.join(', ')}
+Key compound lifts: ${ctx.previousKeyLifts.join(', ')}
+
+DOCUMENTED PROGRESS OVER 12 WEEKS:
+${weightLine}
+${completionLine}${liftSection ? '\n' + liftSection : ''}
+
+---
+
+Generate a fully individualised 12-week training and nutrition plan for the client below. Be specific — generic output is a failure. Respond with ONLY a valid JSON object matching the schema exactly. No markdown, no code fences.
+
+STEP 1 — NUTRITION (Mifflin St Jeor)
+Male BMR = (10×weight) + (6.25×height) − (5×age) + 5. Female: same −161.
+Multiply by activity multiplier → TDEE. Apply goal adjustment from Section 7 → calorie_target. Set macros per Section 7 split. Store bmr and tdee in user_summary.
+
+STEP 2 — EXERCISE LIBRARY
+Build exercise_library first. Include every exercise used across all sessions — each keyed by snake_case ID (e.g. "barbell_bench_press"). Each entry has:
+- name: full exercise name
+- cues: one sentence on correct execution
+- common_mistakes: one sentence on what to avoid
+- injury_modifications: specific alternative if client has a relevant injury, else ""
+Select exercises from the coaching bible (Tier 1 as foundation, Tier 2 for variety). Prioritise exercises that DIFFER from the previous plan's key compound lifts listed above. Apply all injury contraindications from Section 9.
+
+STEP 3 — PHASES (3 phases, 4 weeks each)
+Build 3 phases. Each phase contains the SAME sessions but with progressive overload applied — reps/sets change between phases to show progression. Base starting loads on the client's CURRENT documented lift records above, not their intake values. Use specific numbers (e.g. phase 1: 3×8, phase 2: 4×6, phase 3: 5×5). Never write vague progressions.
+- phase 1: label "Foundation", weeks "1–4"
+- phase 2: label "Accumulation", weeks "5–8"
+- phase 3: label "Intensification", weeks "9–12"
+Each session: { name, exercises: [{ ex: "<library_id>", sets, reps, rest }] }
+training_calories and rest_calories increase slightly each phase as progressive overload demand rises.
+
+STEP 4 — MEAL PLAN (2 templates only)
+Build one training_day template and one rest_day template — not 7 separate days.
+- Each template is an array of meals (M1–M5). M3 must be "M3 — Post Workout" on training days.
+- Every food: named with gram amount (e.g. "Chicken breast 180g"). Never "lean protein" or "complex carbs".
+- grocery_list reflects exactly the foods used.
+- Maximum 5 supplements. One line each: name, dose, timing.
+
+STEP 5 — PERSONAL NOTE
+3 short paragraphs written directly to the client. Include:
+- Full Mifflin St Jeor calculation with their actual numbers.
+- Their goal, current weight, target weight, and what the calorie target achieves relative to their documented 12-week progress.
+- Why the new split and exercise selection differs from their previous plan and specifically how it builds on their documented strength and completion data.
+
+STANDARDS: key_lifts = exactly 3 compound exercise names. All fields populated. No placeholders.
+
+Client data:
+${JSON.stringify(intakeData, null, 2)}`;
+}
+
 function buildSnapshotUserPrompt(intakeData) {
   return `Based on this client's intake data, generate a brief coaching snapshot. Respond with ONLY a valid JSON object — no markdown, no code fences.
 
@@ -781,7 +858,7 @@ async function handleSnapshot(req, res) {
 // POST /generate-plan
 // Called by Stripe webhook after payment confirmed — NOT called directly by frontend.
 // Body: { userId: string, intakeData: {...} } — assembled by the webhook handler.
-async function handleGeneratePlan(userId, intakeData) {
+async function handleGeneratePlan(userId, intakeData, renewalCtx = null) {
   console.log('Generating full plan for user:', userId);
 
   // Per-user Anthropic spend protection: max 2 plan generations per 24 hours
@@ -821,7 +898,7 @@ async function handleGeneratePlan(userId, intakeData) {
         model: 'claude-sonnet-4-6',
         max_tokens: 16000,
         system: buildFullPlanSystemPrompt(creatorBible),
-        messages: [{ role: 'user', content: buildFullPlanUserPrompt(intakeData) }]
+        messages: [{ role: 'user', content: renewalCtx ? buildRenewalUserPrompt(intakeData, renewalCtx) : buildFullPlanUserPrompt(intakeData) }]
       }).finalMessage();
 
       const raw = message.content[0].text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
@@ -845,6 +922,120 @@ async function handleGeneratePlan(userId, intakeData) {
 
   console.log('Plan saved for user:', userId);
   return planData;
+}
+
+// POST /api/plan/renew
+// Generates a renewal plan (option 1 = continue same goal, option 2 = new direction).
+// Responds 202 immediately and generates async so the client isn't held open.
+async function handleRenewalPlan(req, res) {
+  const userId = await getUserIdFromToken(req.headers['authorization']);
+  if (!userId) return json(res, 401, { error: 'Unauthorized' });
+
+  const { data: sub } = await supabaseAdmin
+    .from('subscriptions').select('status').eq('user_id', userId).maybeSingle();
+  if (!sub || sub.status !== 'active')
+    return json(res, 403, { error: 'Active subscription required to generate a renewal plan.' });
+
+  const rawBody = await readBody(req);
+  let parsed;
+  try { parsed = JSON.parse(rawBody); } catch { return json(res, 400, { error: 'Invalid JSON' }); }
+
+  const option = Number(parsed.option);
+  if (option !== 1 && option !== 2) return json(res, 400, { error: 'option must be 1 or 2' });
+
+  // First intake = starting stats baseline
+  const { data: firstIntakeRow } = await supabaseAdmin
+    .from('intake_submissions').select('data')
+    .eq('user_id', userId).order('created_at', { ascending: true }).limit(1).maybeSingle();
+
+  // Latest intake = current preferences (split preference, session length, injuries, etc.)
+  const { data: latestIntakeRow } = await supabaseAdmin
+    .from('intake_submissions').select('data')
+    .eq('user_id', userId).order('created_at', { ascending: false }).limit(1).maybeSingle();
+
+  if (!latestIntakeRow) return json(res, 400, { error: 'No intake data found. Complete the intake form first.' });
+
+  // Build intake for new plan; option 2 overrides goal fields from request
+  let intakeData = { ...latestIntakeRow.data };
+  if (option === 2 && parsed.new_intake && typeof parsed.new_intake === 'object') {
+    const ni = parsed.new_intake;
+    if (ni.goal)         intakeData.goal         = sanitiseInput(String(ni.goal), 50);
+    if (ni.targetWeight) intakeData.targetWeight  = Number(ni.targetWeight) || intakeData.targetWeight;
+    if (ni.trainingDays) intakeData.trainingDays  = sanitiseInput(String(ni.trainingDays), 10);
+  }
+
+  // First plan = previous plan to summarise for variation instructions
+  const { data: firstPlanRow } = await supabaseAdmin
+    .from('plans').select('plan_data, generated_at')
+    .eq('user_id', userId).order('generated_at', { ascending: true }).limit(1).maybeSingle();
+
+  let renewalCtx = null;
+
+  if (firstPlanRow?.plan_data) {
+    const prev = firstPlanRow.plan_data;
+    const firstIntake = firstIntakeRow?.data || latestIntakeRow.data;
+
+    // Current weight: most recent weight log
+    const { data: latestWt } = await supabaseAdmin
+      .from('weight_logs').select('weight_kg')
+      .eq('user_id', userId).order('logged_at', { ascending: false }).limit(1).maybeSingle();
+
+    // Session completions over the 12-week plan window
+    const planStart = firstPlanRow.generated_at;
+    const planEnd   = new Date(new Date(planStart).getTime() + 84 * 86400000).toISOString();
+    const { data: completions } = await supabaseAdmin
+      .from('session_completions').select('id')
+      .eq('user_id', userId).gte('completed_at', planStart).lte('completed_at', planEnd);
+
+    const sessionsCompleted     = completions?.length || 0;
+    const sessionsTarget        = parseInt(firstIntake.trainingDays || '4', 10) * 12;
+    const sessionCompletionRate = sessionsTarget > 0
+      ? Math.round((sessionsCompleted / sessionsTarget) * 100) : 0;
+
+    // Lift progress: earliest vs latest logged entry per key lift
+    const LIFT_NAMES = ['Barbell Bench Press', 'Squat', 'Deadlift', 'Overhead Press'];
+    const startingLifts = [];
+    const currentLifts  = [];
+    for (const liftName of LIFT_NAMES) {
+      const { data: entries } = await supabaseAdmin
+        .from('lift_logs').select('weight_kg, logged_at')
+        .eq('user_id', userId).eq('exercise_name', liftName)
+        .order('logged_at', { ascending: true });
+      if (!entries || entries.length === 0) continue;
+      startingLifts.push(`  ${liftName}: ${entries[0].weight_kg}kg (${entries[0].logged_at.slice(0, 10)})`);
+      if (entries.length > 1) {
+        const last = entries[entries.length - 1];
+        currentLifts.push(`  ${liftName}: ${last.weight_kg}kg (${last.logged_at.slice(0, 10)})`);
+      }
+    }
+
+    renewalCtx = {
+      previousSplit:        prev.user_summary?.split || 'Unknown',
+      previousTrainingDays: prev.user_summary?.training_days_per_week || 'Unknown',
+      previousKeyLifts:     Array.isArray(prev.key_lifts) ? prev.key_lifts : [],
+      previousSessionNames: prev.phases?.[0]?.sessions?.map(s => s.name) || [],
+      startingWeight:       firstIntake.currentWeight ?? null,
+      currentWeight:        latestWt?.weight_kg ?? null,
+      sessionsCompleted,
+      sessionsTarget,
+      sessionCompletionRate,
+      startingLifts,
+      currentLifts,
+      option,
+    };
+  }
+
+  // Acknowledge immediately — plan generation takes 1-2 minutes
+  json(res, 202, { ok: true, message: 'Renewal plan generation started. Your new plan will be ready in 1–2 minutes.' });
+
+  setImmediate(async () => {
+    try {
+      await handleGeneratePlan(userId, intakeData, renewalCtx);
+      console.log(`[renewal-plan] option=${option} complete for user ${userId}`);
+    } catch (err) {
+      console.error(`[renewal-plan] option=${option} failed for user ${userId}:`, err.message);
+    }
+  });
 }
 
 // POST /stripe-webhook
@@ -2475,6 +2666,11 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'POST' && url === '/api/monthly-checkin') {
       return await handleMonthlyCheckin(req, res);
+    }
+
+    if (req.method === 'POST' && url === '/api/plan/renew') {
+      if (rateLimit(req, res, LIMITS.plan)) return;
+      return await handleRenewalPlan(req, res);
     }
 
     if (url.startsWith('/api/food/')) {

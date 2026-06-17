@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { createPortalSession, deleteAccount, createCheckoutSession, getEmailPreferences, saveEmailPreferences, sendTestWeeklyEmail } from '../lib/api';
+import { createPortalSession, deleteAccount, createCheckoutSession, getEmailPreferences, saveEmailPreferences, sendTestWeeklyEmail, requestRenewalPlan } from '../lib/api';
 
 /*
   ─── NO NEW SQL TABLES REQUIRED ────────────────────────────────────────────────
@@ -233,7 +233,18 @@ function ProfileSection({ user, intake, intakeLoading }) {
 
 // ─── SECTION 2: MY PLAN ──────────────────────────────────────────────────────
 
+const RENEWAL_GOALS = [
+  { value: 'fat_loss',        label: 'Fat Loss' },
+  { value: 'muscle_building', label: 'Lean Bulk' },
+  { value: 'maintenance',     label: 'Recomposition' },
+];
+
 function MyPlanSection({ plan, intake, intakeLoading }) {
+  const [step,      setStep]      = useState('idle'); // idle | picking | new_direction | submitting | queued | error
+  const [err,       setErr]       = useState('');
+  const [newGoal,   setNewGoal]   = useState('fat_loss');
+  const [newTarget, setNewTarget] = useState('');
+
   if (intakeLoading || !intake) {
     return (
       <SectionCard title="MY PLAN">
@@ -248,11 +259,11 @@ function MyPlanSection({ plan, intake, intakeLoading }) {
   if (startDate) startDate.setHours(0, 0, 0, 0);
   const endDate   = startDate ? new Date(startDate.getTime() + 84 * 86400000) : null;
 
-  const today       = new Date(); today.setHours(0, 0, 0, 0);
-  const daysElapsed = startDate ? Math.max(0, Math.floor((today - startDate) / 86400000)) : 0;
+  const today         = new Date(); today.setHours(0, 0, 0, 0);
+  const daysElapsed   = startDate ? Math.max(0, Math.floor((today - startDate) / 86400000)) : 0;
   const weeksComplete = Math.min(12, Math.floor(daysElapsed / 7));
   const weeksRemaining = Math.max(0, 12 - weeksComplete);
-  const planComplete   = weeksComplete >= 12;
+  const planComplete  = weeksComplete >= 12;
 
   const fmt = d => d ? d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '—';
 
@@ -260,6 +271,27 @@ function MyPlanSection({ plan, intake, intakeLoading }) {
   const splitLabel = plan?.user_summary?.split || SPLIT_LABELS[splitKey] || splitKey.replace(/_/g, ' ') || '—';
   const sessionLen = SESSION_LABELS[String(intake.sessionLength)] || (intake.sessionLength ? `${intake.sessionLength} min` : '—');
   const trainingDays = intake.trainingDays ? `${intake.trainingDays} days / week` : '—';
+
+  async function submitRenewal(option) {
+    setStep('submitting');
+    setErr('');
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const newIntake = option === 2
+        ? { goal: newGoal, targetWeight: newTarget ? Number(newTarget) : undefined }
+        : null;
+      await requestRenewalPlan(option, newIntake, session.access_token);
+      setStep('queued');
+    } catch (e) {
+      setErr(e.message || 'Something went wrong. Please try again.');
+      setStep(option === 2 ? 'new_direction' : 'picking');
+    }
+  }
+
+  const optionCardStyle = {
+    background: '#111', border: '1px solid rgba(200,200,200,0.12)', padding: '20px',
+    cursor: 'pointer', transition: 'border-color 0.15s', marginBottom: 8,
+  };
 
   return (
     <SectionCard title="MY PLAN">
@@ -276,11 +308,11 @@ function MyPlanSection({ plan, intake, intakeLoading }) {
 
           <div style={{ marginBottom: 20 }}>
             {[
-              ['Started',            fmt(startDate)],
-              ['Ends',               fmt(endDate)],
-              ['Training Days',      trainingDays],
-              ['Split',              splitLabel],
-              ['Session Length',     sessionLen],
+              ['Started',        fmt(startDate)],
+              ['Ends',           fmt(endDate)],
+              ['Training Days',  trainingDays],
+              ['Split',          splitLabel],
+              ['Session Length', sessionLen],
             ].map(([k, v]) => (
               <div key={k} style={rowStyle}>
                 <span style={{ color: '#787878', fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.06em' }}>{k}</span>
@@ -289,17 +321,128 @@ function MyPlanSection({ plan, intake, intakeLoading }) {
             ))}
           </div>
 
-          <button
-            disabled={!planComplete}
-            title={!planComplete ? 'Available after Week 12' : 'Generate a new 12-week plan'}
-            style={primaryBtn(!planComplete)}
-          >
-            Generate New Plan
-          </button>
-          {!planComplete && (
-            <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, color: '#555', marginTop: 8, letterSpacing: '0.08em' }}>
-              Available after Week 12
+          {/* Renewal flow */}
+          {step === 'idle' && (
+            <>
+              <button
+                disabled={!planComplete}
+                title={!planComplete ? 'Available after Week 12' : 'Generate a new 12-week plan'}
+                style={primaryBtn(!planComplete)}
+                onClick={() => planComplete && setStep('picking')}
+              >
+                Generate New Plan
+              </button>
+              {!planComplete && (
+                <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, color: '#555', marginTop: 8, letterSpacing: '0.08em' }}>
+                  Available after Week 12
+                </p>
+              )}
+            </>
+          )}
+
+          {step === 'picking' && (
+            <div style={{ marginTop: 4 }}>
+              <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, color: '#787878', letterSpacing: '0.08em', marginBottom: 16 }}>
+                Choose how you want your next plan built:
+              </p>
+
+              <div
+                style={optionCardStyle}
+                onClick={() => submitRenewal(1)}
+                onMouseEnter={e => e.currentTarget.style.borderColor = '#C0392B'}
+                onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(200,200,200,0.12)'}
+              >
+                <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 18, letterSpacing: '0.06em', color: '#F5F3EE', marginBottom: 6 }}>
+                  Continue &amp; Evolve
+                </div>
+                <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, color: '#787878', letterSpacing: '0.04em', margin: 0, lineHeight: 1.5 }}>
+                  Same goal, new structure. Exercises, split, and loading based on your 12 weeks of documented progress.
+                </p>
+              </div>
+
+              <div
+                style={optionCardStyle}
+                onClick={() => setStep('new_direction')}
+                onMouseEnter={e => e.currentTarget.style.borderColor = '#C0392B'}
+                onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(200,200,200,0.12)'}
+              >
+                <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 18, letterSpacing: '0.06em', color: '#F5F3EE', marginBottom: 6 }}>
+                  New Direction
+                </div>
+                <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, color: '#787878', letterSpacing: '0.04em', margin: 0, lineHeight: 1.5 }}>
+                  Change your goal. Set a new target and get a plan built around where you want to go next.
+                </p>
+              </div>
+
+              <button onClick={() => setStep('idle')} style={{ ...ghostBtn(), marginTop: 4, fontSize: 11 }}>
+                Cancel
+              </button>
+            </div>
+          )}
+
+          {step === 'new_direction' && (
+            <div style={{ marginTop: 4 }}>
+              <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, color: '#787878', letterSpacing: '0.08em', marginBottom: 16 }}>
+                Set your new goal:
+              </p>
+
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
+                <span style={{ ...eyebrowStyle, fontSize: 10 }}>New Goal</span>
+                <select
+                  value={newGoal}
+                  onChange={e => setNewGoal(e.target.value)}
+                  style={{ ...inp(), appearance: 'none' }}
+                >
+                  {RENEWAL_GOALS.map(g => (
+                    <option key={g.value} value={g.value}>{g.label}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
+                <span style={{ ...eyebrowStyle, fontSize: 10 }}>Target Weight (kg) — optional</span>
+                <input
+                  type="number"
+                  min="30" max="250" step="0.5"
+                  value={newTarget}
+                  onChange={e => setNewTarget(e.target.value)}
+                  placeholder="e.g. 85"
+                  style={inp()}
+                />
+              </label>
+
+              {err && <p style={{ color: '#ef4444', fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", marginBottom: 10 }}>{err}</p>}
+
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => submitRenewal(2)} style={primaryBtn(false)}>
+                  Generate Plan
+                </button>
+                <button onClick={() => setStep('picking')} style={ghostBtn()}>
+                  Back
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === 'submitting' && (
+            <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, color: '#787878', letterSpacing: '0.08em', marginTop: 4 }}>
+              Starting generation…
             </p>
+          )}
+
+          {step === 'queued' && (
+            <div style={{ background: '#0d1a0d', border: '1px solid rgba(76,175,80,0.3)', padding: '16px 20px', marginTop: 4 }}>
+              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, letterSpacing: '0.1em', color: '#4CAF50', marginBottom: 6 }}>
+                ✓ Plan generation started
+              </div>
+              <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, color: '#787878', letterSpacing: '0.04em', margin: 0, lineHeight: 1.5 }}>
+                Your new 12-week plan will be ready in 1–2 minutes. Reload the app to see it under the Plan tab.
+              </p>
+            </div>
+          )}
+
+          {step === 'error' && (
+            <p style={{ color: '#ef4444', fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", marginTop: 4 }}>{err}</p>
           )}
         </>
       ) : (

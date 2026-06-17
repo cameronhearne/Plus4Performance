@@ -56,6 +56,10 @@ export async function submitMonthlyCheckin(payload, token) {
   return authedPost('/api/monthly-checkin', payload, token);
 }
 
+export async function requestRenewalPlan(option, newIntake, token) {
+  return authedPost('/api/plan/renew', { option, new_intake: newIntake || null }, token);
+}
+
 // ─── FOOD ─────────────────────────────────────────────────────────────────────
 export async function foodSearch(token, query)         { return authedPost('/api/food/search', { query }, token); }
 export async function foodLog(token, entry)            { return authedPost('/api/food/log', entry, token); }
