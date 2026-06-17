@@ -439,8 +439,9 @@ function Pill({ children }) {
 function MissionCard({ session, library, sessionLength, weekNum, onComplete, onOpenLogbook }) {
   const [open, setOpen]             = useState(false);
   const [expandedEx, setExpandedEx] = useState(null);
-  const [completing, setCompleting] = useState(false);
-  const [completed, setCompleted]   = useState(false);
+  const [completing, setCompleting]         = useState(false);
+  const [completed, setCompleted]           = useState(false);
+  const [logNudgeDismissed, setLogNudgeDismissed] = useState(false);
   const [hasBeenOpened, setHasBeenOpened] = useState(
     () => localStorage.getItem('missionCardOpened') === 'true'
   );
@@ -576,8 +577,34 @@ function MissionCard({ session, library, sessionLength, weekNum, onComplete, onO
                 {completing ? '…' : 'Session Complete'}
               </button>
             ) : (
-              <div style={{ textAlign: 'center', padding: '16px 0', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, fontWeight: 700, letterSpacing: '0.14em', color: '#4CAF50' }}>
-                ✓ Session logged.
+              <div>
+                <div style={{ textAlign: 'center', padding: '16px 0 12px', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, fontWeight: 700, letterSpacing: '0.14em', color: '#4CAF50' }}>
+                  ✓ Session logged.
+                </div>
+                {!logNudgeDismissed && (
+                  <div style={{ background: '#111', border: '1px solid rgba(200,200,200,0.1)', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                    <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#CDCDC8' }}>
+                      Log your working weights?
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                      <button
+                        type="button"
+                        onClick={() => onOpenLogbook?.(session.name)}
+                        style={{ background: 'none', border: '1px solid #C0392B', color: '#C0392B', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', padding: '8px 16px', cursor: 'pointer' }}
+                      >
+                        Log Now →
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setLogNudgeDismissed(true)}
+                        aria-label="Dismiss"
+                        style={{ background: 'none', border: 'none', color: '#555', fontSize: 18, lineHeight: 1, cursor: 'pointer', padding: '4px 6px' }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
