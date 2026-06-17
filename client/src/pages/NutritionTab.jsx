@@ -10,10 +10,12 @@ import { foodSearch, foodLog, foodGetDay, foodDeleteEntry } from '../lib/api';
 function getMealSlots(plan, defaultCount = 4) {
   const meals = plan?.meal_plan?.training_day;
   if (meals?.length) {
-    return meals.map((m, i) => ({
-      key:   m.name || `Meal ${i + 1}`,
-      label: m.name || `Meal ${i + 1}`,
-    }));
+    return meals.map((m, i) => {
+      // Strip descriptive suffix: "M3 — Post Workout" → "M3", "Meal 1 - Breakfast" → "Meal 1"
+      const rawName = m.name || `Meal ${i + 1}`;
+      const label   = rawName.replace(/\s*[—–-]+\s*.+$/, '').trim() || rawName;
+      return { key: rawName, label };
+    });
   }
   return Array.from({ length: defaultCount }, (_, i) => ({
     key:   `Meal ${i + 1}`,
@@ -291,15 +293,15 @@ function SearchModal({ defaultMealType, mealSlots, date, onClose, onSaved }) {
 
             {/* Meal type (re-selectable on step 2) */}
             <div style={{ display: 'flex', gap: 6, marginBottom: 20, flexWrap: 'wrap' }}>
-              {MEALS.map(m => (
-                <button key={m} onClick={() => setMealType(m)} style={{
+              {mealSlots.map(slot => (
+                <button key={slot.key} onClick={() => setMealType(slot.key)} style={{
                   padding: '6px 12px', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700,
                   letterSpacing: '0.14em', textTransform: 'uppercase', cursor: 'pointer',
-                  background: mealType === m ? '#C0392B' : 'transparent',
-                  color: mealType === m ? '#fff' : '#555',
-                  border: mealType === m ? 'none' : '1px solid rgba(200,200,200,0.12)',
+                  background: mealType === slot.key ? '#C0392B' : 'transparent',
+                  color: mealType === slot.key ? '#fff' : '#555',
+                  border: mealType === slot.key ? 'none' : '1px solid rgba(200,200,200,0.12)',
                 }}>
-                  {MEAL_LABELS[m]}
+                  {slot.label}
                 </button>
               ))}
             </div>

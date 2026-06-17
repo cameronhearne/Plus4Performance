@@ -1566,7 +1566,7 @@ async function searchFood(query) {
     data = await attempt(); // let this throw if retry also fails — caller logs it
   }
 
-  const results = [];
+  const raw = [];
   for (const p of data.products || []) {
     if (!p.product_name) continue;
     const n = p.nutriments || {};
@@ -1574,9 +1574,8 @@ async function searchFood(query) {
     const protein  = n['proteins_100g']        ?? null;
     const carbs    = n['carbohydrates_100g']    ?? null;
     const fat      = n['fat_100g']              ?? null;
-    // Skip entries with no useful macro data
     if (calories === null && protein === null) continue;
-    results.push({
+    raw.push({
       id:       p.code || null,
       name:     p.product_name.trim(),
       brand:    p.brands ? p.brands.split(',')[0].trim() : null,
@@ -1585,9 +1584,23 @@ async function searchFood(query) {
       carbs:    Math.round((carbs    || 0) * 10) / 10,
       fat:      Math.round((fat      || 0) * 10) / 10,
     });
-    if (results.length >= 10) break;
   }
-  return results;
+
+  // Re-rank: exact/prefix name matches float to the top, pushing unrelated
+  // high-scan-count products (e.g. mayonnaise when searching "egg") down.
+  // OFF's sort_by=unique_scans_n handles broad popularity; this layer handles
+  // query relevance which the API doesn't natively support.
+  const q = query.toLowerCase();
+  const score = name => {
+    const n = name.toLowerCase();
+    if (n === q)             return 0; // exact match
+    if (n.startsWith(q))     return 1; // prefix match
+    if (n.includes(' ' + q)) return 2; // word boundary match
+    if (n.includes(q))       return 3; // substring match
+    return 4;                          // unrelated (brand match only, etc.)
+  };
+  raw.sort((a, b) => score(a.name) - score(b.name));
+  return raw.slice(0, 10);
 }
 
 // ── Achievement helper (server-side mirror of client lib/achievements.js) ─────
