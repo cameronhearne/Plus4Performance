@@ -1541,7 +1541,7 @@ async function searchFood(query) {
   const encoded = encodeURIComponent(query.trim());
   // countries_tags + lang/lc restrict to UK English products; sort_by=unique_scans_n
   // ranks by real-world scan popularity which strongly correlates with relevance.
-  const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encoded}&search_simple=1&action=process&json=1&fields=code,product_name,brands,nutriments&page_size=20&sort_by=unique_scans_n&countries_tags=en:united-kingdom&lang=en&lc=en`;
+  const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encoded}&search_simple=1&action=process&json=1&fields=code,product_name,brands,nutriments,serving_size&page_size=20&sort_by=unique_scans_n&countries_tags=en:united-kingdom&lang=en&lc=en`;
 
   async function attempt() {
     const { status, body } = await httpsGet(url);
@@ -1561,9 +1561,19 @@ async function searchFood(query) {
   } catch (firstErr) {
     if (!firstErr.retryable) throw firstErr;
     // Single retry after 1500ms — clears Cloudflare's burst window on Railway IPs
-    console.warn('[food/search] first attempt got', firstErr.message, '— retrying in 1500ms');
-    await new Promise(r => setTimeout(r, 1500));
+    // 2500ms clears Cloudflare's burst window on Railway IPs even when the IP
+    // has recently made other OFF requests. 1500ms was too short in those cases.
+    console.warn('[food/search] first attempt got', firstErr.message, '— retrying in 2500ms');
+    await new Promise(r => setTimeout(r, 2500));
     data = await attempt(); // let this throw if retry also fails — caller logs it
+  }
+
+  // Parse grams from OFF's free-text serving_size field (e.g. "1 bar (35 g)", "30g", "0.25 pack (60 g)")
+  function parseServingGrams(s) {
+    if (!s) return null;
+    const all = [...String(s).matchAll(/(\d+(?:\.\d+)?)\s*g\b/gi)].map(m => parseFloat(m[1]));
+    const valid = all.filter(n => n >= 5 && n <= 2000);
+    return valid.length ? Math.round(valid[valid.length - 1]) : null; // last match (often in parentheses)
   }
 
   const raw = [];
@@ -1571,35 +1581,52 @@ async function searchFood(query) {
     if (!p.product_name) continue;
     const n = p.nutriments || {};
     const calories = n['energy-kcal_100g'] ?? n['energy-kcal'] ?? null;
-    const protein  = n['proteins_100g']        ?? null;
-    const carbs    = n['carbohydrates_100g']    ?? null;
-    const fat      = n['fat_100g']              ?? null;
+    const protein  = n['proteins_100g']    ?? null;
+    const carbs    = n['carbohydrates_100g'] ?? null;
+    const fat      = n['fat_100g']          ?? null;
     if (calories === null && protein === null) continue;
     raw.push({
-      id:       p.code || null,
-      name:     p.product_name.trim(),
-      brand:    p.brands ? p.brands.split(',')[0].trim() : null,
-      calories: Math.round((calories || 0) * 10) / 10,
-      protein:  Math.round((protein  || 0) * 10) / 10,
-      carbs:    Math.round((carbs    || 0) * 10) / 10,
-      fat:      Math.round((fat      || 0) * 10) / 10,
+      id:        p.code || null,
+      name:      p.product_name.trim(),
+      brand:     p.brands ? p.brands.split(',')[0].trim() : null,
+      calories:  Math.round((calories || 0) * 10) / 10,
+      protein:   Math.round((protein  || 0) * 10) / 10,
+      carbs:     Math.round((carbs    || 0) * 10) / 10,
+      fat:       Math.round((fat      || 0) * 10) / 10,
+      servingG:  parseServingGrams(p.serving_size),
     });
   }
 
-  // Re-rank: exact/prefix name matches float to the top, pushing unrelated
-  // high-scan-count products (e.g. mayonnaise when searching "egg") down.
-  // OFF's sort_by=unique_scans_n handles broad popularity; this layer handles
-  // query relevance which the API doesn't natively support.
+  // Re-rank by query relevance. OFF's sort_by=unique_scans_n is the popularity
+  // tiebreaker within each tier; this layer promotes name-match relevance.
+  //
+  // Tiers (lower = better):
+  //   0  exact name match                   ("egg" for query "egg")
+  //   1  query is the entire first word      ("Egg Fried Rice")
+  //   2  query appears as a whole word       ("Free Range Egg")
+  //   3  query is a prefix only (no boundary)("eggnog", rare)
+  //   4  query is a substring               ("scrambled egg mix")
+  //   5  unrelated (brand match, etc.)
+  //
+  // Secondary sort: word count ascending — shorter names within the same tier
+  // rank first (e.g. "Rice Cakes" before "Rice Cakes With Sea Salt")
   const q = query.toLowerCase();
+  const qPad = q + ' '; // query word + space for word-boundary prefix check
   const score = name => {
     const n = name.toLowerCase();
-    if (n === q)             return 0; // exact match
-    if (n.startsWith(q))     return 1; // prefix match
-    if (n.includes(' ' + q)) return 2; // word boundary match
-    if (n.includes(q))       return 3; // substring match
-    return 4;                          // unrelated (brand match only, etc.)
+    if (n === q)                                             return 0;
+    if (n.startsWith(qPad) || n === q)                      return 1;
+    if (n.includes(' ' + q + ' ') || n.endsWith(' ' + q))   return 2;
+    if (n.startsWith(q))                                     return 3; // prefix, no boundary
+    if (n.includes(q))                                       return 4;
+    return 5;
   };
-  raw.sort((a, b) => score(a.name) - score(b.name));
+  const wordCount = name => name.split(/\s+/).length;
+  raw.sort((a, b) => {
+    const sd = score(a.name) - score(b.name);
+    if (sd !== 0) return sd;
+    return wordCount(a.name) - wordCount(b.name); // shorter name first within same tier
+  });
   return raw.slice(0, 10);
 }
 

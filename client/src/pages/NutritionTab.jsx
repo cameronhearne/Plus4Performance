@@ -131,7 +131,7 @@ function SearchModal({ defaultMealType, mealSlots, date, onClose, onSaved }) {
   const [searchWarn,    setSearchWarn]   = useState('');
   const [selected,      setSelected]     = useState(null);
   const [mealType,      setMealType]     = useState(defaultMealType);
-  const [quantityG,     setQuantityG]    = useState('100');
+  const [quantityG,     setQuantityG]    = useState('100'); // overwritten when a result is selected
   const [saving,        setSaving]       = useState(false);
   const [saveError,     setSaveError]    = useState('');
   const debounceRef = useRef(null);
@@ -235,7 +235,7 @@ function SearchModal({ defaultMealType, mealSlots, date, onClose, onSaved }) {
                 <div
                   key={r.id || i}
                   style={S.resultItem}
-                  onClick={() => { setSelected(r); setStep('quantity'); }}
+                  onClick={() => { setSelected(r); setQuantityG(r.servingG ? String(r.servingG) : '100'); setStep('quantity'); }}
                   onMouseEnter={e => e.currentTarget.style.background = '#0d0d0d'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 >
@@ -263,7 +263,7 @@ function SearchModal({ defaultMealType, mealSlots, date, onClose, onSaved }) {
             </div>
 
             <label style={{ display: 'block', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: '#555', marginBottom: 8 }}>
-              Quantity (grams)
+              Quantity (grams){selected?.servingG ? <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: '#444', marginLeft: 8 }}>— defaulted to serving size</span> : null}
             </label>
             <div style={{ position: 'relative', maxWidth: 180, marginBottom: 20 }}>
               <input
