@@ -796,6 +796,7 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
       return raw ? (JSON.parse(raw).session ?? null) : null;
     } catch { return null; }
   });
+  const [showPicker, setShowPicker] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -1035,42 +1036,6 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
         </div>
         {isUnlocked ? (
           <>
-            {/* Session picker — shown when training override is active */}
-            {dayOverride === 'training' && phase1Sessions.length > 0 && (
-              <div style={{ marginBottom: 12, padding: '14px 16px', background: '#0d0d0d', border: '1px solid rgba(200,200,200,0.08)' }}>
-                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: '#555', marginBottom: 10 }}>
-                  Pick a session
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {phase1Sessions.map(s => {
-                    const selected = overrideSession === s.name;
-                    return (
-                      <button
-                        key={s.name}
-                        type="button"
-                        onClick={() => handleOverride('training', s.name)}
-                        style={{
-                          padding: '7px 14px',
-                          background: '#111',
-                          border: `1px solid ${selected ? '#C0392B' : '#2a2a2a'}`,
-                          color: selected ? '#C0392B' : '#787878',
-                          fontFamily: "'Barlow Condensed', sans-serif",
-                          fontSize: 12,
-                          fontWeight: 700,
-                          letterSpacing: '0.14em',
-                          textTransform: 'uppercase',
-                          cursor: 'pointer',
-                          transition: 'border-color 0.15s, color 0.15s',
-                        }}
-                      >
-                        {s.name}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
             {/* Card */}
             {effectiveIsRestDay ? (
               <RestDayCard tomorrowSession={tomorrowSession} />
@@ -1097,24 +1062,53 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
           </div>
         )}
 
-        {/* ── Day override links ──────────────────────────────── */}
-        {isUnlocked && (effectiveSession || effectiveIsRestDay || dayOverride === 'training') && (
-          <div style={{ marginTop: 16, display: 'flex', gap: 20, justifyContent: 'center', flexWrap: 'wrap' }}>
-            {dayOverride === null && (
-              <button
-                type="button"
-                className="override-link"
-                onClick={() => handleOverride(effectiveIsRestDay ? 'training' : 'rest')}
-              >
-                {effectiveIsRestDay
-                  ? 'Training today anyway? Switch to training day'
-                  : 'Taking a rest day today? Switch to rest day'}
-              </button>
-            )}
-            {dayOverride !== null && (
-              <button type="button" className="override-link" onClick={() => handleOverride(null)}>
-                Reset to default
-              </button>
+        {/* ── Session picker / override ───────────────────────── */}
+        {isUnlocked && phase1Sessions.length > 0 && (
+          <div style={{ marginTop: 16 }}>
+            {!showPicker ? (
+              <div style={{ display: 'flex', gap: 20, justifyContent: 'center', flexWrap: 'wrap' }}>
+                <button type="button" className="override-link" onClick={() => setShowPicker(true)}>
+                  Change today's session →
+                </button>
+                {dayOverride !== null && (
+                  <button type="button" className="override-link"
+                    onClick={() => { handleOverride(null); setShowPicker(false); }}>
+                    Reset to scheduled
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div style={{ padding: '12px 0 4px' }}>
+                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: '#555', marginBottom: 10, textAlign: 'center' }}>
+                  Choose a session for today
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginBottom: 10 }}>
+                  {phase1Sessions.map(s => {
+                    const active = dayOverride === 'training'
+                      ? overrideSession === s.name
+                      : dayOverride === null && todaySession?.name === s.name;
+                    return (
+                      <button key={s.name} type="button"
+                        onClick={() => { handleOverride('training', s.name); setShowPicker(false); }}
+                        style={{ padding: '7px 14px', background: '#111', border: `1px solid ${active ? '#C0392B' : '#2a2a2a'}`, color: active ? '#C0392B' : '#787878', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', cursor: 'pointer', transition: 'border-color 0.15s, color 0.15s' }}
+                      >
+                        {s.name}
+                      </button>
+                    );
+                  })}
+                  <button type="button"
+                    onClick={() => { handleOverride('rest'); setShowPicker(false); }}
+                    style={{ padding: '7px 14px', background: '#111', border: `1px solid ${dayOverride === 'rest' || (dayOverride === null && isRestDay) ? '#C0392B' : '#2a2a2a'}`, color: dayOverride === 'rest' || (dayOverride === null && isRestDay) ? '#C0392B' : '#787878', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', cursor: 'pointer', transition: 'border-color 0.15s, color 0.15s' }}
+                  >
+                    Rest Day
+                  </button>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <button type="button" className="override-link" onClick={() => setShowPicker(false)}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         )}
