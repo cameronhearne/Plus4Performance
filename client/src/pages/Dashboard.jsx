@@ -8,6 +8,7 @@ import TodayTab from './TodayTab';
 import Logbook from './Logbook';
 import AccountTab from './AccountTab';
 import NutritionTab from './NutritionTab';
+import CommunityTab from './CommunityTab';
 
 const TABS = [
   { id: 'today', label: 'Today' },
@@ -16,6 +17,7 @@ const TABS = [
   { id: 'progress', label: 'Progress' },
   { id: 'achievements', label: 'Achievements' },
   { id: 'logbook', label: 'Logbook' },
+  { id: 'community', label: 'Community' },
   { id: 'account', label: 'Account' },
 ];
 
@@ -427,6 +429,7 @@ export default function Dashboard() {
           {activeTab === 'progress' && <ProgressTab userId={user?.id} plan={plan} onSwitchTab={handleSwitchTab} />}
           {activeTab === 'achievements' && <AchievementsTab userId={user?.id} />}
           {activeTab === 'logbook' && <Logbook userId={user?.id} plan={plan} preselectedSession={logbookSession} />}
+          {activeTab === 'community' && <CommunityTab />}
           {activeTab === 'account' && <AccountTab user={user} plan={plan} isUnlocked={isUnlocked} subRow={subRow} onUnlock={handleUnlock} />}
         </div>
       </div>
