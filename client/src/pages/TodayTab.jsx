@@ -240,7 +240,7 @@ function StreakBadge({ streak }) {
       </span>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
         <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: '#555' }}>
-          Session Streak
+          Week Streak
         </div>
         {streak === 0 && (
           <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 9, letterSpacing: '0.1em', color: '#333', textAlign: 'center' }}>
@@ -320,7 +320,7 @@ function MotivationalLine({ streak, currentWeight, startingWeight, targetWeight,
   let line = `Week ${weekNum} of 12. Stay the course.`;
 
   if (streak >= 7) {
-    line = `${streak} sessions straight. You're building something real.`;
+    line = `${streak} weeks on target. You're building something real.`;
   } else if (
     currentWeight != null &&
     startingWeight != null &&
