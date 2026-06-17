@@ -10,6 +10,7 @@ import AccountTab from './AccountTab';
 import NutritionTab from './NutritionTab';
 import CommunityTab from './CommunityTab';
 import MarketplaceTab from './MarketplaceTab';
+import SupplementsTab from './SupplementsTab';
 import { useBranding } from '../lib/BrandingContext';
 
 const TABS = [
@@ -20,8 +21,9 @@ const TABS = [
   { id: 'achievements',label: 'Achievements' },
   { id: 'logbook',     label: 'Logbook' },
   { id: 'community',   label: 'Community' },
-  { id: 'marketplace', label: 'Marketplace', mainSiteOnly: true },
-  { id: 'account',     label: 'Account' },
+  { id: 'marketplace',  label: 'Marketplace',  mainSiteOnly: true },
+  { id: 'supplements',  label: 'Supplements',  mainSiteOnly: true },
+  { id: 'account',      label: 'Account' },
 ];
 
 // ─── LOCKED OVERLAY ──────────────────────────────────────────────────────────
@@ -436,7 +438,8 @@ export default function Dashboard() {
           {activeTab === 'achievements' && <AchievementsTab userId={user?.id} />}
           {activeTab === 'logbook' && <Logbook userId={user?.id} plan={plan} preselectedSession={logbookSession} />}
           {activeTab === 'community'   && <CommunityTab />}
-          {activeTab === 'marketplace' && <MarketplaceTab />}
+          {activeTab === 'marketplace'  && <MarketplaceTab />}
+          {activeTab === 'supplements'  && <SupplementsTab />}
           {activeTab === 'account' && <AccountTab user={user} plan={plan} isUnlocked={isUnlocked} subRow={subRow} onUnlock={handleUnlock} />}
         </div>
       </div>
