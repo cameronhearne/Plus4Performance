@@ -460,7 +460,7 @@ const PLAN_GOAL_LABELS = { fat_loss: 'Fat Loss', muscle_building: 'Lean Bulk', m
 const fmtDate = d => new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 const planEndDate = d => new Date(new Date(d).getTime() + 84 * 86400000);
 
-function MyPlansSection({ isUnlocked }) {
+function MyPlansSection({ isUnlocked, onPlanSwitch }) {
   const [plans,      setPlans]      = useState(null); // null = loading
   const [activating, setActivating] = useState(null); // id being switched
   const [plansErr,   setPlansErr]   = useState('');
@@ -485,6 +485,7 @@ function MyPlansSection({ isUnlocked }) {
       const { data: { session } } = await supabase.auth.getSession();
       await activatePlan(planId, session.access_token);
       setPlans(prev => prev.map(p => ({ ...p, is_active: p.id === planId })));
+      onPlanSwitch?.();
     } catch (e) {
       setPlansErr(e.message || 'Failed to switch plan.');
     } finally {
@@ -886,7 +887,7 @@ function SettingsSection({ user }) {
 
 // ─── MAIN EXPORT ─────────────────────────────────────────────────────────────
 
-export default function AccountTab({ user, plan, isUnlocked, subRow, onUnlock }) {
+export default function AccountTab({ user, plan, isUnlocked, subRow, onUnlock, onPlanSwitch }) {
   const [intake,        setIntake]        = useState(null);
   const [intakeLoading, setIntakeLoading] = useState(true);
 
@@ -919,7 +920,7 @@ export default function AccountTab({ user, plan, isUnlocked, subRow, onUnlock })
     <div>
       <ProfileSection      user={user} intake={intake} intakeLoading={intakeLoading} />
       <MyPlanSection       plan={plan} intake={intake} intakeLoading={intakeLoading} />
-      <MyPlansSection      isUnlocked={isUnlocked} />
+      <MyPlansSection      isUnlocked={isUnlocked} onPlanSwitch={onPlanSwitch} />
       <SubscriptionSection isUnlocked={isUnlocked} subRow={subRow} user={user} onUnlock={onUnlock} />
       <SettingsSection    user={user} />
     </div>

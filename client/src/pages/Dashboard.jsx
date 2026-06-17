@@ -359,6 +359,15 @@ export default function Dashboard() {
     }
   }, [searchParams]);
 
+  async function refreshActivePlan() {
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    if (!currentUser) return;
+    const { data: planRow } = await supabase
+      .from('plans').select('plan_data')
+      .eq('user_id', currentUser.id).eq('is_active', true).maybeSingle();
+    if (planRow) setPlan(planRow.plan_data);
+  }
+
   async function handleUnlock() {
     if (!user) return;
     setLoadingUnlock(true);
@@ -439,7 +448,7 @@ export default function Dashboard() {
           {activeTab === 'community'   && <CommunityTab />}
           {activeTab === 'marketplace'  && <MarketplaceTab />}
           {activeTab === 'supplements'  && <SupplementsTab />}
-          {activeTab === 'account' && <AccountTab user={user} plan={plan} isUnlocked={isUnlocked} subRow={subRow} onUnlock={handleUnlock} />}
+          {activeTab === 'account' && <AccountTab user={user} plan={plan} isUnlocked={isUnlocked} subRow={subRow} onUnlock={handleUnlock} onPlanSwitch={refreshActivePlan} />}
         </div>
       </div>
     </div>
