@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { createPortalSession, deleteAccount, createCheckoutSession, getEmailPreferences, saveEmailPreferences, sendTestWeeklyEmail, requestRenewalPlan } from '../lib/api';
+import { createPortalSession, deleteAccount, createCheckoutSession, getEmailPreferences, saveEmailPreferences, sendTestWeeklyEmail, requestRenewalPlan, listPlans, activatePlan } from '../lib/api';
 
 /*
   ─── NO NEW SQL TABLES REQUIRED ────────────────────────────────────────────────
@@ -454,7 +454,128 @@ function MyPlanSection({ plan, intake, intakeLoading }) {
   );
 }
 
-// ─── SECTION 3: SUBSCRIPTION ─────────────────────────────────────────────────
+// ─── SECTION 3: MY PLANS ─────────────────────────────────────────────────────
+
+const PLAN_GOAL_LABELS = { fat_loss: 'Fat Loss', muscle_building: 'Lean Bulk', maintenance: 'Recomposition' };
+const fmtDate = d => new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+const planEndDate = d => new Date(new Date(d).getTime() + 84 * 86400000);
+
+function MyPlansSection({ isUnlocked }) {
+  const [plans,      setPlans]      = useState(null); // null = loading
+  const [activating, setActivating] = useState(null); // id being switched
+  const [plansErr,   setPlansErr]   = useState('');
+
+  useEffect(() => {
+    if (!isUnlocked) return;
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const result = await listPlans(session.access_token);
+        setPlans(result.plans || []);
+      } catch (e) {
+        setPlansErr(e.message || 'Failed to load plans.');
+      }
+    })();
+  }, [isUnlocked]);
+
+  async function handleActivate(planId) {
+    setActivating(planId);
+    setPlansErr('');
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      await activatePlan(planId, session.access_token);
+      setPlans(prev => prev.map(p => ({ ...p, is_active: p.id === planId })));
+    } catch (e) {
+      setPlansErr(e.message || 'Failed to switch plan.');
+    } finally {
+      setActivating(null);
+    }
+  }
+
+  if (!isUnlocked) return null;
+
+  return (
+    <SectionCard title="MY PLANS">
+      {plans === null && !plansErr ? (
+        <>
+          <SkeletonLine width="60%" />
+          <SkeletonLine width="50%" />
+        </>
+      ) : plansErr ? (
+        <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, color: '#ef4444', letterSpacing: '0.06em' }}>{plansErr}</p>
+      ) : plans.length === 0 ? (
+        <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, color: '#555', letterSpacing: '0.06em' }}>No plans yet.</p>
+      ) : (
+        <>
+          {[...plans].reverse().map(p => (
+            <div key={p.id} style={{ borderBottom: '1px solid #1a1a1a', padding: '16px 0' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                <div>
+                  <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 18, letterSpacing: '0.06em', color: '#F5F3EE', lineHeight: 1, marginBottom: 4 }}>
+                    Plan {p.plan_number}
+                  </div>
+                  <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, color: '#555', letterSpacing: '0.06em' }}>
+                    {fmtDate(p.generated_at)} – {fmtDate(planEndDate(p.generated_at))}
+                  </div>
+                </div>
+                {p.is_active && (
+                  <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: '#C0392B', border: '1px solid rgba(192,57,43,0.5)', padding: '3px 8px', flexShrink: 0 }}>
+                    Active
+                  </span>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', marginBottom: p.is_active ? 0 : 12 }}>
+                {p.goal && (
+                  <div>
+                    <div style={{ ...eyebrowStyle, fontSize: 9, marginBottom: 2 }}>Goal</div>
+                    <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, color: '#CDCDC8', letterSpacing: '0.04em' }}>
+                      {PLAN_GOAL_LABELS[p.goal] || p.goal}
+                    </div>
+                  </div>
+                )}
+                {p.split && (
+                  <div>
+                    <div style={{ ...eyebrowStyle, fontSize: 9, marginBottom: 2 }}>Split</div>
+                    <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, color: '#CDCDC8', letterSpacing: '0.04em' }}>
+                      {p.split}
+                    </div>
+                  </div>
+                )}
+                {p.training_days && (
+                  <div>
+                    <div style={{ ...eyebrowStyle, fontSize: 9, marginBottom: 2 }}>Days / Week</div>
+                    <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, color: '#CDCDC8', letterSpacing: '0.04em' }}>
+                      {p.training_days}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {!p.is_active && (
+                <button
+                  onClick={() => handleActivate(p.id)}
+                  disabled={!!activating}
+                  style={{ ...ghostBtn({ fontSize: 11, padding: '8px 16px' }), opacity: activating === p.id ? 0.55 : 1 }}
+                >
+                  {activating === p.id ? '…' : 'Make Active'}
+                </button>
+              )}
+            </div>
+          ))}
+          {plansErr && (
+            <p style={{ color: '#ef4444', fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", marginTop: 10 }}>{plansErr}</p>
+          )}
+          <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, color: '#444', letterSpacing: '0.06em', marginTop: 12 }}>
+            Switching takes effect immediately across Today, Plan, and Nutrition tabs.
+          </p>
+        </>
+      )}
+    </SectionCard>
+  );
+}
+
+// ─── SECTION 4: SUBSCRIPTION ─────────────────────────────────────────────────
 
 function SubscriptionSection({ isUnlocked, subRow, user, onUnlock }) {
   const [portalLoading, setPortalLoading] = useState(false);
@@ -796,8 +917,9 @@ export default function AccountTab({ user, plan, isUnlocked, subRow, onUnlock })
 
   return (
     <div>
-      <ProfileSection     user={user} intake={intake} intakeLoading={intakeLoading} />
-      <MyPlanSection      plan={plan} intake={intake} intakeLoading={intakeLoading} />
+      <ProfileSection      user={user} intake={intake} intakeLoading={intakeLoading} />
+      <MyPlanSection       plan={plan} intake={intake} intakeLoading={intakeLoading} />
+      <MyPlansSection      isUnlocked={isUnlocked} />
       <SubscriptionSection isUnlocked={isUnlocked} subRow={subRow} user={user} onUnlock={onUnlock} />
       <SettingsSection    user={user} />
     </div>

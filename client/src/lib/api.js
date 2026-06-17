@@ -60,6 +60,9 @@ export async function requestRenewalPlan(option, newIntake, token) {
   return authedPost('/api/plan/renew', { option, new_intake: newIntake || null }, token);
 }
 
+export async function listPlans(token)              { return authedGet('/api/plans', token); }
+export async function activatePlan(planId, token)   { return authedPost('/api/plan/activate', { plan_id: planId }, token); }
+
 // ─── FOOD ─────────────────────────────────────────────────────────────────────
 export async function foodSearch(token, query)         { return authedPost('/api/food/search', { query }, token); }
 export async function foodLog(token, entry)            { return authedPost('/api/food/log', entry, token); }

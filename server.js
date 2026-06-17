@@ -736,8 +736,7 @@ async function runSessionReminderEmails() {
 
       const firstName = user.user_metadata?.first_name || user.email.split('@')[0];
       const { data: planRow } = await supabaseAdmin
-        .from('plans').select('plan_data').eq('user_id', user_id)
-        .order('generated_at', { ascending: false }).limit(1).maybeSingle();
+        .from('plans').select('plan_data').eq('user_id', user_id).eq('is_active', true).maybeSingle();
       const sessionName = (planRow?.plan_data?.user_summary?.split || 'training').toLowerCase();
 
       const html = buildSessionReminderHtml(firstName, sessionName);
@@ -910,9 +909,13 @@ async function handleGeneratePlan(userId, intakeData, renewalCtx = null) {
     }
   }
 
+  // Deactivate all existing plans before inserting the new active one
+  await supabaseAdmin.from('plans').update({ is_active: false }).eq('user_id', userId);
+
   const { error } = await supabaseAdmin.from('plans').insert({
     user_id: userId,
     plan_data: planData,
+    is_active: true,
   });
 
   if (error) {
@@ -922,6 +925,54 @@ async function handleGeneratePlan(userId, intakeData, renewalCtx = null) {
 
   console.log('Plan saved for user:', userId);
   return planData;
+}
+
+// GET /api/plans — list all plans for the authenticated user, oldest first.
+async function handleListPlans(req, res) {
+  const userId = await getUserIdFromToken(req.headers['authorization']);
+  if (!userId) return json(res, 401, { error: 'Unauthorized' });
+
+  const { data: rows } = await supabaseAdmin
+    .from('plans')
+    .select('id, generated_at, is_active, plan_data')
+    .eq('user_id', userId)
+    .order('generated_at', { ascending: true });
+
+  const plans = (rows || []).map((p, i) => ({
+    id:            p.id,
+    plan_number:   i + 1,
+    generated_at:  p.generated_at,
+    is_active:     p.is_active,
+    goal:          p.plan_data?.user_summary?.goal          || null,
+    split:         p.plan_data?.user_summary?.split         || null,
+    training_days: p.plan_data?.user_summary?.training_days_per_week || null,
+  }));
+
+  return json(res, 200, { plans });
+}
+
+// POST /api/plan/activate — switch active plan. Only one plan may be active per user.
+async function handleActivatePlan(req, res) {
+  const userId = await getUserIdFromToken(req.headers['authorization']);
+  if (!userId) return json(res, 401, { error: 'Unauthorized' });
+
+  const rawBody = await readBody(req);
+  let parsed;
+  try { parsed = JSON.parse(rawBody); } catch { return json(res, 400, { error: 'Invalid JSON' }); }
+
+  const planId = parsed.plan_id;
+  if (!planId) return json(res, 400, { error: 'plan_id required' });
+
+  // Verify the plan belongs to this user
+  const { data: owned } = await supabaseAdmin
+    .from('plans').select('id').eq('id', planId).eq('user_id', userId).maybeSingle();
+  if (!owned) return json(res, 404, { error: 'Plan not found' });
+
+  await supabaseAdmin.from('plans').update({ is_active: false }).eq('user_id', userId);
+  const { error } = await supabaseAdmin.from('plans').update({ is_active: true }).eq('id', planId);
+  if (error) return json(res, 500, { error: 'Failed to activate plan' });
+
+  return json(res, 200, { ok: true });
 }
 
 // POST /api/plan/renew
@@ -1498,8 +1549,7 @@ async function handleMonthlyCheckin(req, res) {
       .from('plans')
       .select('plan_data')
       .eq('user_id', userId)
-      .order('generated_at', { ascending: false })
-      .limit(1)
+      .eq('is_active', true)
       .maybeSingle();
     const plan = planRow?.plan_data || {};
 
@@ -1855,8 +1905,7 @@ async function unlockAchievementServer(userId, achievementId, xp) {
 async function checkNutritionAchievements(userId, date) {
   // Fetch user's plan targets
   const { data: planRow } = await supabaseAdmin
-    .from('plans').select('plan_data').eq('user_id', userId)
-    .order('generated_at', { ascending: false }).limit(1).maybeSingle();
+    .from('plans').select('plan_data').eq('user_id', userId).eq('is_active', true).maybeSingle();
   const targets = planRow?.plan_data?.nutrition?.training_day || null;
 
   // Today's totals
@@ -2668,6 +2717,8 @@ const server = http.createServer(async (req, res) => {
       return await handleMonthlyCheckin(req, res);
     }
 
+    if (req.method === 'GET'  && url === '/api/plans')         return await handleListPlans(req, res);
+    if (req.method === 'POST' && url === '/api/plan/activate') return await handleActivatePlan(req, res);
     if (req.method === 'POST' && url === '/api/plan/renew') {
       if (rateLimit(req, res, LIMITS.plan)) return;
       return await handleRenewalPlan(req, res);

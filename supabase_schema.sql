@@ -76,14 +76,18 @@ create table public.plans (
   id           uuid primary key default gen_random_uuid(),
   user_id      uuid not null references public.profiles(id) on delete cascade,
   plan_data    jsonb not null,
+  is_active    boolean not null default false,  -- exactly one true per user_id at a time
   generated_at timestamptz default now()
 );
 
 alter table public.plans enable row level security;
 
-create policy "Users can read own plan"
+create policy "Users can read own plans"
   on public.plans for select
   using (auth.uid() = user_id);
+
+grant select, insert, update on public.plans to service_role;
+grant select on public.plans to authenticated;
 
 -- ─── SUBSCRIPTIONS ───────────────────────────────────────────────────────────
 -- Mirrors Stripe subscription state. Updated by webhook on every event.

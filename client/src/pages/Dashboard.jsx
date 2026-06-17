@@ -322,8 +322,7 @@ export default function Dashboard() {
           .from('plans')
           .select('plan_data')
           .eq('user_id', user.id)
-          .order('generated_at', { ascending: false })
-          .limit(1)
+          .eq('is_active', true)
           .maybeSingle();
         if (planErr) console.error('[Dashboard] plans error:', planErr);
         if (planRow) setPlan(planRow.plan_data);
@@ -351,7 +350,7 @@ export default function Dashboard() {
           setIsUnlocked(true);
           clearInterval(poll);
           // Load plan
-          const { data: planRow } = await supabase.from('plans').select('plan_data').eq('user_id', user.id).order('generated_at', { ascending: false }).limit(1).maybeSingle();
+          const { data: planRow } = await supabase.from('plans').select('plan_data').eq('user_id', user.id).eq('is_active', true).maybeSingle();
           if (planRow) setPlan(planRow.plan_data);
         }
         if (++attempts >= 20) clearInterval(poll);
