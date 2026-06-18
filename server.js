@@ -2372,18 +2372,24 @@ async function handleAdminRefund(req, res, targetUserId) {
 async function handleAdminRegeneratePlan(req, res, targetUserId) {
   const adminId = await requireAdmin(req, res);
   if (!adminId) return;
-  try {
-    const { data: intakeRow } = await supabaseAdmin
-      .from('intake_submissions').select('data')
-      .eq('user_id', targetUserId).order('created_at', { ascending: false }).limit(1).maybeSingle();
-    if (!intakeRow?.data) return json(res, 404, { error: 'No intake data found for this user' });
-    await handleGeneratePlan(targetUserId, intakeRow.data);
-    await logAdminAction(adminId, targetUserId, 'regenerate_plan', {});
-    return json(res, 200, { ok: true });
-  } catch (err) {
-    console.error('[admin/regenerate-plan]', err);
-    return json(res, 500, { error: err.message || 'Plan generation failed' });
-  }
+
+  const { data: intakeRow } = await supabaseAdmin
+    .from('intake_submissions').select('data')
+    .eq('user_id', targetUserId).order('created_at', { ascending: false }).limit(1).maybeSingle();
+  if (!intakeRow?.data) return json(res, 404, { error: 'No intake data found for this user' });
+
+  // Respond immediately — generation runs async to avoid Railway's HTTP timeout
+  json(res, 202, { ok: true, message: 'Plan regeneration started — check back in 1-2 minutes.' });
+
+  setImmediate(async () => {
+    try {
+      await handleGeneratePlan(targetUserId, intakeRow.data);
+      await logAdminAction(adminId, targetUserId, 'regenerate_plan', {});
+      console.log(`[admin/regenerate-plan] complete for user ${targetUserId}`);
+    } catch (err) {
+      console.error(`[admin/regenerate-plan] failed for user ${targetUserId}:`, err.message);
+    }
+  });
 }
 
 // ─── ADMIN ROUTE DISPATCHER ───────────────────────────────────────────────────

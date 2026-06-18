@@ -213,7 +213,7 @@ export default function AdminUserDetail() {
     try {
       await adminRegeneratePlan(session.access_token, userId);
       setModal(null);
-      setActionOk('Plan regenerated successfully.');
+      setActionOk('Plan regeneration started — check back in 1-2 minutes.');
     } catch (e) { setActionErr(e.message || 'Failed.'); }
     setWorking(false);
   }
