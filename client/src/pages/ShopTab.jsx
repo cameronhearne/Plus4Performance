@@ -5,7 +5,43 @@ const API = import.meta.env.VITE_API_URL || '';
 // Add a creator's slug here once their subdomain is live to restore full card behaviour.
 const LIVE_CREATOR_SLUGS = new Set([]);
 
-export default function MarketplaceTab() {
+// ─── SHARED COMING-SOON SECTION ──────────────────────────────────────────────
+
+function ComingSoonSection({ title, children }) {
+  return (
+    <div style={{ padding: '44px 0 8px', textAlign: 'center' }}>
+      <div style={{
+        fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700,
+        letterSpacing: '0.32em', textTransform: 'uppercase', color: '#C0392B',
+        marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
+      }}>
+        <span style={{ display: 'block', width: 28, height: 1, background: '#C0392B' }} />
+        Coming Soon
+        <span style={{ display: 'block', width: 28, height: 1, background: '#C0392B' }} />
+      </div>
+      <div style={{
+        fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(44px, 8vw, 72px)',
+        letterSpacing: '0.04em', color: '#F5F3EE', lineHeight: 1, marginBottom: 24,
+      }}>
+        {title}
+      </div>
+      <p style={{
+        fontFamily: "'Barlow', sans-serif", fontSize: 15, fontWeight: 300,
+        color: '#787878', lineHeight: 1.75, maxWidth: 380, margin: '0 auto',
+      }}>
+        {children}
+      </p>
+    </div>
+  );
+}
+
+function SectionDivider() {
+  return <div style={{ borderTop: '1px solid rgba(200,200,200,0.08)', margin: '48px 0 0' }} />;
+}
+
+// ─── MAIN EXPORT ─────────────────────────────────────────────────────────────
+
+export default function ShopTab() {
   const [creators, setCreators] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [toast, setToast]       = useState(false);
@@ -18,7 +54,6 @@ export default function MarketplaceTab() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Auto-dismiss toast; resetting `toast` to true restarts the timer cleanly.
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(false), 2800);
@@ -35,10 +70,12 @@ export default function MarketplaceTab() {
 
   return (
     <div>
-      <div style={S.eyebrow}>Marketplace</div>
-      <h2 style={S.heading}>Creator Plans</h2>
+
+      {/* ── Section 1: Creator Plans ─────────────────────────────── */}
+      <div style={S.eyebrow}>Creator Plans</div>
+      <h2 style={S.heading}>Specialist Programmes</h2>
       <p style={S.sub}>
-        Specialist coaching programmes from expert creators, all powered by the Plus 4 Performance platform.
+        Coaching programmes from expert creators, all powered by the Plus 4 Performance platform.
       </p>
 
       {loading ? (
@@ -82,6 +119,20 @@ export default function MarketplaceTab() {
           This creator's programme isn't available yet — check back soon
         </div>
       )}
+
+      {/* ── Section 2: Supplements ───────────────────────────────── */}
+      <SectionDivider />
+      <ComingSoonSection title="Supplements">
+        Trusted supplement recommendations — creatine, pre-workout, and more
+        from brands we rate. Coming soon.
+      </ComingSoonSection>
+
+      {/* ── Section 3: Clothing ──────────────────────────────────── */}
+      <SectionDivider />
+      <ComingSoonSection title="Clothing">
+        Plus 4 Performance clothing — coming soon.
+      </ComingSoonSection>
+
     </div>
   );
 }

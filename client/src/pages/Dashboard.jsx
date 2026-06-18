@@ -9,20 +9,18 @@ import Logbook from './Logbook';
 import AccountTab from './AccountTab';
 import NutritionTab from './NutritionTab';
 import CommunityTab from './CommunityTab';
-import MarketplaceTab from './MarketplaceTab';
-import SupplementsTab from './SupplementsTab';
+import ShopTab from './ShopTab';
 import { useBranding } from '../lib/BrandingContext';
 
 const TABS = [
-  { id: 'today',       label: 'Today' },
-  { id: 'plan',        label: 'Plan' },
-  { id: 'nutrition',   label: 'Nutrition' },
-  { id: 'progress',    label: 'Progress' },
-  { id: 'achievements',label: 'Achievements' },
-  { id: 'logbook',     label: 'Logbook' },
-  { id: 'community',   label: 'Community' },
-  { id: 'marketplace',  label: 'Marketplace',  mainSiteOnly: true },
-  { id: 'supplements',  label: 'Supplements',  mainSiteOnly: true },
+  { id: 'today',        label: 'Today' },
+  { id: 'plan',         label: 'Plan' },
+  { id: 'nutrition',    label: 'Nutrition' },
+  { id: 'progress',     label: 'Progress' },
+  { id: 'achievements', label: 'Achievements' },
+  { id: 'logbook',      label: 'Logbook' },
+  { id: 'community',    label: 'Community' },
+  { id: 'shop',         label: 'Shop',         mainSiteOnly: true },
   { id: 'account',      label: 'Account' },
 ];
 
@@ -447,8 +445,7 @@ export default function Dashboard() {
           {activeTab === 'achievements' && <AchievementsTab userId={user?.id} />}
           {activeTab === 'logbook' && <Logbook userId={user?.id} plan={plan} preselectedSession={logbookSession} />}
           {activeTab === 'community'   && <CommunityTab />}
-          {activeTab === 'marketplace'  && <MarketplaceTab />}
-          {activeTab === 'supplements'  && <SupplementsTab />}
+          {activeTab === 'shop'         && <ShopTab />}
           {activeTab === 'account' && <AccountTab user={user} plan={plan} isUnlocked={isUnlocked} subRow={subRow} onUnlock={handleUnlock} onPlanSwitch={refreshActivePlan} planGeneratedAt={planGeneratedAt} />}
         </div>
       </div>
