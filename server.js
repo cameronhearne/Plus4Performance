@@ -158,7 +158,7 @@ Build exercise_library first. Include every exercise used across all sessions �
 Select exercises from the coaching bible (Tier 1 as foundation, Tier 2 for variety). For PPL: Push A and Push B must have different exercise selections. Same for Pull A and Pull B. Apply all injury contraindications from Section 9.
 
 STEP 3 — PHASES (3 phases, 4 weeks each)
-Build 3 phases. Each phase contains the SAME sessions but with progressive overload applied — reps/sets change between phases to show progression. Use specific numbers (e.g. phase 1: 3×8, phase 2: 4×6, phase 3: 5×5). Never write vague progressions.
+Build 3 phases. Each phase contains the SAME sessions but with progressive overload applied — load and reps change between phases, set count stays within the coaching bible's prescribed range (typically 3 sets). Use specific numbers (e.g. phase 1: 3×10, phase 2: 3×8, phase 3: 3×6). Never write vague progressions.
 - phase 1: label "Foundation", weeks "1–4"
 - phase 2: label "Accumulation", weeks "5–8"
 - phase 3: label "Intensification", weeks "9–12"

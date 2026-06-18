@@ -124,7 +124,7 @@ function SessionCard({ session, library = {}, defaultOpen = false }) {
             <thead>
               <tr>
                 {['Exercise', 'Sets', 'Reps', 'Rest'].map(h => (
-                  <th key={h} style={styles.th}>{h}</th>
+                  <th key={h} style={{ ...styles.th, textAlign: h === 'Exercise' ? 'left' : 'center' }}>{h}</th>
                 ))}
               </tr>
             </thead>
