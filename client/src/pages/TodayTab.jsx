@@ -4,6 +4,8 @@ import { supabase } from '../lib/supabase';
 import { unlockAchievement } from '../lib/achievements';
 import { getExerciseVideoEmbed } from '../lib/exerciseVideo';
 import MonthlyCheckIn from '../components/MonthlyCheckIn';
+import WeeklyScheduleView from './WeeklyScheduleView';
+import { getWeekSchedule } from '../lib/api';
 
 /*
   ─── SUPABASE SQL — run once in the SQL editor ─────────────────────────────
@@ -796,7 +798,9 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
       return raw ? (JSON.parse(raw).session ?? null) : null;
     } catch { return null; }
   });
-  const [showPicker, setShowPicker] = useState(false);
+  const [showPicker,          setShowPicker]          = useState(false);
+  const [showWeeklySchedule,  setShowWeeklySchedule]  = useState(false);
+  const [weeklyOverride,      setWeeklyOverride]       = useState(null); // null = no override loaded yet / no override
 
   useEffect(() => {
     async function load() {
@@ -858,6 +862,20 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
           setVideoMap(map);
         }
       } catch { /* table may not exist yet */ }
+
+      // Weekly schedule override for the current week
+      try {
+        const { data: { session: authSession } } = await supabase.auth.getSession();
+        if (authSession) {
+          const today = new Date(); today.setHours(0, 0, 0, 0);
+          const day   = today.getDay();
+          const monday = new Date(today);
+          monday.setDate(today.getDate() + (day === 0 ? -6 : 1 - day));
+          const weekStart = monday.toISOString().split('T')[0];
+          const result = await getWeekSchedule(weekStart, authSession.access_token);
+          if (result.schedule) setWeeklyOverride(result.schedule);
+        }
+      } catch { /* non-critical */ }
     }
     load();
   }, []);
@@ -869,8 +887,25 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
   const todayInfo       = (plan && isUnlocked)
     ? getSessionForToday(plan, { ...intakeSchedule, startDate })
     : { session: null, isRestDay: false, tomorrowSession: null };
-  const todaySession    = todayInfo.session;
-  const isRestDay       = todayInfo.isRestDay;
+
+  // Apply weekly schedule override (if it exists) on top of the plan default.
+  // The single-day dayOverride (localStorage) takes final precedence.
+  const todayDayIdx    = (() => { const d = new Date().getDay(); return d === 0 ? 6 : d - 1; })(); // 0=Mon
+  const weeklyEntry    = weeklyOverride?.[String(todayDayIdx)]; // undefined = no override, null = rest
+  const hasWeeklyEntry = weeklyOverride !== null && String(todayDayIdx) in (weeklyOverride || {});
+
+  const baseIsRestDay = hasWeeklyEntry ? (weeklyEntry === null || weeklyEntry === undefined)
+                                       : todayInfo.isRestDay;
+  const baseTodaySession = (() => {
+    if (!hasWeeklyEntry || !weeklyEntry) return todayInfo.session;
+    // Find the session in the current phase by name
+    const phaseIdx = Math.min((plan?.phases?.length || 1) - 1, Math.max(0, Math.floor((weekNum - 1) / 4)));
+    const phase = plan?.phases?.[phaseIdx] || plan?.phases?.[0];
+    return phase?.sessions?.find(s => s.name === weeklyEntry) ?? todayInfo.session;
+  })();
+
+  const isRestDay       = baseIsRestDay;
+  const todaySession    = baseTodaySession;
   const tomorrowSession = todayInfo.tomorrowSession;
 
   // Phase 1 sessions for the picker
@@ -1031,9 +1066,32 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
 
       {/* ── Today's Mission ────────────────────────────────────── */}
       <div style={{ marginBottom: 28 }} className="today-mission-card">
-        <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 22, letterSpacing: '0.06em', color: '#F5F3EE', marginBottom: 14, marginTop: 4 }}>
-          Today's Session
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 14, marginTop: 4 }}>
+          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 22, letterSpacing: '0.06em', color: '#F5F3EE' }}>
+            Today's Session
+          </div>
+          {isUnlocked && phase1Sessions.length > 0 && (
+            <button type="button" className="override-link"
+              onClick={() => setShowWeeklySchedule(v => !v)}
+              style={{ fontSize: 11, letterSpacing: '0.1em' }}
+            >
+              {showWeeklySchedule ? 'Hide schedule ✕' : 'This week →'}
+            </button>
+          )}
         </div>
+
+        {/* Weekly schedule view */}
+        {showWeeklySchedule && isUnlocked && (
+          <WeeklyScheduleView
+            plan={plan}
+            intakeSchedule={intakeSchedule}
+            startDate={startDate}
+            weekNum={weekNum}
+            onClose={() => setShowWeeklySchedule(false)}
+            onScheduleChange={newSchedule => setWeeklyOverride(newSchedule)}
+          />
+        )}
+
         {isUnlocked ? (
           <>
             {/* Card */}

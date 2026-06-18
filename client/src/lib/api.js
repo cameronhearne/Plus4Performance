@@ -63,6 +63,17 @@ export async function requestRenewalPlan(option, newIntake, token) {
 export async function listPlans(token)              { return authedGet('/api/plans', token); }
 export async function activatePlan(planId, token)   { return authedPost('/api/plan/activate', { plan_id: planId }, token); }
 
+export async function getWeekSchedule(weekStart, token)           { return authedGet(`/api/schedule/week?week_start=${weekStart}`, token); }
+export async function saveWeekSchedule(weekStart, schedule, token){ return authedPost('/api/schedule/week', { week_start: weekStart, schedule }, token); }
+export async function resetWeekSchedule(weekStart, token) {
+  const API = import.meta.env.VITE_API_URL || '';
+  const res = await fetch(API + `/api/schedule/week?week_start=${weekStart}`, {
+    method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) { const e = await res.json().catch(() => ({ error: res.statusText })); throw new Error(e.error || 'Request failed'); }
+  return res.json();
+}
+
 // ─── FOOD ─────────────────────────────────────────────────────────────────────
 export async function foodSearch(token, query)         { return authedPost('/api/food/search', { query }, token); }
 export async function foodLog(token, entry)            { return authedPost('/api/food/log', entry, token); }

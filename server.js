@@ -975,6 +975,52 @@ async function handleActivatePlan(req, res) {
   return json(res, 200, { ok: true });
 }
 
+// ─── WEEKLY SCHEDULE OVERRIDES ───────────────────────────────────────────────
+
+// GET /api/schedule/week?week_start=YYYY-MM-DD
+async function handleGetWeekSchedule(req, res) {
+  const userId = await getUserIdFromToken(req.headers['authorization']);
+  if (!userId) return json(res, 401, { error: 'Unauthorized' });
+  const weekStart = new URL('http://x' + req.url).searchParams.get('week_start');
+  if (!weekStart || !/^\d{4}-\d{2}-\d{2}$/.test(weekStart))
+    return json(res, 400, { error: 'week_start required (YYYY-MM-DD)' });
+  const { data } = await supabaseAdmin
+    .from('weekly_schedule_overrides')
+    .select('schedule_data')
+    .eq('user_id', userId).eq('week_start_date', weekStart).maybeSingle();
+  return json(res, 200, { schedule: data?.schedule_data || null });
+}
+
+// POST /api/schedule/week  — upserts this week's override
+async function handleSaveWeekSchedule(req, res) {
+  const userId = await getUserIdFromToken(req.headers['authorization']);
+  if (!userId) return json(res, 401, { error: 'Unauthorized' });
+  const raw = await readBody(req);
+  let parsed;
+  try { parsed = JSON.parse(raw); } catch { return json(res, 400, { error: 'Invalid JSON' }); }
+  const { week_start, schedule } = parsed;
+  if (!week_start || !/^\d{4}-\d{2}-\d{2}$/.test(week_start) || !schedule)
+    return json(res, 400, { error: 'week_start (YYYY-MM-DD) and schedule required' });
+  const { error } = await supabaseAdmin
+    .from('weekly_schedule_overrides')
+    .upsert({ user_id: userId, week_start_date: week_start, schedule_data: schedule },
+             { onConflict: 'user_id,week_start_date' });
+  if (error) return json(res, 500, { error: 'Failed to save schedule' });
+  return json(res, 200, { ok: true });
+}
+
+// DELETE /api/schedule/week?week_start=YYYY-MM-DD — removes override, restores default
+async function handleResetWeekSchedule(req, res) {
+  const userId = await getUserIdFromToken(req.headers['authorization']);
+  if (!userId) return json(res, 401, { error: 'Unauthorized' });
+  const weekStart = new URL('http://x' + req.url).searchParams.get('week_start');
+  if (!weekStart) return json(res, 400, { error: 'week_start required' });
+  await supabaseAdmin
+    .from('weekly_schedule_overrides')
+    .delete().eq('user_id', userId).eq('week_start_date', weekStart);
+  return json(res, 200, { ok: true });
+}
+
 // POST /api/plan/renew
 // Generates a renewal plan (option 1 = continue same goal, option 2 = new direction).
 // Responds 202 immediately and generates async so the client isn't held open.
@@ -2728,6 +2774,13 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && url === '/api/plan/renew') {
       if (rateLimit(req, res, LIMITS.plan)) return;
       return await handleRenewalPlan(req, res);
+    }
+
+    if (url.startsWith('/api/schedule/week')) {
+      if (req.method === 'GET')    return await handleGetWeekSchedule(req, res);
+      if (req.method === 'POST')   return await handleSaveWeekSchedule(req, res);
+      if (req.method === 'DELETE') return await handleResetWeekSchedule(req, res);
+      return json(res, 405, { error: 'Method not allowed' });
     }
 
     if (url.startsWith('/api/food/')) {

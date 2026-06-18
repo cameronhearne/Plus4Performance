@@ -226,3 +226,26 @@ create policy "Authenticated users can read exercise videos"
   on public.exercise_videos for select
   to authenticated
   using (true);
+
+-- ─── WEEKLY SCHEDULE OVERRIDES ───────────────────────────────────────────────
+-- One row per user per week. week_start_date is always the Monday of the week.
+-- schedule_data: {"0":"Push A","1":"Pull A","2":null,...} — 0=Mon, 6=Sun, null=rest.
+-- Rows are ignored automatically after their week passes — no cleanup needed.
+create table public.weekly_schedule_overrides (
+  id              uuid        primary key default gen_random_uuid(),
+  user_id         uuid        not null references public.profiles(id) on delete cascade,
+  week_start_date date        not null,
+  schedule_data   jsonb       not null,
+  created_at      timestamptz default now(),
+  unique (user_id, week_start_date)
+);
+
+alter table public.weekly_schedule_overrides enable row level security;
+
+create policy "Users can manage own schedule overrides"
+  on public.weekly_schedule_overrides for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+grant select, insert, update, delete on public.weekly_schedule_overrides to service_role;
+grant select, insert, update, delete on public.weekly_schedule_overrides to authenticated;
