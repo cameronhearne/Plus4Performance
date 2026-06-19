@@ -5,6 +5,7 @@ import AdminOverview from './AdminOverview';
 import AdminUsers from './AdminUsers';
 import AdminUserDetail from './AdminUserDetail';
 import AdminAffiliates from './AdminAffiliates';
+import AdminFlagged1rm from './AdminFlagged1rm';
 
 const S = {
   page:    { minHeight: '100vh', background: '#080808', color: '#F5F3EE' },
@@ -30,6 +31,7 @@ export default function AdminDashboard() {
 
   const isUsers      = pathname.startsWith('/admin/users');
   const isAffiliates = pathname.startsWith('/admin/affiliates');
+  const isFlagged    = pathname.startsWith('/admin/flagged-1rm');
 
   return (
     <div style={S.page}>
@@ -49,9 +51,10 @@ export default function AdminDashboard() {
 
       <div style={S.inner}>
         <div style={S.subnav}>
-          <Link to="/admin"            style={!isUsers && !isAffiliates ? S.tabActive : S.tab}>Overview</Link>
-          <Link to="/admin/users"      style={isUsers      ? S.tabActive : S.tab}>Users</Link>
-          <Link to="/admin/affiliates" style={isAffiliates ? S.tabActive : S.tab}>Affiliates</Link>
+          <Link to="/admin"              style={!isUsers && !isAffiliates && !isFlagged ? S.tabActive : S.tab}>Overview</Link>
+          <Link to="/admin/users"        style={isUsers      ? S.tabActive : S.tab}>Users</Link>
+          <Link to="/admin/affiliates"   style={isAffiliates ? S.tabActive : S.tab}>Affiliates</Link>
+          <Link to="/admin/flagged-1rm"  style={isFlagged    ? S.tabActive : S.tab}>Flagged 1RMs</Link>
         </div>
 
         <Routes>
@@ -59,6 +62,7 @@ export default function AdminDashboard() {
           <Route path="users"            element={<AdminUsers />} />
           <Route path="users/:userId"    element={<AdminUserDetail />} />
           <Route path="affiliates"       element={<AdminAffiliates />} />
+          <Route path="flagged-1rm"      element={<AdminFlagged1rm />} />
         </Routes>
       </div>
     </div>

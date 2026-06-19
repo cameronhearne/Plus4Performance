@@ -51,6 +51,62 @@ const supabaseAuth = createClient(
   ─────────────────────────────────────────────────────────────────────────────
 */
 
+/*
+  ─── SQL — 1RM leaderboard columns (run once in Supabase SQL editor) ──────────
+
+  alter table public.one_rep_maxes add column if not exists flagged_for_review boolean not null default false;
+  alter table public.one_rep_maxes add column if not exists flagged_reason text;
+  alter table public.one_rep_maxes add column if not exists reviewer_action text;
+
+  ─────────────────────────────────────────────────────────────────────────────
+*/
+
+/*
+  ─── SQL — friendships table (run once in Supabase SQL editor) ────────────────
+
+  create table public.friendships (
+    id           uuid        primary key default gen_random_uuid(),
+    requester_id uuid        not null references public.profiles(id) on delete cascade,
+    recipient_id uuid        not null references public.profiles(id) on delete cascade,
+    status       text        not null default 'pending'
+                             check (status in ('pending', 'accepted', 'declined')),
+    created_at   timestamptz default now(),
+    responded_at timestamptz,
+    constraint no_self_friend check (requester_id != recipient_id)
+  );
+
+  create unique index friendships_pair_active_unique
+    on public.friendships (
+      least(requester_id::text, recipient_id::text),
+      greatest(requester_id::text, recipient_id::text)
+    )
+    where status in ('pending', 'accepted');
+
+  alter table public.friendships enable row level security;
+
+  create policy "Users can see their own friendships"
+    on public.friendships for select to authenticated
+    using (auth.uid() = requester_id or auth.uid() = recipient_id);
+
+  create policy "Users can send friend requests"
+    on public.friendships for insert to authenticated
+    with check (auth.uid() = requester_id);
+
+  create policy "Recipients can respond to requests"
+    on public.friendships for update to authenticated
+    using (auth.uid() = recipient_id)
+    with check (auth.uid() = recipient_id);
+
+  create policy "Either party can remove a friendship"
+    on public.friendships for delete to authenticated
+    using (auth.uid() = requester_id or auth.uid() = recipient_id);
+
+  grant select, insert, update on public.friendships to authenticated;
+  grant select, insert, update, delete on public.friendships to service_role;
+
+  ─────────────────────────────────────────────────────────────────────────────
+*/
+
 // Startup key validation
 (function validateEnv() {
   const required = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_ANON_KEY', 'ANTHROPIC_API_KEY', 'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'STRIPE_PRICE_ID'];
@@ -2337,7 +2393,7 @@ async function handleAdminGetUser(req, res, targetUserId) {
       supabaseAdmin.from('plans').select('plan_data, generated_at').eq('user_id', targetUserId).order('generated_at', { ascending: false }).limit(1).maybeSingle(),
       supabaseAdmin.from('monthly_checkins').select('*').eq('user_id', targetUserId).order('created_at', { ascending: false }),
       supabaseAdmin.from('weight_logs').select('weight_kg, logged_at').eq('user_id', targetUserId).order('logged_at', { ascending: true }),
-      supabaseAdmin.from('one_rep_maxes').select('lift, weight_kg, logged_at, is_calculated').eq('user_id', targetUserId).order('logged_at', { ascending: true }),
+      supabaseAdmin.from('one_rep_maxes').select('lift, weight_kg, logged_at, is_calculated, flagged_for_review, reviewer_action').eq('user_id', targetUserId).order('logged_at', { ascending: true }),
       supabaseAdmin.from('admin_actions').select('*').eq('target_user_id', targetUserId).order('created_at', { ascending: false }).limit(50),
     ]);
 
@@ -2490,6 +2546,14 @@ function routeAdmin(req, res, url) {
   if (req.method === 'POST' && url === '/api/admin/affiliates') return handleAdminCreateAffiliate(req, res);
   const affM = url.match(/^\/api\/admin\/affiliates\/([a-f0-9-]+)\/mark-paid$/);
   if (affM && req.method === 'POST') return handleAdminMarkAffiliatePaid(req, res, affM[1]);
+
+  if (req.method === 'GET'  && url === '/api/admin/flagged-1rm') return handleAdminFlagged1rm(req, res);
+  const orm1rmM = url.match(/^\/api\/admin\/flagged-1rm\/([0-9a-f-]{36})\/(approve|reject)$/);
+  if (orm1rmM && req.method === 'POST') {
+    const [, id, action] = orm1rmM;
+    if (action === 'approve') return handleAdminApprove1rm(req, res, id);
+    if (action === 'reject')  return handleAdminReject1rm(req, res, id);
+  }
 
   return json(res, 404, { error: 'Not found' });
 }
@@ -2727,6 +2791,517 @@ async function handleAdminMarkAffiliatePaid(req, res, affiliateId) {
   return json(res, 200, { ok: true });
 }
 
+// ─── 1RM LOGGING ─────────────────────────────────────────────────────────────
+
+const VALID_LIFTS = ['bench_press', 'squat', 'deadlift', 'overhead_press'];
+
+// POST /api/1rm/log  { lift, weight_kg, is_calculated }
+async function handleOneRmLog(req, res) {
+  const userId = await getUserIdFromToken(req.headers['authorization']);
+  if (!userId) return json(res, 401, { error: 'Unauthorized' });
+
+  let body;
+  try { body = JSON.parse(await readBody(req)); } catch { return json(res, 400, { error: 'Invalid JSON' }); }
+
+  const { lift, weight_kg, is_calculated = false } = body;
+  if (!VALID_LIFTS.includes(lift)) return json(res, 400, { error: 'Invalid lift' });
+
+  const kg = parseFloat(weight_kg);
+  if (!kg || isNaN(kg) || kg < 1) return json(res, 400, { error: 'Invalid weight' });
+
+  // Hard block
+  if (kg > 500) {
+    return json(res, 400, { error: 'Weight exceeds 500 kg. If this is not an error, contact support.' });
+  }
+
+  // Fetch previous entries and most recent bodyweight in parallel
+  const [{ data: prevRows }, { data: bwRows }] = await Promise.all([
+    supabaseAdmin
+      .from('one_rep_maxes')
+      .select('weight_kg, flagged_for_review')
+      .eq('user_id', userId)
+      .eq('lift', lift)
+      .order('weight_kg', { ascending: false }),
+    supabaseAdmin
+      .from('weight_logs')
+      .select('weight_kg')
+      .eq('user_id', userId)
+      .order('logged_at', { ascending: false })
+      .limit(1),
+  ]);
+
+  const prevBestAll = prevRows?.length > 0 ? parseFloat(prevRows[0].weight_kg) : 0;
+  const prevBestClean = prevRows?.find(r => !r.flagged_for_review);
+  const prevBestCleanKg = prevBestClean ? parseFloat(prevBestClean.weight_kg) : null;
+  const bodyweightKg = bwRows?.[0] ? parseFloat(bwRows[0].weight_kg) : null;
+  const isNewPr = kg > prevBestAll;
+
+  // Soft-flag checks
+  let flaggedForReview = false;
+  const reasons = [];
+  if (bodyweightKg && kg > bodyweightKg * 4) reasons.push('exceeds_4x_bodyweight');
+  if (prevBestCleanKg && kg > prevBestCleanKg * 1.5) reasons.push('exceeds_50pct_jump');
+  if (reasons.length) flaggedForReview = true;
+
+  const { data: entry, error } = await supabaseAdmin
+    .from('one_rep_maxes')
+    .insert({
+      user_id: userId,
+      lift,
+      weight_kg: kg,
+      is_calculated: Boolean(is_calculated),
+      flagged_for_review: flaggedForReview,
+      flagged_reason: reasons.length ? reasons.join(',') : null,
+      logged_at: new Date().toISOString(),
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('[1rm/log] insert error:', error.message);
+    return json(res, 500, { error: 'Failed to log 1RM' });
+  }
+
+  return json(res, 201, { entry, is_new_pr: isNewPr });
+}
+
+// ─── LEADERBOARD ──────────────────────────────────────────────────────────────
+
+async function fetchOrmRows(lift, weekStart) {
+  let q = supabaseAdmin
+    .from('one_rep_maxes')
+    .select('user_id, weight_kg')
+    .eq('lift', lift)
+    .eq('flagged_for_review', false);
+  if (weekStart) q = q.gte('logged_at', weekStart);
+  const { data } = await q;
+  return data || [];
+}
+
+async function fetchProfiles(userIds) {
+  if (!userIds.length) return [];
+  const { data } = await supabaseAdmin
+    .from('profiles')
+    .select('id, username, first_name, last_name, avatar_url, privacy_settings')
+    .in('id', userIds);
+  return data || [];
+}
+
+function applyOrmPrivacy(profile, scope) {
+  const p = (profile.privacy_settings || {}).one_rep_max || 'friends';
+  if (p === 'private') return false;
+  if (scope === 'global' && p !== 'public') return false;
+  return true;
+}
+
+function resolveAvatar(profile, myFriendIds, userId) {
+  const ap = (profile.privacy_settings || {}).avatar || 'friends';
+  const isSelf = profile.id === userId;
+  const isFriend = myFriendIds.has(profile.id);
+  if (ap === 'public' || isSelf || (ap === 'friends' && isFriend)) return profile.avatar_url;
+  return null;
+}
+
+function toEntry(profile, weightKg, rank, userId, myFriendIds) {
+  return {
+    rank,
+    user_id: profile.id,
+    username: profile.username,
+    display_name: [profile.first_name, profile.last_name].filter(Boolean).join(' ') || profile.username,
+    avatar_url: resolveAvatar(profile, myFriendIds, userId),
+    weight_kg: parseFloat(weightKg),
+    is_self: profile.id === userId,
+  };
+}
+
+// GET /api/leaderboard?lift=bench_press&period=all_time&scope=global
+async function handleLeaderboard(req, res) {
+  const userId = await getUserIdFromToken(req.headers['authorization']);
+  if (!userId) return json(res, 401, { error: 'Unauthorized' });
+
+  const params = new URL('http://x' + req.url).searchParams;
+  const lift   = params.get('lift')   || 'bench_press';
+  const period = params.get('period') || 'all_time';
+  const scope  = params.get('scope')  || 'global';
+
+  const ALL_LIFTS = ['bench_press', 'squat', 'deadlift', 'overhead_press', 'combined'];
+  if (!ALL_LIFTS.includes(lift))               return json(res, 400, { error: 'Invalid lift' });
+  if (!['week', 'all_time'].includes(period))  return json(res, 400, { error: 'Invalid period' });
+  if (!['global', 'friends'].includes(scope))  return json(res, 400, { error: 'Invalid scope' });
+
+  // Most recent Monday 00:00 UTC
+  let weekStart = null;
+  if (period === 'week') {
+    const now = new Date();
+    const dow = now.getUTCDay();
+    const back = dow === 0 ? 6 : dow - 1;
+    weekStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - back)).toISOString();
+  }
+
+  // Viewer's friends (used for scope filtering + avatar privacy)
+  const { data: friendRows } = await supabaseAdmin
+    .from('friendships')
+    .select('requester_id, recipient_id')
+    .or(`requester_id.eq.${userId},recipient_id.eq.${userId}`)
+    .eq('status', 'accepted');
+  const myFriendIds = new Set(
+    (friendRows || []).map(f => f.requester_id === userId ? f.recipient_id : f.requester_id)
+  );
+
+  const INDIVIDUAL_LIFTS = ['bench_press', 'squat', 'deadlift', 'overhead_press'];
+
+  if (lift === 'combined') {
+    // Fetch all 4 lifts; aggregate per-user best for each
+    const allRows = await Promise.all(INDIVIDUAL_LIFTS.map(l => fetchOrmRows(l, weekStart)));
+    const liftBests = {}; // { userId: { bench_press: N, ... } }
+    INDIVIDUAL_LIFTS.forEach((l, i) => {
+      for (const row of allRows[i]) {
+        if (!liftBests[row.user_id]) liftBests[row.user_id] = {};
+        const cur = liftBests[row.user_id][l];
+        const kg = parseFloat(row.weight_kg);
+        if (!cur || kg > cur) liftBests[row.user_id][l] = kg;
+      }
+    });
+
+    // Keep only users who have all 4 lifts
+    const combinedScores = Object.entries(liftBests)
+      .filter(([, lifts]) => INDIVIDUAL_LIFTS.every(l => lifts[l]))
+      .map(([uid, lifts]) => ({ user_id: uid, total: INDIVIDUAL_LIFTS.reduce((s, l) => s + lifts[l], 0) }));
+
+    const profiles = await fetchProfiles(combinedScores.map(s => s.user_id));
+    const profileMap = Object.fromEntries(profiles.map(p => [p.id, p]));
+
+    const filtered = combinedScores
+      .filter(s => {
+        const p = profileMap[s.user_id];
+        if (!p?.username) return false;
+        if (!applyOrmPrivacy(p, scope)) return false;
+        if (scope === 'friends' && s.user_id !== userId && !myFriendIds.has(s.user_id)) return false;
+        return true;
+      })
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 25);
+
+    const entries = filtered.map((s, i) =>
+      toEntry(profileMap[s.user_id], s.total, i + 1, userId, myFriendIds)
+    );
+    return json(res, 200, { entries });
+  }
+
+  // Single lift
+  const rows = await fetchOrmRows(lift, weekStart);
+  const bestByUser = new Map();
+  for (const row of rows) {
+    const kg = parseFloat(row.weight_kg);
+    const cur = bestByUser.get(row.user_id);
+    if (!cur || kg > cur) bestByUser.set(row.user_id, kg);
+  }
+
+  const profiles = await fetchProfiles([...bestByUser.keys()]);
+  const profileMap = Object.fromEntries(profiles.map(p => [p.id, p]));
+
+  const filtered = [...bestByUser.entries()]
+    .filter(([uid]) => {
+      const p = profileMap[uid];
+      if (!p?.username) return false;
+      if (!applyOrmPrivacy(p, scope)) return false;
+      if (scope === 'friends' && uid !== userId && !myFriendIds.has(uid)) return false;
+      return true;
+    })
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 25);
+
+  const entries = filtered.map(([uid, kg], i) =>
+    toEntry(profileMap[uid], kg, i + 1, userId, myFriendIds)
+  );
+  return json(res, 200, { entries });
+}
+
+// ─── ADMIN — FLAGGED 1RM ──────────────────────────────────────────────────────
+
+// GET /api/admin/flagged-1rm
+async function handleAdminFlagged1rm(req, res) {
+  if (!await requireAdmin(req, res)) return;
+
+  const { data: flagged, error } = await supabaseAdmin
+    .from('one_rep_maxes')
+    .select('id, user_id, lift, weight_kg, is_calculated, flagged_reason, logged_at')
+    .eq('flagged_for_review', true)
+    .is('reviewer_action', null)
+    .order('logged_at', { ascending: false });
+
+  if (error) {
+    console.error('[admin/flagged-1rm] error:', error.message);
+    return json(res, 500, { error: 'Failed to fetch flagged entries' });
+  }
+
+  const userIds = [...new Set((flagged || []).map(r => r.user_id))];
+  const profiles = await fetchProfiles(userIds);
+  const profileMap = Object.fromEntries(profiles.map(p => [p.id, p]));
+
+  // Enrich each flagged entry with previous best + bodyweight
+  const enriched = await Promise.all((flagged || []).map(async entry => {
+    const profile = profileMap[entry.user_id] || {};
+
+    const [{ data: prevBest }, { data: bwRow }] = await Promise.all([
+      supabaseAdmin
+        .from('one_rep_maxes')
+        .select('weight_kg')
+        .eq('user_id', entry.user_id)
+        .eq('lift', entry.lift)
+        .eq('flagged_for_review', false)
+        .lt('logged_at', entry.logged_at)
+        .order('weight_kg', { ascending: false })
+        .limit(1),
+      supabaseAdmin
+        .from('weight_logs')
+        .select('weight_kg')
+        .eq('user_id', entry.user_id)
+        .lte('logged_at', entry.logged_at)
+        .order('logged_at', { ascending: false })
+        .limit(1),
+    ]);
+
+    return {
+      id:            entry.id,
+      user_id:       entry.user_id,
+      username:      profile.username || '—',
+      lift:          entry.lift,
+      weight_kg:     parseFloat(entry.weight_kg),
+      is_calculated: entry.is_calculated,
+      flagged_reason: entry.flagged_reason,
+      logged_at:     entry.logged_at,
+      previous_best: prevBest?.[0] ? parseFloat(prevBest[0].weight_kg) : null,
+      bodyweight:    bwRow?.[0]    ? parseFloat(bwRow[0].weight_kg)    : null,
+    };
+  }));
+
+  return json(res, 200, { entries: enriched });
+}
+
+// POST /api/admin/flagged-1rm/:id/approve
+async function handleAdminApprove1rm(req, res, entryId) {
+  if (!await requireAdmin(req, res)) return;
+  const { error } = await supabaseAdmin
+    .from('one_rep_maxes')
+    .update({ flagged_for_review: false, reviewer_action: 'approved' })
+    .eq('id', entryId);
+  if (error) return json(res, 500, { error: 'Failed to approve' });
+  return json(res, 200, { ok: true });
+}
+
+// POST /api/admin/flagged-1rm/:id/reject
+async function handleAdminReject1rm(req, res, entryId) {
+  if (!await requireAdmin(req, res)) return;
+  const { error } = await supabaseAdmin
+    .from('one_rep_maxes')
+    .update({ reviewer_action: 'rejected' })
+    .eq('id', entryId);
+  if (error) return json(res, 500, { error: 'Failed to reject' });
+  return json(res, 200, { ok: true });
+}
+
+// ─── FRIENDS ─────────────────────────────────────────────────────────────────
+
+// GET /api/friends/search?q=...
+async function handleFriendSearch(req, res) {
+  const userId = await getUserIdFromToken(req.headers['authorization']);
+  if (!userId) return json(res, 401, { error: 'Unauthorized' });
+
+  const q = (new URL('http://x' + req.url).searchParams.get('q') || '').trim();
+  if (q.length < 2) return json(res, 400, { error: 'Query must be at least 2 characters' });
+
+  const { data: profiles, error } = await supabaseAdmin
+    .from('profiles')
+    .select('id, username, first_name, last_name, avatar_url, privacy_settings')
+    .ilike('username', `%${q}%`)
+    .not('username', 'is', null)
+    .neq('id', userId)
+    .limit(20);
+
+  if (error) return json(res, 500, { error: 'Search failed' });
+
+  // Get requester's accepted friends to apply avatar privacy
+  const { data: friendships } = await supabaseAdmin
+    .from('friendships')
+    .select('requester_id, recipient_id')
+    .or(`requester_id.eq.${userId},recipient_id.eq.${userId}`)
+    .eq('status', 'accepted');
+
+  const friendIds = new Set(
+    (friendships || []).map(f => f.requester_id === userId ? f.recipient_id : f.requester_id)
+  );
+
+  const results = profiles.map(p => {
+    const avatarPrivacy = (p.privacy_settings || {}).avatar || 'friends';
+    const isFriend = friendIds.has(p.id);
+    const showAvatar = avatarPrivacy === 'public' || (avatarPrivacy === 'friends' && isFriend);
+    return {
+      id: p.id,
+      username: p.username,
+      display_name: [p.first_name, p.last_name].filter(Boolean).join(' ') || p.username,
+      avatar_url: showAvatar ? p.avatar_url : null,
+    };
+  });
+
+  return json(res, 200, { results });
+}
+
+// POST /api/friends/request  { recipient_id }
+async function handleFriendRequest(req, res) {
+  const userId = await getUserIdFromToken(req.headers['authorization']);
+  if (!userId) return json(res, 401, { error: 'Unauthorized' });
+
+  let body;
+  try { body = JSON.parse(await readBody(req)); } catch { return json(res, 400, { error: 'Invalid JSON' }); }
+  const { recipient_id } = body;
+
+  if (!recipient_id) return json(res, 400, { error: 'recipient_id required' });
+  if (recipient_id === userId) return json(res, 400, { error: 'Cannot send a friend request to yourself' });
+
+  // Verify recipient exists
+  const { data: recipient } = await supabaseAdmin
+    .from('profiles').select('id').eq('id', recipient_id).maybeSingle();
+  if (!recipient) return json(res, 404, { error: 'User not found' });
+
+  // Check for existing active relationship
+  const { data: existing } = await supabaseAdmin
+    .from('friendships')
+    .select('id, status')
+    .or(
+      `and(requester_id.eq.${userId},recipient_id.eq.${recipient_id}),` +
+      `and(requester_id.eq.${recipient_id},recipient_id.eq.${userId})`
+    )
+    .in('status', ['pending', 'accepted'])
+    .maybeSingle();
+
+  if (existing) {
+    const msg = existing.status === 'accepted' ? 'Already friends' : 'Friend request already pending';
+    return json(res, 409, { error: msg });
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('friendships')
+    .insert({ requester_id: userId, recipient_id, status: 'pending' })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('[friends/request] insert error:', error.message);
+    return json(res, 500, { error: 'Failed to send request' });
+  }
+
+  return json(res, 201, { friendship: data });
+}
+
+// POST /api/friends/respond  { friendship_id, action: 'accept' | 'decline' }
+async function handleFriendRespond(req, res) {
+  const userId = await getUserIdFromToken(req.headers['authorization']);
+  if (!userId) return json(res, 401, { error: 'Unauthorized' });
+
+  let body;
+  try { body = JSON.parse(await readBody(req)); } catch { return json(res, 400, { error: 'Invalid JSON' }); }
+  const { friendship_id, action } = body;
+
+  if (!friendship_id || !action) return json(res, 400, { error: 'friendship_id and action required' });
+  if (!['accept', 'decline'].includes(action)) return json(res, 400, { error: 'action must be accept or decline' });
+
+  const { data: friendship } = await supabaseAdmin
+    .from('friendships').select('id, recipient_id, status').eq('id', friendship_id).maybeSingle();
+
+  if (!friendship) return json(res, 404, { error: 'Request not found' });
+  if (friendship.recipient_id !== userId) return json(res, 403, { error: 'Forbidden' });
+  if (friendship.status !== 'pending') return json(res, 409, { error: 'Request already responded to' });
+
+  const { data, error } = await supabaseAdmin
+    .from('friendships')
+    .update({ status: action === 'accept' ? 'accepted' : 'declined', responded_at: new Date().toISOString() })
+    .eq('id', friendship_id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('[friends/respond] update error:', error.message);
+    return json(res, 500, { error: 'Failed to respond' });
+  }
+
+  return json(res, 200, { friendship: data });
+}
+
+// DELETE /api/friends/:id
+async function handleFriendRemove(req, res, friendshipId) {
+  const userId = await getUserIdFromToken(req.headers['authorization']);
+  if (!userId) return json(res, 401, { error: 'Unauthorized' });
+
+  const { data: friendship } = await supabaseAdmin
+    .from('friendships').select('id, requester_id, recipient_id').eq('id', friendshipId).maybeSingle();
+
+  if (!friendship) return json(res, 404, { error: 'Friendship not found' });
+  if (friendship.requester_id !== userId && friendship.recipient_id !== userId) {
+    return json(res, 403, { error: 'Forbidden' });
+  }
+
+  const { error } = await supabaseAdmin.from('friendships').delete().eq('id', friendshipId);
+  if (error) {
+    console.error('[friends/remove] delete error:', error.message);
+    return json(res, 500, { error: 'Failed to remove' });
+  }
+
+  return json(res, 200, { ok: true });
+}
+
+// GET /api/friends — returns { friends, received, sent }
+async function handleFriendList(req, res) {
+  const userId = await getUserIdFromToken(req.headers['authorization']);
+  if (!userId) return json(res, 401, { error: 'Unauthorized' });
+
+  const { data: rows, error } = await supabaseAdmin
+    .from('friendships')
+    .select(`
+      id, status, created_at, responded_at, requester_id, recipient_id,
+      requester:profiles!requester_id(id, username, first_name, last_name, avatar_url, privacy_settings),
+      recipient:profiles!recipient_id(id, username, first_name, last_name, avatar_url, privacy_settings)
+    `)
+    .or(`requester_id.eq.${userId},recipient_id.eq.${userId}`)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('[friends/list] error:', error.message);
+    return json(res, 500, { error: 'Failed to load friends' });
+  }
+
+  const friends = [];
+  const received = [];
+  const sent = [];
+
+  for (const row of rows || []) {
+    const isSender = row.requester_id === userId;
+    const other = isSender ? row.recipient : row.requester;
+    if (!other) continue;
+
+    const isFriend = row.status === 'accepted';
+    const avatarPrivacy = (other.privacy_settings || {}).avatar || 'friends';
+    const showAvatar = isFriend || avatarPrivacy === 'public';
+
+    const person = {
+      friendship_id: row.id,
+      id: other.id,
+      username: other.username,
+      display_name: [other.first_name, other.last_name].filter(Boolean).join(' ') || other.username,
+      avatar_url: showAvatar ? other.avatar_url : null,
+      created_at: row.created_at,
+    };
+
+    if (isFriend) {
+      friends.push(person);
+    } else if (row.status === 'pending') {
+      (isSender ? sent : received).push(person);
+    }
+  }
+
+  return json(res, 200, { friends, received, sent });
+}
+
 // ─── HTTP SERVER ──────────────────────────────────────────────────────────────
 
 const server = http.createServer(async (req, res) => {
@@ -2842,6 +3417,20 @@ const server = http.createServer(async (req, res) => {
 
     if (url.startsWith('/api/admin/')) {
       return await routeAdmin(req, res, url);
+    }
+
+    if (req.method === 'POST' && url === '/api/1rm/log') return await handleOneRmLog(req, res);
+
+    if (req.method === 'GET' && url.startsWith('/api/leaderboard')) return await handleLeaderboard(req, res);
+
+    if (url.startsWith('/api/friends')) {
+      if (req.method === 'GET'  && url === '/api/friends')         return await handleFriendList(req, res);
+      if (req.method === 'GET'  && url === '/api/friends/search')  return await handleFriendSearch(req, res);
+      if (req.method === 'POST' && url === '/api/friends/request') return await handleFriendRequest(req, res);
+      if (req.method === 'POST' && url === '/api/friends/respond') return await handleFriendRespond(req, res);
+      const friendIdM = url.match(/^\/api\/friends\/([0-9a-f-]{36})$/);
+      if (friendIdM && req.method === 'DELETE') return await handleFriendRemove(req, res, friendIdM[1]);
+      return json(res, 404, { error: 'Not found' });
     }
 
     json(res, 404, { error: 'Not found' });

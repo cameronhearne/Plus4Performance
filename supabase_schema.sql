@@ -257,3 +257,55 @@ create policy "Users can manage own schedule overrides"
 
 grant select, insert, update, delete on public.weekly_schedule_overrides to service_role;
 grant select, insert, update, delete on public.weekly_schedule_overrides to authenticated;
+
+-- ─── FRIENDSHIPS ─────────────────────────────────────────────────────────────
+-- Tracks friend requests and accepted friendships between users.
+-- Either direction of the pair is valid; the unique index canonicalises ordering.
+create table public.friendships (
+  id           uuid        primary key default gen_random_uuid(),
+  requester_id uuid        not null references public.profiles(id) on delete cascade,
+  recipient_id uuid        not null references public.profiles(id) on delete cascade,
+  status       text        not null default 'pending'
+                           check (status in ('pending', 'accepted', 'declined')),
+  created_at   timestamptz default now(),
+  responded_at timestamptz,
+  constraint no_self_friend check (requester_id != recipient_id)
+);
+
+-- Prevents duplicate active relationships in either direction.
+-- Declined requests are excluded so a user can re-send after a decline.
+create unique index friendships_pair_active_unique
+  on public.friendships (
+    least(requester_id::text, recipient_id::text),
+    greatest(requester_id::text, recipient_id::text)
+  )
+  where status in ('pending', 'accepted');
+
+alter table public.friendships enable row level security;
+
+create policy "Users can see their own friendships"
+  on public.friendships for select to authenticated
+  using (auth.uid() = requester_id or auth.uid() = recipient_id);
+
+create policy "Users can send friend requests"
+  on public.friendships for insert to authenticated
+  with check (auth.uid() = requester_id);
+
+create policy "Recipients can respond to requests"
+  on public.friendships for update to authenticated
+  using (auth.uid() = recipient_id)
+  with check (auth.uid() = recipient_id);
+
+create policy "Either party can remove a friendship"
+  on public.friendships for delete to authenticated
+  using (auth.uid() = requester_id or auth.uid() = recipient_id);
+
+grant select, insert, update on public.friendships to authenticated;
+grant select, insert, update, delete on public.friendships to service_role;
+
+-- ─── 1RM LEADERBOARD MIGRATIONS ──────────────────────────────────────────────
+-- Run these after the initial one_rep_maxes table is in place.
+alter table public.one_rep_maxes add column if not exists flagged_for_review boolean not null default false;
+alter table public.one_rep_maxes add column if not exists flagged_reason text;
+-- null = pending review, 'approved' = cleared for leaderboard, 'rejected' = permanent personal-only
+alter table public.one_rep_maxes add column if not exists reviewer_action text;

@@ -87,6 +87,35 @@ export async function foodDeleteEntry(token, id) {
   return res.json();
 }
 
+// ─── 1RM ─────────────────────────────────────────────────────────────────────
+export async function logOneRm(token, { lift, weight_kg, is_calculated }) {
+  return authedPost('/api/1rm/log', { lift, weight_kg, is_calculated }, token);
+}
+
+// ─── LEADERBOARD ─────────────────────────────────────────────────────────────
+export async function getLeaderboard(token, { lift, period, scope }) {
+  return authedGet(`/api/leaderboard?lift=${lift}&period=${period}&scope=${scope}`, token);
+}
+
+// ─── FRIENDS ─────────────────────────────────────────────────────────────────
+export async function friendSearch(token, q)              { return authedGet(`/api/friends/search?q=${encodeURIComponent(q)}`, token); }
+export async function friendList(token)                   { return authedGet('/api/friends', token); }
+export async function friendRequest(token, recipient_id)  { return authedPost('/api/friends/request', { recipient_id }, token); }
+export async function friendRespond(token, friendship_id, action) { return authedPost('/api/friends/respond', { friendship_id, action }, token); }
+export async function friendRemove(token, friendship_id) {
+  const res = await fetch(API + `/api/friends/${friendship_id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) { const e = await res.json().catch(() => ({ error: res.statusText })); throw new Error(e.error || 'Request failed'); }
+  return res.json();
+}
+
+// ─── ADMIN — FLAGGED 1RM ─────────────────────────────────────────────────────
+export async function adminGetFlagged1rm(token)          { return authedGet('/api/admin/flagged-1rm', token); }
+export async function adminApprove1rm(token, id)         { return authedPost(`/api/admin/flagged-1rm/${id}/approve`, {}, token); }
+export async function adminReject1rm(token, id)          { return authedPost(`/api/admin/flagged-1rm/${id}/reject`, {}, token); }
+
 // ─── ADMIN ────────────────────────────────────────────────────────────────────
 // ─── AFFILIATE (admin) ────────────────────────────────────────────────────────
 export async function adminListAffiliates(token)               { return authedGet('/api/admin/affiliates', token); }

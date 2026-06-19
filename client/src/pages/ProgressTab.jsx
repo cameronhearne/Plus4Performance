@@ -6,6 +6,7 @@ import {
 import { Camera, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { unlockAchievement, hasConsecutiveDays } from '../lib/achievements';
+import { logOneRm } from '../lib/api';
 
 /*
   ─── SQL — run once in Supabase SQL editor ────────────────────────────────────
@@ -711,7 +712,7 @@ function LiftCard({ liftName, liftKey }) {
     if (!user) { setLoading(false); return; }
     const { data } = await supabase
       .from('one_rep_maxes')
-      .select('id, weight_kg, is_calculated, logged_at')
+      .select('id, weight_kg, is_calculated, logged_at, flagged_for_review')
       .eq('user_id', user.id)
       .eq('lift', liftKey)
       .order('logged_at', { ascending: true });
@@ -727,41 +728,44 @@ function LiftCard({ liftName, liftKey }) {
   }
 
   async function handleLog(kg, isCalculated) {
-    if (!kg || isNaN(kg) || kg < 1 || kg > 1000) return;
+    if (!kg || isNaN(kg) || kg < 1) return;
+    if (kg > 500) {
+      setFeedback({ msg: 'Weight exceeds 500 kg — if this is correct, contact support.', isError: true });
+      setTimeout(() => setFeedback(null), 5000);
+      return;
+    }
     const setSaving = isCalculated ? setSavingCalc : setSavingManual;
     setSaving(true);
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setSaving(false); return; }
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { setSaving(false); return; }
+    const { user, access_token: token } = session;
 
-    const currentBest = entries.length > 0 ? Math.max(...entries.map(e => e.weight_kg)) : 0;
-    const isNewPr = kg > currentBest;
-
-    const { error } = await supabase.from('one_rep_maxes').insert({
-      user_id: user.id, lift: liftKey,
-      weight_kg: kg, is_calculated: isCalculated,
-      logged_at: new Date().toISOString(),
-    });
-
-    setSaving(false);
-
-    if (error) {
-      setFeedback({ msg: 'Error saving', isPr: false });
-      setTimeout(() => setFeedback(null), 3000);
+    let result;
+    try {
+      result = await logOneRm(token, { lift: liftKey, weight_kg: kg, is_calculated: isCalculated });
+    } catch (e) {
+      setSaving(false);
+      setFeedback({ msg: e.message || 'Error saving', isError: true });
+      setTimeout(() => setFeedback(null), 5000);
       return;
     }
 
+    setSaving(false);
     await fetchEntries();
+
+    const { is_new_pr: isNewPr, entry } = result;
+    const flagged = entry?.flagged_for_review;
 
     if (isNewPr) {
       await unlockAchievement(supabase, user.id, 'pr_hunter', 200);
-      setFeedback({ msg: 'NEW PR! 🎯', isPr: true });
+      setFeedback({ msg: flagged ? 'NEW PR! — pending review' : 'NEW PR! 🎯', isPr: true });
       setGlowing(true);
       setTimeout(() => setGlowing(false), 2000);
     } else {
-      setFeedback({ msg: '✓ Logged', isPr: false });
+      setFeedback({ msg: flagged ? 'Saved — pending review' : '✓ Logged', isPr: false });
     }
-    setTimeout(() => setFeedback(null), 3500);
+    setTimeout(() => setFeedback(null), 4000);
 
     // big_four: all four lifts have at least one entry
     const { data: allLifts } = await supabase
@@ -843,7 +847,7 @@ function LiftCard({ liftName, liftKey }) {
 
           {/* Feedback */}
           {feedback && (
-            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', color: feedback.isPr ? '#C0392B' : '#4CAF50', marginBottom: 8 }}>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', color: feedback.isError ? '#FF9800' : feedback.isPr ? '#C0392B' : '#4CAF50', marginBottom: 8 }}>
               {feedback.msg}
             </div>
           )}
