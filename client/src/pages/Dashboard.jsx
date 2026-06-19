@@ -296,6 +296,52 @@ function GroceryList({ list }) {
   );
 }
 
+// ─── PLAN GENERATING OVERLAY ─────────────────────────────────────────────────
+
+const GEN_STEPS = [
+  'Calculating your nutrition targets…',
+  'Structuring your 12-week phases…',
+  'Programming your progressive overload…',
+  'Selecting exercises for your split…',
+  'Finalising your meal plan…',
+  'Almost there…',
+];
+
+function PlanGeneratingOverlay({ error, onRetry }) {
+  const [step, setStep] = useState(0);
+  useEffect(() => {
+    if (error) return;
+    const t = setInterval(() => setStep(s => (s + 1) % GEN_STEPS.length), 4000);
+    return () => clearInterval(t);
+  }, [error]);
+
+  return (
+    <div style={styles.genOverlay}>
+      <style>{`@keyframes planSpin{to{transform:rotate(360deg)}}`}</style>
+      <div style={styles.genCard}>
+        {error ? (
+          <>
+            <div style={styles.genTitle}>Taking longer than expected</div>
+            <p style={styles.genBody}>
+              Your plan is still generating — give it another minute, then reload.
+              If this keeps happening, reach us at{' '}
+              <a href="mailto:hello@plus4performance.com" style={{ color: '#C0392B' }}>hello@plus4performance.com</a>.
+            </p>
+            <button onClick={onRetry} style={styles.genRetryBtn}>Reload and check →</button>
+          </>
+        ) : (
+          <>
+            <div style={styles.genSpinner} />
+            <div style={styles.genTitle}>Building your plan.</div>
+            <div style={styles.genStep}>{GEN_STEPS[step]}</div>
+            <div style={styles.genNote}>Usually takes 60–90 seconds. Keep this tab open.</div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── MAIN DASHBOARD ──────────────────────────────────────────────────────────
 
 export default function Dashboard() {
@@ -310,6 +356,8 @@ export default function Dashboard() {
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [subRow, setSubRow] = useState(null);
   const [loadingUnlock, setLoadingUnlock] = useState(false);
+  const [planGenerating, setPlanGenerating] = useState(false);
+  const [planGenError,   setPlanGenError]   = useState(false);
   const [logbookSession, setLogbookSession] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -372,32 +420,39 @@ export default function Dashboard() {
     load();
   }, [navigate]);
 
-  // Handle return from Stripe
+  // Handle return from Stripe — poll until subscription AND generated plan are both ready
   useEffect(() => {
-    if (searchParams.get('payment') === 'success') {
-      // Poll for subscription — Stripe webhook may take a few seconds
-      let attempts = 0;
-      const poll = setInterval(async () => {
+    if (searchParams.get('payment') !== 'success') return;
+    setPlanGenerating(true);
+    let attempts = 0;
+    const MAX = 50; // 50 × 3 s = 150 s max
+    const poll = setInterval(async () => {
+      try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
         const { data: sub } = await supabase
-          .from('subscriptions')
-          .select('status')
-          .eq('user_id', user.id)
-          .eq('status', 'active')
-          .limit(1)
-          .maybeSingle();
+          .from('subscriptions').select('status')
+          .eq('user_id', user.id).eq('status', 'active').limit(1).maybeSingle();
         if (sub) {
           setIsUnlocked(true);
-          clearInterval(poll);
-          // Load plan
-          const { data: planRow } = await supabase.from('plans').select('plan_data, generated_at').eq('user_id', user.id).eq('is_active', true).maybeSingle();
-          if (planRow) { setPlan(planRow.plan_data); setPlanGeneratedAt(planRow.generated_at); }
+          const { data: planRow } = await supabase
+            .from('plans').select('plan_data, generated_at')
+            .eq('user_id', user.id).eq('is_active', true).maybeSingle();
+          if (planRow) {
+            setPlan(planRow.plan_data);
+            setPlanGeneratedAt(planRow.generated_at);
+            setPlanGenerating(false);
+            clearInterval(poll);
+            return;
+          }
         }
-        if (++attempts >= 20) clearInterval(poll);
-      }, 3000);
-      return () => clearInterval(poll);
-    }
+      } catch (e) { console.error('[plan poll]', e); }
+      if (++attempts >= MAX) {
+        clearInterval(poll);
+        setPlanGenError(true); // overlay stays visible in error mode
+      }
+    }, 3000);
+    return () => clearInterval(poll);
   }, [searchParams]);
 
   async function refreshActivePlan() {
@@ -432,6 +487,12 @@ export default function Dashboard() {
 
   return (
     <div style={styles.page}>
+      {planGenerating && (
+        <PlanGeneratingOverlay
+          error={planGenError}
+          onRetry={() => window.location.reload()}
+        />
+      )}
       {/* Nav */}
       <nav style={styles.nav}>
         {branding.logo_url
@@ -511,6 +572,14 @@ const styles = {
   tabActive: { flex: '0 0 auto', padding: '10px 14px', background: '#1a1a1a', border: 'none', color: '#F5F3EE', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', cursor: 'pointer', borderRadius: 2, whiteSpace: 'nowrap' },
   content: { minHeight: 400 },
 
+  genOverlay:  { position: 'fixed', inset: 0, background: 'rgba(8,8,8,0.97)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 24px' },
+  genCard:     { maxWidth: 440, width: '100%', textAlign: 'center' },
+  genSpinner:  { width: 40, height: 40, border: '2px solid #1a1a1a', borderTopColor: '#C0392B', borderRadius: '50%', animation: 'planSpin 0.9s linear infinite', margin: '0 auto 32px' },
+  genTitle:    { fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(32px, 6vw, 48px)', letterSpacing: '0.04em', color: '#F5F3EE', lineHeight: 1, marginBottom: 20 },
+  genStep:     { fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#555', marginBottom: 28, minHeight: 20 },
+  genNote:     { fontFamily: "'Barlow', sans-serif", fontSize: 13, color: '#333', fontWeight: 300 },
+  genBody:     { fontFamily: "'Barlow', sans-serif", fontSize: 14, color: '#787878', fontWeight: 300, lineHeight: 1.7, marginBottom: 24 },
+  genRetryBtn: { background: 'none', border: '1px solid rgba(200,200,200,0.2)', color: '#787878', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', padding: '12px 24px', cursor: 'pointer' },
   snapshotCard: { background: '#0d0d0d', border: '1px solid rgba(200,200,200,0.15)', padding: '28px 28px 24px', marginBottom: 28 },
   snapshotEyebrow: { fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.28em', textTransform: 'uppercase', color: '#787878', marginBottom: 12 },
   snapshotSummary: { fontSize: 15, color: '#CDCDC8', lineHeight: 1.7, marginBottom: 20, fontStyle: 'italic' },

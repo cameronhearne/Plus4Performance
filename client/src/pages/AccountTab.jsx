@@ -392,7 +392,7 @@ const RENEWAL_GOALS = [
   { value: 'maintenance',     label: 'Recomposition' },
 ];
 
-function MyPlanSection({ plan, intake, intakeLoading, planGeneratedAt }) {
+function MyPlanSection({ plan, intake, intakeLoading, planGeneratedAt, onPlanSwitch }) {
   const [step,      setStep]      = useState('idle'); // idle | picking | new_direction | submitting | queued | error
   const [err,       setErr]       = useState('');
   const [newGoal,   setNewGoal]   = useState('fat_loss');
@@ -590,11 +590,17 @@ function MyPlanSection({ plan, intake, intakeLoading, planGeneratedAt }) {
           {step === 'queued' && (
             <div style={{ background: '#0d1a0d', border: '1px solid rgba(76,175,80,0.3)', padding: '16px 20px', marginTop: 4 }}>
               <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, letterSpacing: '0.1em', color: '#4CAF50', marginBottom: 6 }}>
-                ✓ Plan generation started
+                ✓ Your new plan is being built
               </div>
-              <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, color: '#787878', letterSpacing: '0.04em', margin: 0, lineHeight: 1.5 }}>
-                Your new 12-week plan will be ready in 1–2 minutes. Reload the app to see it under the Plan tab.
+              <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, color: '#787878', letterSpacing: '0.04em', margin: '0 0 12px', lineHeight: 1.5 }}>
+                This takes 60–90 seconds. Come back to the Plan tab in a moment — it'll be there.
               </p>
+              <button
+                onClick={() => { onPlanSwitch?.(); setStep('idle'); }}
+                style={{ background: 'none', border: '1px solid rgba(76,175,80,0.4)', color: '#4CAF50', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', padding: '8px 16px', cursor: 'pointer' }}
+              >
+                Check for my plan →
+              </button>
             </div>
           )}
 
@@ -1076,7 +1082,7 @@ export default function AccountTab({ user, plan, isUnlocked, subRow, onUnlock, o
   return (
     <div>
       <ProfileSection      user={user} intake={intake} intakeLoading={intakeLoading} />
-      <MyPlanSection       plan={plan} intake={intake} intakeLoading={intakeLoading} planGeneratedAt={planGeneratedAt} />
+      <MyPlanSection       plan={plan} intake={intake} intakeLoading={intakeLoading} planGeneratedAt={planGeneratedAt} onPlanSwitch={onPlanSwitch} />
       <MyPlansSection      isUnlocked={isUnlocked} onPlanSwitch={onPlanSwitch} />
       <SubscriptionSection isUnlocked={isUnlocked} subRow={subRow} user={user} onUnlock={onUnlock} />
       <SettingsSection    user={user} />
