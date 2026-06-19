@@ -167,8 +167,15 @@ create policy "Affiliates read own referrals"
   );
 
 -- Add referral tracking column to profiles (nullable — most users have no referrer).
-alter table public.profiles add column if not exists referred_by text;
-alter table public.profiles add column if not exists username    text unique;
+alter table public.profiles add column if not exists referred_by       text;
+alter table public.profiles add column if not exists username          text unique;
+alter table public.profiles add column if not exists bio               text;
+alter table public.profiles add column if not exists avatar_url        text;
+alter table public.profiles add column if not exists walkout_song      text;
+alter table public.profiles add column if not exists privacy_settings  jsonb not null default '{"bio":"friends","avatar":"friends","one_rep_max":"friends","weight":"friends"}'::jsonb;
+
+grant select, insert, update on public.profiles to service_role;
+grant select, insert, update on public.profiles to authenticated;
 
 -- ─── CREATORS (WHITE-LABEL) ───────────────────────────────────────────────────
 -- Each creator gets their own subdomain (e.g. gymreaper.plus4performance.com).

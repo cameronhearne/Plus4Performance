@@ -159,6 +159,35 @@ function DeleteModal({ onClose, onConfirm, deleting }) {
 
 // ─── SECTION 1: PROFILE ──────────────────────────────────────────────────────
 
+const DEFAULT_PRIVACY = { bio: 'friends', avatar: 'friends', one_rep_max: 'friends', weight: 'friends' };
+const BIO_MAX = 200;
+
+function PrivacySelect({ value, onChange }) {
+  return (
+    <select
+      value={value || 'friends'}
+      onChange={e => onChange(e.target.value)}
+      style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', color: '#555', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '3px 6px', cursor: 'pointer' }}
+    >
+      <option value="public">Public</option>
+      <option value="friends">Friends Only</option>
+      <option value="private">Private</option>
+    </select>
+  );
+}
+
+function PrivacyFieldLabel({ label, privacyKey, privacy, onPrivacyChange, children }) {
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+        <span style={{ ...eyebrowStyle, fontSize: 10 }}>{label}</span>
+        <PrivacySelect value={privacy[privacyKey]} onChange={v => onPrivacyChange(privacyKey, v)} />
+      </div>
+      {children}
+    </div>
+  );
+}
+
 function ProfileSection({ user, intake, intakeLoading }) {
   const meta        = user?.user_metadata || {};
   const firstName   = meta.first_name || '';
@@ -166,30 +195,81 @@ function ProfileSection({ user, intake, intakeLoading }) {
   const fullName    = [firstName, lastName].filter(Boolean).join(' ') || user?.email?.split('@')[0] || 'Athlete';
   const initials    = ([firstName[0], lastName[0]].filter(Boolean).join('') || (user?.email?.[0] || 'A')).toUpperCase();
 
-  const [displayName, setDisplayName] = useState(meta.display_name || firstName || '');
-  const [username,    setUsername]    = useState('');
-  const [saving, setSaving]           = useState(false);
-  const [saved, setSaved]             = useState(false);
-  const [err, setErr]                 = useState('');
+  const [displayName,  setDisplayName]  = useState(meta.display_name || firstName || '');
+  const [username,     setUsername]     = useState('');
+  const [bio,          setBio]          = useState('');
+  const [avatarUrl,    setAvatarUrl]    = useState('');
+  const [avatarFile,   setAvatarFile]   = useState(null);
+  const [avatarPreview,setAvatarPreview]= useState('');
+  const [walkoutSong,  setWalkoutSong]  = useState('');
+  const [privacy,      setPrivacy]      = useState(DEFAULT_PRIVACY);
+  const [saving,       setSaving]       = useState(false);
+  const [saved,        setSaved]        = useState(false);
+  const [err,          setErr]          = useState('');
 
-  // Load username from profiles table on mount
   useEffect(() => {
     if (!user?.id) return;
-    supabase.from('profiles').select('username').eq('id', user.id).maybeSingle()
-      .then(({ data }) => { if (data?.username) setUsername(data.username); });
+    supabase.from('profiles')
+      .select('username, bio, avatar_url, walkout_song, privacy_settings')
+      .eq('id', user.id).maybeSingle()
+      .then(({ data }) => {
+        if (!data) return;
+        if (data.username)         setUsername(data.username);
+        if (data.bio)              setBio(data.bio);
+        if (data.avatar_url)       setAvatarUrl(data.avatar_url);
+        if (data.walkout_song)     setWalkoutSong(data.walkout_song);
+        if (data.privacy_settings) setPrivacy({ ...DEFAULT_PRIVACY, ...data.privacy_settings });
+      });
   }, [user?.id]);
 
+  function handleAvatarSelect(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAvatarFile(file);
+    setAvatarPreview(URL.createObjectURL(file));
+  }
+
+  function setPrivacyField(key, val) {
+    setPrivacy(p => ({ ...p, [key]: val }));
+  }
+
   async function handleSave() {
-    const trimmed = username.trim();
-    if (trimmed && !/^[a-zA-Z0-9_]{3,30}$/.test(trimmed)) {
+    const trimmedUsername = username.trim();
+    if (trimmedUsername && !/^[a-zA-Z0-9_]{3,30}$/.test(trimmedUsername)) {
       setErr('Username must be 3–30 characters: letters, numbers and underscores only.');
       return;
     }
+    if (bio.length > BIO_MAX) { setErr(`Bio must be ${BIO_MAX} characters or fewer.`); return; }
+
     setSaving(true); setErr(''); setSaved(false);
+
+    // Upload avatar if a new file was selected
+    let newAvatarUrl = avatarUrl;
+    if (avatarFile) {
+      const ext  = avatarFile.type === 'image/png' ? 'png' : 'jpg';
+      const path = `${user.id}/avatar.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from('avatars').upload(path, avatarFile, { contentType: avatarFile.type, upsert: true });
+      if (upErr) { setSaving(false); setErr('Avatar upload failed: ' + upErr.message); return; }
+      const { data: pub } = supabase.storage.from('avatars').getPublicUrl(path);
+      newAvatarUrl = pub.publicUrl;
+      setAvatarUrl(newAvatarUrl);
+      setAvatarFile(null);
+    }
+
+    // Update auth display name
     const { error: authErr } = await supabase.auth.updateUser({ data: { display_name: displayName } });
     if (authErr) { setSaving(false); setErr(authErr.message); return; }
-    const { error: profileErr } = await supabase
-      .from('profiles').update({ username: trimmed || null }).eq('id', user.id);
+
+    // Update profiles row
+    const { error: profileErr } = await supabase.from('profiles').update({
+      username:         trimmedUsername || null,
+      bio:              bio.trim()      || null,
+      avatar_url:       newAvatarUrl    || null,
+      walkout_song:     walkoutSong.trim() || null,
+      privacy_settings: privacy,
+    }).eq('id', user.id);
+
     setSaving(false);
     if (profileErr) {
       setErr(profileErr.message.includes('unique') ? 'That username is already taken.' : profileErr.message);
@@ -199,13 +279,19 @@ function ProfileSection({ user, intake, intakeLoading }) {
     setTimeout(() => setSaved(false), 3000);
   }
 
+  const avatarSrc = avatarPreview || avatarUrl;
+
   return (
     <SectionCard title="PROFILE">
-      {/* Avatar + name */}
+      {/* Avatar + name header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
-        <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#6B0F0A', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 24, color: '#F5F3EE', letterSpacing: '0.04em' }}>{initials}</span>
-        </div>
+        {avatarSrc ? (
+          <img src={avatarSrc} alt="Avatar" style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+        ) : (
+          <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#6B0F0A', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 24, color: '#F5F3EE', letterSpacing: '0.04em' }}>{initials}</span>
+          </div>
+        )}
         <div>
           <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 22, color: '#F5F3EE', letterSpacing: '0.04em', lineHeight: 1.1 }}>{fullName}</div>
           <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, color: '#787878', marginTop: 4 }}>{user?.email}</div>
@@ -221,35 +307,73 @@ function ProfileSection({ user, intake, intakeLoading }) {
         </div>
       ) : intake && (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
-          {intake.goal      && <LabelPill>{GOAL_LABELS[intake.goal]      || intake.goal}</LabelPill>}
-          {intake.experience && <LabelPill>{EXP_LABELS[intake.experience]  || intake.experience}</LabelPill>}
+          {intake.goal       && <LabelPill>{GOAL_LABELS[intake.goal]        || intake.goal}</LabelPill>}
+          {intake.experience && <LabelPill>{EXP_LABELS[intake.experience]   || intake.experience}</LabelPill>}
           {intake.equipment  && <LabelPill>{EQUIP_LABELS[intake.equipment]  || intake.equipment}</LabelPill>}
         </div>
       )}
 
-      {/* Editable fields */}
+      {/* Profile photo */}
+      <PrivacyFieldLabel label="Profile Photo" privacyKey="avatar" privacy={privacy} onPrivacyChange={setPrivacyField}>
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+          <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarSelect} />
+          <span style={{ ...ghostBtn({ fontSize: 11, padding: '7px 14px' }), display: 'inline-block' }}>
+            {avatarSrc ? 'Change photo' : 'Upload photo'}
+          </span>
+          {avatarFile && <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, color: '#555', letterSpacing: '0.06em' }}>{avatarFile.name}</span>}
+        </label>
+      </PrivacyFieldLabel>
+
+      {/* Display name */}
       <FieldLabel label="Display Name">
-        <input
-          type="text"
-          value={displayName}
-          onChange={e => setDisplayName(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && handleSave()}
-          style={inp()}
-        />
+        <input type="text" value={displayName} onChange={e => setDisplayName(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && handleSave()} style={inp()} />
       </FieldLabel>
+
+      {/* Username */}
       <FieldLabel label="Username — optional">
-        <input
-          type="text"
-          value={username}
-          onChange={e => setUsername(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && handleSave()}
-          placeholder="e.g. cam_lifts"
-          style={inp()}
-        />
+        <input type="text" value={username} onChange={e => setUsername(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && handleSave()} placeholder="e.g. cam_lifts" style={inp()} />
       </FieldLabel>
+
+      {/* Bio */}
+      <PrivacyFieldLabel label={`Bio — optional (${bio.length}/${BIO_MAX})`} privacyKey="bio" privacy={privacy} onPrivacyChange={setPrivacyField}>
+        <textarea
+          value={bio}
+          onChange={e => setBio(e.target.value)}
+          maxLength={BIO_MAX}
+          rows={3}
+          placeholder="A short description about you and your training..."
+          style={{ ...inp(), resize: 'vertical', lineHeight: 1.5 }}
+        />
+      </PrivacyFieldLabel>
+
+      {/* Walkout song */}
+      <FieldLabel label="Walkout Song — optional">
+        <input type="text" value={walkoutSong} onChange={e => setWalkoutSong(e.target.value)}
+          placeholder="e.g. Lose Yourself — Eminem" style={inp()} />
+      </FieldLabel>
+
+      {/* Email (read-only) */}
       <FieldLabel label="Email">
         <input type="email" value={user?.email || ''} readOnly style={inp({ color: '#555', cursor: 'default' })} />
       </FieldLabel>
+
+      {/* Future data privacy (1RM and weight — seeds the preference now) */}
+      <div style={{ borderTop: '1px solid #1a1a1a', marginTop: 8, paddingTop: 16, marginBottom: 14 }}>
+        <div style={{ ...eyebrowStyle, fontSize: 10, marginBottom: 14 }}>Data Privacy</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {[
+            { key: 'one_rep_max', label: '1RM records' },
+            { key: 'weight',      label: 'Weight logs'  },
+          ].map(({ key, label }) => (
+            <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, color: '#CDCDC8', letterSpacing: '0.04em' }}>{label}</span>
+              <PrivacySelect value={privacy[key]} onChange={v => setPrivacyField(key, v)} />
+            </div>
+          ))}
+        </div>
+      </div>
 
       {err && <p style={{ color: '#ef4444', fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", marginBottom: 10 }}>{err}</p>}
 
