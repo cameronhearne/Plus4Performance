@@ -2815,7 +2815,7 @@ async function handleOneRmLog(req, res) {
   }
 
   // Fetch previous entries and most recent bodyweight in parallel
-  const [{ data: prevRows }, { data: bwRows }] = await Promise.all([
+  const [prevResult, bwResult] = await Promise.all([
     supabaseAdmin
       .from('one_rep_maxes')
       .select('weight_kg, flagged_for_review')
@@ -2830,10 +2830,15 @@ async function handleOneRmLog(req, res) {
       .limit(1),
   ]);
 
-  const prevBestAll = prevRows?.length > 0 ? parseFloat(prevRows[0].weight_kg) : 0;
-  const prevBestClean = prevRows?.find(r => !r.flagged_for_review);
-  const prevBestCleanKg = prevBestClean ? parseFloat(prevBestClean.weight_kg) : null;
-  const bodyweightKg = bwRows?.[0] ? parseFloat(bwRows[0].weight_kg) : null;
+  if (prevResult.error) console.error('[1rm/log] prevRows query error:', prevResult.error.message);
+  if (bwResult.error)   console.error('[1rm/log] bwRows query error:',   bwResult.error.message);
+
+  const prevRows     = prevResult.data || [];
+  const bwRows       = bwResult.data   || [];
+  const prevBestAll  = prevRows.length > 0 ? parseFloat(prevRows[0].weight_kg) : 0;
+  const prevBestClean    = prevRows.find(r => !r.flagged_for_review);
+  const prevBestCleanKg  = prevBestClean ? parseFloat(prevBestClean.weight_kg) : null;
+  const bodyweightKg     = bwRows[0] ? parseFloat(bwRows[0].weight_kg) : null;
   const isNewPr = kg > prevBestAll;
 
   // Soft-flag checks
@@ -2843,23 +2848,27 @@ async function handleOneRmLog(req, res) {
   if (prevBestCleanKg && kg > prevBestCleanKg * 1.5) reasons.push('exceeds_50pct_jump');
   if (reasons.length) flaggedForReview = true;
 
+  console.log(`[1rm/log] user=${userId} lift=${lift} kg=${kg} prevBestAll=${prevBestAll} prevBestCleanKg=${prevBestCleanKg} bodyweightKg=${bodyweightKg} flagged=${flaggedForReview}`);
+
+  const insertPayload = {
+    user_id: userId,
+    lift,
+    weight_kg: kg,
+    is_calculated: Boolean(is_calculated),
+    flagged_for_review: flaggedForReview,
+    logged_at: new Date().toISOString(),
+  };
+  if (reasons.length) insertPayload.flagged_reason = reasons.join(',');
+
   const { data: entry, error } = await supabaseAdmin
     .from('one_rep_maxes')
-    .insert({
-      user_id: userId,
-      lift,
-      weight_kg: kg,
-      is_calculated: Boolean(is_calculated),
-      flagged_for_review: flaggedForReview,
-      flagged_reason: reasons.length ? reasons.join(',') : null,
-      logged_at: new Date().toISOString(),
-    })
+    .insert(insertPayload)
     .select()
     .single();
 
   if (error) {
-    console.error('[1rm/log] insert error:', error.message);
-    return json(res, 500, { error: 'Failed to log 1RM' });
+    console.error('[1rm/log] insert error:', error.message, '| code:', error.code, '| details:', error.details);
+    return json(res, 500, { error: `Failed to log 1RM: ${error.message}` });
   }
 
   return json(res, 201, { entry, is_new_pr: isNewPr });
