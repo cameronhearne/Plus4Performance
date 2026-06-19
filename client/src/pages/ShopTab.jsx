@@ -41,7 +41,7 @@ function SectionDivider() {
 
 // ─── MAIN EXPORT ─────────────────────────────────────────────────────────────
 
-export default function ShopTab() {
+export default function ShopTab({ onCardClick } = {}) {
   const [creators, setCreators] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [toast, setToast]       = useState(false);
@@ -61,6 +61,10 @@ export default function ShopTab() {
   }, [toast]);
 
   function handleCardClick(slug) {
+    if (onCardClick) {
+      onCardClick(slug, LIVE_CREATOR_SLUGS.has(slug));
+      return;
+    }
     if (LIVE_CREATOR_SLUGS.has(slug)) {
       window.location.href = `https://${slug}.plus4performance.com/signup`;
       return;
