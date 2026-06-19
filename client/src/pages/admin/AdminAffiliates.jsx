@@ -26,7 +26,7 @@ export default function AdminAffiliates() {
   const [affiliates, setAffiliates] = useState([]);
   const [loading, setLoading]       = useState(true);
   const [paying, setPaying]         = useState(null);   // affiliate id being marked paid
-  const [form, setForm] = useState({ name: '', email: '', commission_type: 'flat', commission_value: '' });
+  const [form, setForm] = useState({ name: '', email: '', commission_type: 'flat', commission_value: '', referral_code: '' });
   const [creating, setCreating]     = useState(false);
   const [formErr, setFormErr]       = useState('');
   const [formOk, setFormOk]         = useState('');
@@ -57,17 +57,31 @@ export default function AdminAffiliates() {
   async function handleCreate(e) {
     e.preventDefault();
     setFormErr(''); setFormOk('');
+
+    const code = form.referral_code.trim();
+    if (code) {
+      if (!/^[A-Z0-9]+$/.test(code)) {
+        setFormErr('Referral code must be uppercase letters and numbers only — no spaces or special characters.');
+        return;
+      }
+      if (affiliates.some(a => a.referral_code === code)) {
+        setFormErr(`Code "${code}" is already in use by another affiliate.`);
+        return;
+      }
+    }
+
     setCreating(true);
     try {
       const token = await getToken();
-      await adminCreateAffiliate(token, {
+      const result = await adminCreateAffiliate(token, {
         name: form.name,
         email: form.email,
         commission_type: form.commission_type,
         commission_value: parseFloat(form.commission_value) || 0,
+        ...(code ? { referral_code: code } : {}),
       });
-      setFormOk('Affiliate created — referral code auto-generated.');
-      setForm({ name: '', email: '', commission_type: 'flat', commission_value: '' });
+      setFormOk(`Affiliate created — code: ${result.affiliate?.referral_code ?? code}`);
+      setForm({ name: '', email: '', commission_type: 'flat', commission_value: '', referral_code: '' });
       load();
     } catch (e) {
       setFormErr(e.message || 'Failed to create affiliate');
@@ -106,6 +120,18 @@ export default function AdminAffiliates() {
             </div>
           </div>
           <div style={S.formRow}>
+            <div style={{ gridColumn: 'span 2' }}>
+              <label style={S.label}>Referral Code</label>
+              <input
+                style={S.input}
+                value={form.referral_code}
+                onChange={e => setForm(f => ({ ...f, referral_code: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') }))}
+                placeholder="e.g. NATHAN — leave blank to auto-generate"
+                maxLength={20}
+              />
+            </div>
+          </div>
+          <div style={S.formRow}>
             <div>
               <label style={S.label}>Commission type</label>
               <select style={S.select} value={form.commission_type} onChange={setF('commission_type')}>
@@ -123,7 +149,7 @@ export default function AdminAffiliates() {
           {formErr && <p style={S.errMsg}>{formErr}</p>}
           {formOk  && <p style={S.okMsg}>{formOk}</p>}
           <button type="submit" style={S.btnRed} disabled={creating}>
-            {creating ? '…' : 'Create Affiliate & Generate Code'}
+            {creating ? '…' : 'Create Affiliate'}
           </button>
         </form>
       </div>

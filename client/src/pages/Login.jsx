@@ -63,6 +63,9 @@ export default function Login() {
         <p style={styles.footer}>
           Don't have an account? <Link to="/signup" style={styles.link}>Sign up free</Link>
         </p>
+        <p style={{ ...styles.footer, marginTop: 10 }}>
+          Are you a partner? <Link to="/affiliate/login" style={styles.link}>Partner login →</Link>
+        </p>
       </div>
     </div>
   );

@@ -2755,14 +2755,22 @@ async function handleAdminCreateAffiliate(req, res) {
   if (!name)  return json(res, 400, { error: 'name required' });
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json(res, 400, { error: 'valid email required' });
 
-  // Generate a collision-free referral code
+  // Referral code: use supplied code if present, otherwise auto-generate
   let referral_code;
-  for (let i = 0; i < 10; i++) {
-    const candidate = generateReferralCode();
-    const { data: dup } = await supabaseAdmin.from('affiliates').select('id').eq('referral_code', candidate).maybeSingle();
-    if (!dup) { referral_code = candidate; break; }
+  const suppliedCode = sanitiseInput(String(parsed.referral_code || ''), 20).toUpperCase().trim();
+  if (suppliedCode) {
+    if (!/^[A-Z0-9]+$/.test(suppliedCode)) return json(res, 400, { error: 'Referral code must be uppercase letters and numbers only' });
+    const { data: dup } = await supabaseAdmin.from('affiliates').select('id').eq('referral_code', suppliedCode).maybeSingle();
+    if (dup) return json(res, 409, { error: `Code "${suppliedCode}" is already in use` });
+    referral_code = suppliedCode;
+  } else {
+    for (let i = 0; i < 10; i++) {
+      const candidate = generateReferralCode();
+      const { data: dup } = await supabaseAdmin.from('affiliates').select('id').eq('referral_code', candidate).maybeSingle();
+      if (!dup) { referral_code = candidate; break; }
+    }
+    if (!referral_code) return json(res, 500, { error: 'Could not generate unique code — try again' });
   }
-  if (!referral_code) return json(res, 500, { error: 'Could not generate unique code — try again' });
 
   const { data: affiliate, error } = await supabaseAdmin
     .from('affiliates')
