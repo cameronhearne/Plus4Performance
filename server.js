@@ -1680,7 +1680,7 @@ async function handleMonthlyCheckin(req, res) {
     // Fetch plan data
     const { data: planRow } = await supabaseAdmin
       .from('plans')
-      .select('plan_data')
+      .select('id, plan_data')
       .eq('user_id', userId)
       .eq('is_active', true)
       .maybeSingle();
@@ -1863,8 +1863,53 @@ Apply the calorie adjustment rules precisely. Reference real numbers. Be specifi
       return json(res, 500, { error: 'Failed to save check-in' });
     }
 
+    // Auto-apply calorie adjustment to the active plan if one was recommended
+    let updatedNutrition = null;
+    const adj = aiResponse.calorie_adjustment;
+    if (adj && planRow?.id && plan?.nutrition) {
+      try {
+        function applyAdj(day) {
+          if (!day) return day;
+          const newCals      = Math.round((day.calories || 0) + adj);
+          const proteinKcal  = (day.protein || 0) * 4;
+          const oldRemaining = (day.calories || 0) - proteinKcal;
+          const newRemaining = newCals - proteinKcal;
+          let newCarbs = day.carbs || 0;
+          let newFat   = day.fat   || 0;
+          if (oldRemaining > 0) {
+            const factor = Math.max(0, newRemaining / oldRemaining);
+            newCarbs = Math.max(0, Math.round(newCarbs * factor));
+            newFat   = Math.max(0, Math.round(newFat   * factor));
+          }
+          return { ...day, calories: newCals, carbs: newCarbs, fat: newFat };
+        }
+        const updatedPlanData = {
+          ...plan,
+          nutrition: {
+            ...plan.nutrition,
+            training_day: applyAdj(plan.nutrition.training_day),
+            rest_day:     applyAdj(plan.nutrition.rest_day),
+          },
+        };
+        const { error: updateErr } = await supabaseAdmin
+          .from('plans')
+          .update({ plan_data: updatedPlanData })
+          .eq('id', planRow.id);
+        if (updateErr) {
+          console.error('[monthly-checkin] plan nutrition update error:', updateErr.message);
+        } else {
+          updatedNutrition = {
+            training_day: updatedPlanData.nutrition.training_day,
+            rest_day:     updatedPlanData.nutrition.rest_day,
+          };
+        }
+      } catch (updateErr) {
+        console.error('[monthly-checkin] plan nutrition update threw:', updateErr.message);
+      }
+    }
+
     console.log('[monthly-checkin] success for user', userId);
-    return json(res, 200, { feedback: aiResponse, checkinId: saved.id, sessionWeeklyBreakdown: weeklySessionCounts });
+    return json(res, 200, { feedback: aiResponse, checkinId: saved.id, sessionWeeklyBreakdown: weeklySessionCounts, updatedNutrition });
 
   } catch (err) {
     console.error('[monthly-checkin] unhandled error:', err);

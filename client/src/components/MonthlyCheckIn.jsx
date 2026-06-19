@@ -148,7 +148,7 @@ function CheckInInputModal({ weekNum, prefillWeight, onClose, onSuccess }) {
         injuries:            injuries || null,
       }, session.access_token);
 
-      onSuccess(feedback.feedback);
+      onSuccess(feedback.feedback, feedback.updatedNutrition || null);
     } catch (e) {
       setError(e.message || 'Something went wrong. Please try again.');
     } finally {
@@ -296,10 +296,11 @@ function FeedbackBlock({ label, children, accent = false }) {
   );
 }
 
-function CheckInResultsModal({ feedback, onClose }) {
+function CheckInResultsModal({ feedback, updatedNutrition, onClose }) {
   const adj     = feedback.calorie_adjustment;
   const hasAdj  = adj !== null && adj !== undefined && adj !== 0;
   const adjSign = adj > 0 ? '+' : '';
+  const applied = updatedNutrition?.training_day != null;
 
   return (
     <Modal onClose={onClose}>
@@ -326,10 +327,23 @@ function CheckInResultsModal({ feedback, onClose }) {
 
       {hasAdj && (
         <FeedbackBlock
-          label={`Suggested Adjustment: ${adjSign}${adj} kcal/day`}
+          label={applied ? `Calorie Target Updated: ${adjSign}${adj} kcal/day` : `Suggested Adjustment: ${adjSign}${adj} kcal/day`}
           accent
         >
           {feedback.calorie_adjustment_reason}
+          {applied && (
+            <div style={{
+              marginTop: 10,
+              paddingTop: 10,
+              borderTop: '1px solid rgba(192,57,43,0.25)',
+              fontFamily: "'Barlow Condensed', sans-serif",
+              fontSize: 12,
+              letterSpacing: '0.08em',
+              color: '#4CAF50',
+            }}>
+              ✓ Applied — training days: {updatedNutrition.training_day.calories} kcal · rest days: {updatedNutrition.rest_day?.calories} kcal
+            </div>
+          )}
         </FeedbackBlock>
       )}
 
@@ -463,7 +477,8 @@ export default function MonthlyCheckIn({ weekNum, currentWeight }) {
   const [showInput, setShowInput]         = useState(false);
   const [showResults, setShowResults]     = useState(false);
   const [showHistory, setShowHistory]     = useState(false);
-  const [latestFeedback, setLatestFeedback] = useState(null);
+  const [latestFeedback, setLatestFeedback]               = useState(null);
+  const [latestUpdatedNutrition, setLatestUpdatedNutrition] = useState(null);
   const [checkinDay, setCheckinDay]       = useState(0); // default Sunday until prefs load
 
   const todayDow  = new Date().getDay();
@@ -524,8 +539,9 @@ export default function MonthlyCheckIn({ weekNum, currentWeight }) {
     if (data) setHistory(data);
   }
 
-  function handleSuccess(feedback) {
+  function handleSuccess(feedback, updatedNutrition) {
     setLatestFeedback(feedback);
+    setLatestUpdatedNutrition(updatedNutrition || null);
     setShowInput(false);
     setShowResults(true);
     reloadHistory();
@@ -660,6 +676,7 @@ export default function MonthlyCheckIn({ weekNum, currentWeight }) {
       {showResults && latestFeedback && (
         <CheckInResultsModal
           feedback={latestFeedback}
+          updatedNutrition={latestUpdatedNutrition}
           onClose={() => setShowResults(false)}
         />
       )}
