@@ -168,6 +168,7 @@ create policy "Affiliates read own referrals"
 
 -- Add referral tracking column to profiles (nullable — most users have no referrer).
 alter table public.profiles add column if not exists referred_by text;
+alter table public.profiles add column if not exists username    text unique;
 
 -- ─── CREATORS (WHITE-LABEL) ───────────────────────────────────────────────────
 -- Each creator gets their own subdomain (e.g. gymreaper.plus4performance.com).

@@ -167,15 +167,34 @@ function ProfileSection({ user, intake, intakeLoading }) {
   const initials    = ([firstName[0], lastName[0]].filter(Boolean).join('') || (user?.email?.[0] || 'A')).toUpperCase();
 
   const [displayName, setDisplayName] = useState(meta.display_name || firstName || '');
+  const [username,    setUsername]    = useState('');
   const [saving, setSaving]           = useState(false);
   const [saved, setSaved]             = useState(false);
   const [err, setErr]                 = useState('');
 
+  // Load username from profiles table on mount
+  useEffect(() => {
+    if (!user?.id) return;
+    supabase.from('profiles').select('username').eq('id', user.id).maybeSingle()
+      .then(({ data }) => { if (data?.username) setUsername(data.username); });
+  }, [user?.id]);
+
   async function handleSave() {
+    const trimmed = username.trim();
+    if (trimmed && !/^[a-zA-Z0-9_]{3,30}$/.test(trimmed)) {
+      setErr('Username must be 3–30 characters: letters, numbers and underscores only.');
+      return;
+    }
     setSaving(true); setErr(''); setSaved(false);
-    const { error } = await supabase.auth.updateUser({ data: { display_name: displayName } });
+    const { error: authErr } = await supabase.auth.updateUser({ data: { display_name: displayName } });
+    if (authErr) { setSaving(false); setErr(authErr.message); return; }
+    const { error: profileErr } = await supabase
+      .from('profiles').update({ username: trimmed || null }).eq('id', user.id);
     setSaving(false);
-    if (error) { setErr(error.message); return; }
+    if (profileErr) {
+      setErr(profileErr.message.includes('unique') ? 'That username is already taken.' : profileErr.message);
+      return;
+    }
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   }
@@ -215,6 +234,16 @@ function ProfileSection({ user, intake, intakeLoading }) {
           value={displayName}
           onChange={e => setDisplayName(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleSave()}
+          style={inp()}
+        />
+      </FieldLabel>
+      <FieldLabel label="Username — optional">
+        <input
+          type="text"
+          value={username}
+          onChange={e => setUsername(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && handleSave()}
+          placeholder="e.g. cam_lifts"
           style={inp()}
         />
       </FieldLabel>
