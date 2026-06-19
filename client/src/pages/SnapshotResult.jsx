@@ -60,6 +60,8 @@ export default function SnapshotResult() {
               <p style={styles.summary}>{snapshot.coach_summary}</p>
             </div>
 
+            <div style={styles.estimateEyebrow}>Estimated targets — based on your intake</div>
+
             <div style={styles.statsGrid}>
               <div style={styles.statCard}>
                 <div style={styles.statVal}>{snapshot.calorie_target}</div>
@@ -78,6 +80,10 @@ export default function SnapshotResult() {
                 <div style={styles.statLabel}>Realistic timeline</div>
               </div>
             </div>
+
+            <p style={styles.estimateNote}>
+              These are calculated from your intake data. Your full plan locks in your exact targets — built precisely around your numbers.
+            </p>
 
             <div style={styles.divider} />
 
@@ -178,6 +184,22 @@ const styles = {
     lineHeight: 1.75,
     fontStyle: 'italic',
     fontWeight: 300,
+  },
+  estimateEyebrow: {
+    fontFamily: "'Barlow Condensed', sans-serif",
+    fontSize: 10,
+    fontWeight: 700,
+    letterSpacing: '0.28em',
+    textTransform: 'uppercase',
+    color: '#555',
+    marginBottom: 14,
+  },
+  estimateNote: {
+    fontSize: 13,
+    color: '#555',
+    fontWeight: 300,
+    lineHeight: 1.65,
+    margin: '16px 0 0',
   },
   statsGrid: {
     display: 'grid',

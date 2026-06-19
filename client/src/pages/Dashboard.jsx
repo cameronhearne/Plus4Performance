@@ -11,6 +11,7 @@ import NutritionTab from './NutritionTab';
 import CommunityTab from './CommunityTab';
 import ShopTab from './ShopTab';
 import { useBranding } from '../lib/BrandingContext';
+import { getWeekNum } from '../lib/schedule';
 
 const TABS = [
   { id: 'today',        label: 'Today' },
@@ -60,6 +61,26 @@ function BlurredCard({ children, onUnlock }) {
 
 function TabPlan({ plan, isUnlocked, onUnlock }) {
   const [selectedPhase, setSelectedPhase] = useState(0);
+  const [startDate,     setStartDate]     = useState(null);
+  const [lockedMsg,     setLockedMsg]     = useState('');
+
+  useEffect(() => {
+    if (!isUnlocked) return;
+    async function loadStartDate() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from('intake_submissions')
+        .select('data')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (data?.data?.startDate) setStartDate(data.data.startDate);
+    }
+    loadStartDate();
+  }, [isUnlocked]);
+
   if (!isUnlocked) return (
     <div>
       <LockedOverlay onUnlock={onUnlock} />
@@ -74,22 +95,43 @@ function TabPlan({ plan, isUnlocked, onUnlock }) {
     </div>
   );
 
-  const phases = plan?.phases || [];
+  const phases  = plan?.phases || [];
   const library = plan?.exercise_library || {};
-  const phase = phases[selectedPhase];
+  const phase   = phases[selectedPhase];
+  const weekNum = getWeekNum(startDate);
+
+  // Phase i unlocks at week (i * 4 + 1): Phase 1→wk 1, Phase 2→wk 5, Phase 3→wk 9
+  const unlockAt      = (i) => i * 4 + 1;
+  const isUnlockedAt  = (i) => weekNum >= unlockAt(i);
+
+  function handlePhaseClick(i) {
+    if (!isUnlockedAt(i)) {
+      setLockedMsg(`Phase ${i + 1} unlocks at week ${unlockAt(i)}`);
+      setTimeout(() => setLockedMsg(''), 3000);
+      return;
+    }
+    setLockedMsg('');
+    setSelectedPhase(i);
+  }
 
   return (
     <div>
       <div style={styles.weekNav}>
-        {phases.map((p, i) => (
-          <button key={i} type="button"
-            style={selectedPhase === i ? styles.weekBtnActive : styles.weekBtn}
-            onClick={() => setSelectedPhase(i)}>
-            Phase {p.phase}
-          </button>
-        ))}
+        {phases.map((p, i) => {
+          const unlocked = isUnlockedAt(i);
+          const active   = unlocked && selectedPhase === i;
+          return (
+            <button key={i} type="button"
+              style={active ? styles.weekBtnActive : unlocked ? styles.weekBtn : styles.weekBtnLocked}
+              onClick={() => handlePhaseClick(i)}>
+              Phase {p.phase}
+              {!unlocked && <span style={styles.lockLabel}> · Wk {unlockAt(i)}</span>}
+            </button>
+          );
+        })}
       </div>
-      {phase && (
+      {lockedMsg && <div style={styles.lockedMsg}>{lockedMsg}</div>}
+      {phase && isUnlockedAt(selectedPhase) && (
         <div>
           <div style={styles.phaseTag}>{phase.label} — Weeks {phase.weeks}</div>
           {(phase.sessions || []).map((s, i) => (
@@ -504,6 +546,9 @@ const styles = {
   weekNav: { display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 20 },
   weekBtn: { padding: '6px 10px', background: '#101010', border: '1px solid rgba(200,200,200,0.15)', color: '#787878', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, fontWeight: 700, cursor: 'pointer' },
   weekBtnActive: { padding: '6px 10px', background: '#1a1a1a', border: '1px solid #C8C8C8', color: '#C8C8C8', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, fontWeight: 700, cursor: 'pointer' },
+  weekBtnLocked: { padding: '6px 10px', background: '#0a0a0a', border: '1px solid rgba(200,200,200,0.06)', color: '#2e2e2e', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, fontWeight: 700, cursor: 'default' },
+  lockLabel: { fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: '#2e2e2e' },
+  lockedMsg: { fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#444', marginBottom: 16 },
   phaseTag: { fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.24em', textTransform: 'uppercase', color: '#787878', marginBottom: 14 },
 
   comingSoon: { textAlign: 'center', padding: '80px 24px', color: '#787878' },

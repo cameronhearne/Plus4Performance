@@ -1,6 +1,14 @@
 export const DAY_ORDER_MON = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 export const DAY_NAMES_JS  = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
+export function getWeekNum(startDateStr) {
+  if (!startDateStr) return 1;
+  const start = new Date(startDateStr);
+  const daysIn = Math.max(0, Math.floor((Date.now() - start) / 86400000));
+  if (daysIn >= 84) return 12;                      // only show 12 when plan is complete
+  return Math.min(11, Math.floor(daysIn / 7) + 1); // cap at 11 while still running
+}
+
 export function getSessionForToday(plan, intakeData) {
   const allSessions = (plan?.phases || []).flatMap(p => p.sessions || []);
   if (!allSessions.length) return { session: null, isRestDay: false, tomorrowSession: null };

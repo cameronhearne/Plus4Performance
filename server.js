@@ -158,6 +158,7 @@ const FULL_PLAN_SCHEMA = `{
           "name": string,
           "exercises": [
             { "ex": string, "sets": number, "reps": string, "rest": string }
+            // sets: 2 for all exercises by default (heavy set + back-off set); 3 ONLY permitted for isolation exercises per coaching bible, never for compounds
           ]
         }
       ]
@@ -213,7 +214,7 @@ Build exercise_library first. Include every exercise used across all sessions �
 Select exercises from the coaching bible (Tier 1 as foundation, Tier 2 for variety). For PPL: Push A and Push B must have different exercise selections. Same for Pull A and Pull B. Apply all injury contraindications from Section 9.
 
 STEP 3 — PHASES (3 phases, 4 weeks each)
-Build 3 phases. Each phase contains the SAME sessions but with progressive overload applied — load and reps change between phases, set count stays within the coaching bible's prescribed range (typically 3 sets). Use specific numbers (e.g. phase 1: 3×10, phase 2: 3×8, phase 3: 3×6). Never write vague progressions.
+Build 3 phases. Each phase contains the SAME sessions but with progressive overload applied — load and reps change between phases, sets do NOT change. Per the coaching bible: every exercise defaults to 2 working sets (one heavy set, one back-off set at 10-20% lighter). Isolation exercises only may optionally use 3 sets — never mandatory, and never apply to compound movements. Set count is fixed across all 12 weeks regardless of phase. Use specific numbers for load/reps only (e.g. phase 1: 2×10, phase 2: 2×8, phase 3: 2×6 — or 3×10/3×8/3×6 ONLY if explicitly an isolation exercise the bible allows a third set on). Never write vague progressions, and never default to 3 sets for compound movements.
 - phase 1: label "Foundation", weeks "1–4"
 - phase 2: label "Accumulation", weeks "5–8"
 - phase 3: label "Intensification", weeks "9–12"
@@ -290,7 +291,7 @@ Build exercise_library first. Include every exercise used across all sessions �
 Select exercises from the coaching bible (Tier 1 as foundation, Tier 2 for variety). Prioritise exercises that DIFFER from the previous plan's key compound lifts listed above. Apply all injury contraindications from Section 9.
 
 STEP 3 — PHASES (3 phases, 4 weeks each)
-Build 3 phases. Each phase contains the SAME sessions but with progressive overload applied — reps/sets change between phases to show progression. Base starting loads on the client's CURRENT documented lift records above, not their intake values. Use specific numbers (e.g. phase 1: 3×8, phase 2: 4×6, phase 3: 5×5). Never write vague progressions.
+Build 3 phases. Each phase contains the SAME sessions but with progressive overload applied — load and reps change between phases, sets do NOT change. Per the coaching bible: every exercise defaults to 2 working sets (one heavy set, one back-off set at 10-20% lighter). Isolation exercises only may optionally use 3 sets — never mandatory, and never apply to compound movements. Set count is fixed across all 12 weeks regardless of phase. Base starting loads on the client's CURRENT documented lift records above, not their intake values. Use specific numbers for load/reps only (e.g. phase 1: 2×10, phase 2: 2×8, phase 3: 2×6 — or 3×10/3×8/3×6 ONLY if explicitly an isolation exercise the bible allows a third set on). Never write vague progressions, and never default to 3 sets for compound movements.
 - phase 1: label "Foundation", weeks "1–4"
 - phase 2: label "Accumulation", weeks "5–8"
 - phase 3: label "Intensification", weeks "9–12"

@@ -6,7 +6,7 @@ import { getExerciseVideoEmbed } from '../lib/exerciseVideo';
 import MonthlyCheckIn from '../components/MonthlyCheckIn';
 import WeeklyScheduleView from './WeeklyScheduleView';
 import { getWeekSchedule } from '../lib/api';
-import { getSessionForToday, DAY_ORDER_MON, DAY_NAMES_JS } from '../lib/schedule';
+import { getSessionForToday, DAY_ORDER_MON, DAY_NAMES_JS, getWeekNum } from '../lib/schedule';
 
 /*
   ─── SUPABASE SQL — run once in the SQL editor ─────────────────────────────
@@ -95,13 +95,6 @@ function calcStreak(completions, trainingDays) {
   return streak;
 }
 
-function getWeekNum(startDateStr) {
-  if (!startDateStr) return 1;
-  const start = new Date(startDateStr);
-  const daysIn = Math.max(0, Math.floor((Date.now() - start) / 86400000));
-  if (daysIn >= 84) return 12;                      // only show 12 when plan is complete
-  return Math.min(11, Math.floor(daysIn / 7) + 1); // cap at 11 while still running
-}
 
 function getProgress(startDateStr) {
   if (!startDateStr) return 0;
