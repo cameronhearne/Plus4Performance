@@ -6,6 +6,7 @@ import { getExerciseVideoEmbed } from '../lib/exerciseVideo';
 import MonthlyCheckIn from '../components/MonthlyCheckIn';
 import WeeklyScheduleView from './WeeklyScheduleView';
 import { getWeekSchedule } from '../lib/api';
+import { getSessionForToday, DAY_ORDER_MON, DAY_NAMES_JS } from '../lib/schedule';
 
 /*
   ─── SUPABASE SQL — run once in the SQL editor ─────────────────────────────
@@ -260,66 +261,7 @@ function StreakBadge({ streak }) {
 }
 
 // ─── SESSION FOR TODAY ────────────────────────────────────────────────────────
-
-const DAY_ORDER_MON = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-const DAY_NAMES_JS  = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-
-function getSessionForToday(plan, intakeData) {
-  const allSessions = (plan?.phases || []).flatMap(p => p.sessions || []);
-  if (!allSessions.length) return { session: null, isRestDay: false, tomorrowSession: null };
-
-  const numTrainingDays = parseInt(intakeData?.trainingDays || '4', 10);
-  const scheduleType    = intakeData?.scheduleType || 'rolling';
-  const preferredDays   = intakeData?.preferredDays || [];
-  const startDateStr    = intakeData?.startDate;
-
-  const todayDate = new Date();
-  todayDate.setHours(0, 0, 0, 0);
-  const todayName = DAY_NAMES_JS[todayDate.getDay()];
-
-  const startDate = startDateStr ? new Date(startDateStr) : new Date(todayDate);
-  startDate.setHours(0, 0, 0, 0);
-  const daysElapsed = Math.max(0, Math.floor((todayDate - startDate) / 86400000));
-
-  if (scheduleType === 'fixed' && preferredDays.length > 0) {
-    const sortedDays = [...preferredDays].sort((a, b) => DAY_ORDER_MON.indexOf(a) - DAY_ORDER_MON.indexOf(b));
-
-    if (!sortedDays.includes(todayName)) {
-      let tomorrowSession = null;
-      for (let i = 1; i <= 7; i++) {
-        const nextDate = new Date(todayDate);
-        nextDate.setDate(todayDate.getDate() + i);
-        const nextName = DAY_NAMES_JS[nextDate.getDay()];
-        if (sortedDays.includes(nextName)) {
-          const nextElapsed  = daysElapsed + i;
-          const weeksPassed  = Math.floor(nextElapsed / 7);
-          const nextDayIdx   = sortedDays.indexOf(nextName);
-          const sessionIdx   = (weeksPassed * sortedDays.length + nextDayIdx) % allSessions.length;
-          tomorrowSession    = allSessions[sessionIdx];
-          break;
-        }
-      }
-      return { session: null, isRestDay: true, tomorrowSession };
-    }
-
-    const weeksPassed = Math.floor(daysElapsed / 7);
-    const dayIdx      = sortedDays.indexOf(todayName);
-    const sessionIdx  = (weeksPassed * sortedDays.length + dayIdx) % allSessions.length;
-    return { session: allSessions[sessionIdx], isRestDay: false, tomorrowSession: null };
-  }
-
-  // Rolling: train first N days of each 7-day cycle
-  const dayInCycle = daysElapsed % 7;
-  const fullWeeks  = Math.floor(daysElapsed / 7);
-
-  if (dayInCycle >= numTrainingDays) {
-    const sessionsCompleted = (fullWeeks + 1) * numTrainingDays;
-    return { session: null, isRestDay: true, tomorrowSession: allSessions[sessionsCompleted % allSessions.length] };
-  }
-
-  const sessionsCompleted = fullWeeks * numTrainingDays + dayInCycle;
-  return { session: allSessions[sessionsCompleted % allSessions.length], isRestDay: false, tomorrowSession: null };
-}
+// getSessionForToday, DAY_ORDER_MON, DAY_NAMES_JS imported from ../lib/schedule
 
 // ─── MOTIVATIONAL LINE ───────────────────────────────────────────────────────
 
@@ -1050,13 +992,13 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
         <div style={{ background: '#111', border: '1px solid #C0392B', borderRadius: '8px', padding: '12px 20px', textAlign: 'center', minWidth: '100px' }}>
           <div style={{ fontSize: '10px', color: '#666', letterSpacing: '0.15em', marginBottom: '6px', fontFamily: 'inherit' }}>CALORIES</div>
           <div style={{ fontSize: '16px', color: '#fff', fontWeight: '700', fontFamily: 'inherit' }}>
-            {plan?.user_summary?.calorie_target || plan?.nutrition?.training_day?.calories || '3456'} KCAL
+            {(isRestDay ? nutrition?.rest_day?.calories : nutrition?.training_day?.calories) ?? '—'} KCAL
           </div>
         </div>
         <div style={{ background: '#111', border: '1px solid #C0392B', borderRadius: '8px', padding: '12px 20px', textAlign: 'center', minWidth: '100px' }}>
           <div style={{ fontSize: '10px', color: '#666', letterSpacing: '0.15em', marginBottom: '6px', fontFamily: 'inherit' }}>PROTEIN</div>
           <div style={{ fontSize: '16px', color: '#fff', fontWeight: '700', fontFamily: 'inherit' }}>
-            {plan?.user_summary?.protein_g || plan?.nutrition?.training_day?.protein || '228'}G
+            {(isRestDay ? nutrition?.rest_day?.protein : nutrition?.training_day?.protein) ?? '—'}G
           </div>
         </div>
       </div>
@@ -1178,12 +1120,15 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
       </div>
       {isUnlocked && nutrition ? (
         <div style={{ background: '#0d0d0d', border: '1px solid rgba(200,200,200,0.12)', padding: '20px', marginBottom: 28 }}>
-          {[
-            ['Calories', (nutrition.training_day?.calories ?? '—') + ' kcal'],
-            ['Protein',  (nutrition.training_day?.protein  ?? '—') + 'g'],
-            ['Carbs',    (nutrition.training_day?.carbs    ?? '—') + 'g'],
-            ['Fat',      (nutrition.training_day?.fat      ?? '—') + 'g'],
-          ].map(([k, v]) => (
+          {(() => {
+            const dayNutrition = isRestDay ? nutrition.rest_day : nutrition.training_day;
+            return [
+              ['Calories', dayNutrition?.calories != null ? dayNutrition.calories + ' kcal' : '—'],
+              ['Protein',  dayNutrition?.protein  != null ? dayNutrition.protein  + 'g'     : '—'],
+              ['Carbs',    dayNutrition?.carbs    != null ? dayNutrition.carbs    + 'g'     : '—'],
+              ['Fat',      dayNutrition?.fat      != null ? dayNutrition.fat      + 'g'     : '—'],
+            ];
+          })().map(([k, v]) => (
             <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#CDCDC8', padding: '8px 0', borderBottom: '1px solid #1a1a1a' }}>
               <span style={{ color: '#787878' }}>{k}</span>
               <span style={{ color: '#F5F3EE', fontWeight: 600 }}>{v}</span>

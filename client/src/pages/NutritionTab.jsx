@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import { foodSearch, foodLog, foodGetDay, foodDeleteEntry } from '../lib/api';
+import { foodSearch, foodLog, foodGetDay, foodDeleteEntry, getWeekSchedule } from '../lib/api';
+import { getSessionForToday } from '../lib/schedule';
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 
@@ -359,8 +360,54 @@ export default function NutritionTab({ plan, isUnlocked, onUnlock }) {
   const [dayLoading,    setDayLoading]    = useState(false);
   const [showSearch,    setShowSearch]    = useState(false);
   const [searchMeal,    setSearchMeal]    = useState('lunch');
+  const [isRestDay,     setIsRestDay]     = useState(false);
 
-  const targets   = plan?.nutrition?.training_day || null;
+  // Determine whether today is a rest day using the same schedule logic as TodayTab,
+  // including any weekly override, so the macro progress target is correct.
+  useEffect(() => {
+    if (!plan) return;
+    let cancelled = false;
+    async function computeRestDay() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session || cancelled) return;
+
+      const { data: intake } = await supabase
+        .from('intake_submissions')
+        .select('data')
+        .eq('user_id', session.user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const { isRestDay: baseRestDay } = getSessionForToday(plan, intake?.data || {});
+      if (cancelled) return;
+
+      try {
+        const today  = new Date(); today.setHours(0, 0, 0, 0);
+        const dow    = today.getDay();
+        const monday = new Date(today);
+        monday.setDate(today.getDate() + (dow === 0 ? -6 : 1 - dow));
+        const weekStart = monday.toISOString().split('T')[0];
+        const result = await getWeekSchedule(weekStart, session.access_token);
+        if (!cancelled && result.schedule) {
+          const todayIdx = dow === 0 ? 6 : dow - 1;
+          const hasEntry = String(todayIdx) in result.schedule;
+          if (hasEntry) {
+            setIsRestDay(result.schedule[String(todayIdx)] === null);
+            return;
+          }
+        }
+      } catch { /* non-critical — fall back to base schedule */ }
+
+      if (!cancelled) setIsRestDay(baseRestDay);
+    }
+    computeRestDay();
+    return () => { cancelled = true; };
+  }, [plan]);
+
+  const targets   = isRestDay
+    ? (plan?.nutrition?.rest_day   || null)
+    : (plan?.nutrition?.training_day || null);
   const mealSlots = getMealSlots(plan);
 
   const loadDay = useCallback(async () => {

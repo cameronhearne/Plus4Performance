@@ -129,7 +129,6 @@ const FULL_PLAN_SCHEMA = `{
     "name": string,
     "goal": string,
     "split": string,
-    "calorie_target": number,
     "protein_g": number,
     "carb_g": number,
     "fat_g": number,
@@ -203,7 +202,7 @@ function buildFullPlanUserPrompt(intakeData) {
 
 STEP 1 — NUTRITION (Mifflin St Jeor)
 Male BMR = (10×weight) + (6.25×height) − (5×age) + 5. Female: same −161.
-Multiply by activity multiplier → TDEE. Apply goal adjustment from Section 7 → calorie_target. Set macros per Section 7 split. Store bmr and tdee in user_summary.
+Multiply by activity multiplier → TDEE. Apply goal adjustment from Section 7 to set nutrition.training_day and nutrition.rest_day calories and macros per Section 7 split. Store bmr and tdee in user_summary. Do NOT put a calorie_target field in user_summary — calories live only in nutrition.training_day.calories and nutrition.rest_day.calories.
 
 STEP 2 — EXERCISE LIBRARY
 Build exercise_library first. Include every exercise used across all sessions — each keyed by snake_case ID (e.g. "barbell_bench_press"). Each entry has:
@@ -280,7 +279,7 @@ Generate a fully individualised 12-week training and nutrition plan for the clie
 
 STEP 1 — NUTRITION (Mifflin St Jeor)
 Male BMR = (10×weight) + (6.25×height) − (5×age) + 5. Female: same −161.
-Multiply by activity multiplier → TDEE. Apply goal adjustment from Section 7 → calorie_target. Set macros per Section 7 split. Store bmr and tdee in user_summary.
+Multiply by activity multiplier → TDEE. Apply goal adjustment from Section 7 to set nutrition.training_day and nutrition.rest_day calories and macros per Section 7 split. Store bmr and tdee in user_summary. Do NOT put a calorie_target field in user_summary — calories live only in nutrition.training_day.calories and nutrition.rest_day.calories.
 
 STEP 2 — EXERCISE LIBRARY
 Build exercise_library first. Include every exercise used across all sessions — each keyed by snake_case ID (e.g. "barbell_bench_press"). Each entry has:
@@ -1770,9 +1769,7 @@ async function handleMonthlyCheckin(req, res) {
     const startingWeight = intake.currentWeight || weightLogs?.[0]?.weight_kg || null;
     const targetWeight   = intake.targetWeight || null;
     const goal           = intake.goal || plan?.user_summary?.goal || 'muscle_building';
-    const calorieTarget  = plan?.user_summary?.calorie_target
-                         || plan?.nutrition?.training_day?.calories
-                         || null;
+    const calorieTarget  = plan?.nutrition?.training_day?.calories || null;
 
     const systemPrompt = `${INJECTION_GUARD}${coachingBible}
 
