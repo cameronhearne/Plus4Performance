@@ -1687,7 +1687,8 @@ async function handleMonthlyCheckin(req, res) {
     const plan = planRow?.plan_data || {};
 
     // Session completions over last 28 days
-    const fourWeeksAgo = new Date(Date.now() - 28 * 86400000).toISOString();
+    const now = Date.now();
+    const fourWeeksAgo = new Date(now - 28 * 86400000).toISOString();
     const { data: completions } = await supabaseAdmin
       .from('session_completions')
       .select('completed_at')
@@ -1698,6 +1699,14 @@ async function handleMonthlyCheckin(req, res) {
     const targetPerWeek    = parseInt(intake.trainingDays || '4', 10);
     const targetTotal      = targetPerWeek * 4;
     const completionPct    = targetTotal > 0 ? Math.round((sessionsCompleted / targetTotal) * 100) : 0;
+
+    // Bucket completions into 4 weekly slots: index 0 = oldest week, index 3 = most recent
+    const WEEK_MS = 7 * 86400000;
+    const weeklySessionCounts = [0, 0, 0, 0];
+    for (const { completed_at } of (completions || [])) {
+      const ageWeeks = Math.min(3, Math.floor((now - new Date(completed_at).getTime()) / WEEK_MS));
+      weeklySessionCounts[3 - ageWeeks]++;
+    }
 
     // Weight logs over last 28 days for trend
     const { data: weightLogs } = await supabaseAdmin
@@ -1804,7 +1813,7 @@ PLAN:
 - Current calorie target: ${calorieTarget != null ? calorieTarget + ' kcal/day' : 'unknown'}
 
 LAST 4 WEEKS:
-- Sessions completed: ${sessionsCompleted} of ${targetTotal} (${completionPct}% completion rate)
+- Sessions completed: ${sessionsCompleted} of ${targetTotal} (${completionPct}% completion rate) — per-week breakdown oldest→newest: [${weeklySessionCounts.join(', ')}] (target: ${targetPerWeek}/week)
 - Weight trend: ${weightTrendStr}
 - Strength progress this week: ${strengthStr}
 - Nutrition tracking adherence: ${nutritionAdherenceStr}
@@ -1855,7 +1864,7 @@ Apply the calorie adjustment rules precisely. Reference real numbers. Be specifi
     }
 
     console.log('[monthly-checkin] success for user', userId);
-    return json(res, 200, { feedback: aiResponse, checkinId: saved.id });
+    return json(res, 200, { feedback: aiResponse, checkinId: saved.id, sessionWeeklyBreakdown: weeklySessionCounts });
 
   } catch (err) {
     console.error('[monthly-checkin] unhandled error:', err);
