@@ -465,12 +465,36 @@ export default function NutritionTab({ plan, isUnlocked, onUnlock }) {
             .map(([label, meals]) => (
               <div key={label} style={{ ...S.card, marginBottom: 12 }}>
                 <div style={{ ...S.eyebrow, marginBottom: 12 }}>{label}</div>
-                {meals.map((meal, i) => (
-                  <div key={i} style={S.row}>
-                    <span style={S.rowLabel}>{meal.meal || meal.name || `Meal ${i + 1}`}</span>
-                    <span style={S.rowVal}>{meal.calories ? `${meal.calories} kcal` : ''}</span>
-                  </div>
-                ))}
+                {meals.map((meal, i) => {
+                  const foods = meal.foods || [];
+                  const totalCal = foods.reduce((sum, f) => sum + (Number(f.cal) || 0), 0);
+                  return (
+                    <div key={i} style={{ borderBottom: '1px solid #111', paddingBottom: 8, marginBottom: 8 }}>
+                      {/* Meal header row */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0 6px' }}>
+                        <span style={{ ...S.rowLabel, color: '#CDCDC8', letterSpacing: '0.08em' }}>
+                          {meal.meal || meal.name || `Meal ${i + 1}`}
+                        </span>
+                        {totalCal > 0 && (
+                          <span style={{ ...S.rowVal, fontSize: 12 }}>{totalCal} kcal</span>
+                        )}
+                      </div>
+                      {/* Food items */}
+                      {foods.map((food, j) => (
+                        <div key={j} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '3px 0 3px 12px' }}>
+                          <span style={{ fontFamily: "'Barlow', sans-serif", fontSize: 12, color: '#555', fontWeight: 300, flex: 1 }}>
+                            {food.name}{food.amount ? ` — ${food.amount}` : ''}
+                          </span>
+                          {food.cal != null && (
+                            <span style={{ fontFamily: "'Barlow', sans-serif", fontSize: 11, color: '#444', fontWeight: 300, flexShrink: 0, marginLeft: 12 }}>
+                              {food.cal} kcal
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
               </div>
             ))
           }
