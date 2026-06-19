@@ -781,6 +781,24 @@ async function runWeighInReminderEmails() {
 
 // ─── ROUTE HANDLERS ──────────────────────────────────────────────────────────
 
+// Generates a username like "cameron_h472". Retries up to 10 times on collision,
+// then falls back to a timestamp suffix which is effectively unique.
+async function generateUniqueUsername(firstName, lastName) {
+  const cleanFirst = (firstName || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20);
+  const lastInitial = lastName ? (lastName[0] || '').toLowerCase().replace(/[^a-z]/g, '') : '';
+  const base = cleanFirst + (lastInitial ? '_' + lastInitial : '');
+  if (!base) return null;
+
+  for (let i = 0; i < 10; i++) {
+    const suffix    = Math.floor(100 + Math.random() * 9900); // 100–9999
+    const candidate = base + suffix;
+    const { data: existing } = await supabaseAdmin
+      .from('profiles').select('id').eq('username', candidate).maybeSingle();
+    if (!existing) return candidate;
+  }
+  return base + Date.now().toString().slice(-4); // timestamp fallback
+}
+
 // POST /snapshot
 // Called immediately after intake form submission (before payment).
 // Requires: Authorization: Bearer <supabase_jwt>
@@ -806,6 +824,19 @@ async function handleSnapshot(req, res) {
       first_name: authUser.user_metadata?.first_name || '',
       last_name: authUser.user_metadata?.last_name || '',
     }, { onConflict: 'id', ignoreDuplicates: true });
+
+    // Auto-generate a username on first intake if the profile doesn't have one yet
+    const { data: profileRow } = await supabaseAdmin
+      .from('profiles').select('username').eq('id', userId).maybeSingle();
+    if (!profileRow?.username) {
+      const fn       = authUser.user_metadata?.first_name || intakeData.firstName || '';
+      const ln       = authUser.user_metadata?.last_name  || '';
+      const username = await generateUniqueUsername(fn, ln);
+      if (username) {
+        await supabaseAdmin.from('profiles').update({ username }).eq('id', userId);
+        console.log(`[snapshot] auto-generated username '${username}' for user ${userId}`);
+      }
+    }
   }
 
   // Save intake submission
