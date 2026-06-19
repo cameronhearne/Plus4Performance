@@ -701,8 +701,10 @@ function LiftCard({ liftName, liftKey }) {
   const [calcResult, setCalcResult] = useState(null);
   const [savingManual, setSavingManual] = useState(false);
   const [savingCalc,   setSavingCalc]   = useState(false);
-  const [feedback, setFeedback]     = useState(null); // { msg, isPr }
+  const [feedback, setFeedback]     = useState(null);
   const [glowing, setGlowing]       = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [deletingId, setDeletingId]   = useState(null);
 
   useEffect(() => { fetchEntries(); }, []);
 
@@ -790,6 +792,13 @@ function LiftCard({ liftName, liftKey }) {
     else { setMaxInput(''); }
   }
 
+  async function deleteEntry(id) {
+    setDeletingId(id);
+    const { error } = await supabase.from('one_rep_maxes').delete().eq('id', id);
+    setDeletingId(null);
+    if (!error) await fetchEntries();
+  }
+
   const allTimeBest  = entries.length > 0 ? Math.max(...entries.map(e => e.weight_kg)) : null;
   const mostRecent   = entries.length > 0 ? entries[entries.length - 1] : null;
   const isPersonalBest = mostRecent && allTimeBest != null && mostRecent.weight_kg >= allTimeBest;
@@ -849,6 +858,44 @@ function LiftCard({ liftName, liftKey }) {
           {feedback && (
             <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', color: feedback.isError ? '#FF9800' : feedback.isPr ? '#C0392B' : '#4CAF50', marginBottom: 8 }}>
               {feedback.msg}
+            </div>
+          )}
+
+          {/* Entry history with delete */}
+          {entries.length > 0 && (
+            <div style={{ marginBottom: 10 }}>
+              <button
+                onClick={() => setShowHistory(h => !h)}
+                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#444' }}
+              >
+                {showHistory ? '▲ Hide history' : `▼ History (${entries.length})`}
+              </button>
+              {showHistory && (
+                <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {[...entries].reverse().slice(0, 10).map(e => (
+                    <div key={e.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #111' }}>
+                      <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, color: e.flagged_for_review ? '#FF9800' : '#787878', letterSpacing: '0.04em' }}>
+                        {new Date(e.logged_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        {e.is_calculated ? ' (est.)' : ''}
+                        {e.flagged_for_review ? ' ⚑' : ''}
+                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, color: '#CDCDC8', fontWeight: 700 }}>
+                          {e.weight_kg} kg
+                        </span>
+                        <button
+                          onClick={() => deleteEntry(e.id)}
+                          disabled={deletingId === e.id}
+                          title="Delete this entry"
+                          style={{ background: 'none', border: 'none', cursor: deletingId === e.id ? 'default' : 'pointer', color: '#333', fontSize: 13, padding: '2px 4px', lineHeight: 1, opacity: deletingId === e.id ? 0.4 : 1 }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
