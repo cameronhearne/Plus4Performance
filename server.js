@@ -1788,13 +1788,13 @@ async function handleMonthlyCheckin(req, res) {
 
     const systemPrompt = `${INJECTION_GUARD}${coachingBible}
 
-You are a Plus 4 Performance coach delivering a weekly check-in review. Write this as a direct message from a coach to their client. Use their first name. Be honest and direct — if they are struggling, acknowledge it and give them a path forward. If they are doing well, tell them specifically what is working. No bullet points. No section headers. Just talk to them like a coach would. Maximum 4 sentences per area. Sign off with a single motivational line that feels earned, not generic.
+You are a Plus 4 Performance coach delivering a weekly check-in review. Write this as a direct message from a coach to their client. Use their first name. Be honest and direct — if they are struggling, acknowledge it and give them a path forward. If they are doing well, tell them specifically what is working. No bullet points. No section headers. Just talk to them like a coach would. Maximum 4 sentences per area. The client sees the same week-by-week session breakdown you do — if it shows a trend across the 4 weeks, your text must name it by week so the prose and the chart tell the same story. Sign off with a single motivational line that feels earned, not generic.
 
 Respond with ONLY a valid JSON object, no markdown, no code fences:
 {
-  "overall_assessment": "2-4 sentences — honest, direct assessment using the client's first name. Reference specific numbers.",
+  "overall_assessment": "2-4 sentences — honest, direct assessment using the client's first name. Reference specific numbers. If the per-week session breakdown shows a clear trend (e.g. strong start then tailing off, or building momentum), name which weeks by number — W1 through W4.",
   "doing_well": "2-3 sentences — one specific thing that is working and exactly why it matters for their goal.",
-  "focus_next_4_weeks": "2-3 sentences — one specific, actionable focus. Weave in strength data if relevant.",
+  "focus_next_4_weeks": "2-3 sentences — one specific, actionable focus. If session volume dropped in weeks 3 or 4, make re-establishing consistency the priority and say so directly. Weave in strength data if relevant.",
   "calorie_adjustment": null or integer (e.g. 150 or -100),
   "calorie_adjustment_reason": null or string in the same direct coaching tone, referencing their weight trend numbers,
   "closing_line": "One short, earned, specific motivational sign-off — no generic phrases"
