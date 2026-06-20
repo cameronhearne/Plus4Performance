@@ -148,7 +148,7 @@ function CheckInInputModal({ weekNum, prefillWeight, onClose, onSuccess }) {
         injuries:            injuries || null,
       }, session.access_token);
 
-      onSuccess(feedback.feedback, feedback.updatedNutrition || null);
+      onSuccess(feedback.feedback, feedback.updatedNutrition || null, feedback.vizData || null);
     } catch (e) {
       setError(e.message || 'Something went wrong. Please try again.');
     } finally {
@@ -296,7 +296,150 @@ function FeedbackBlock({ label, children, accent = false }) {
   );
 }
 
-function CheckInResultsModal({ feedback, updatedNutrition, onClose }) {
+// ─── VISUAL SUMMARY COMPONENTS ───────────────────────────────────────────────
+
+function VizBlock({ label, children }) {
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <div style={{
+        fontFamily: "'Barlow Condensed', sans-serif",
+        fontSize: 9, fontWeight: 700,
+        letterSpacing: '0.22em', textTransform: 'uppercase',
+        color: '#444', marginBottom: 8,
+      }}>
+        {label}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function SessionWeekBars({ weeklyBreakdown, targetPerWeek }) {
+  if (!weeklyBreakdown) return null;
+  const BAR_H = 52;
+  return (
+    <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end' }}>
+      {weeklyBreakdown.map((count, i) => {
+        const pct  = targetPerWeek > 0 ? Math.min(1, count / targetPerWeek) : 0;
+        const fill = Math.max(3, Math.round(pct * BAR_H));
+        const hit  = count >= targetPerWeek;
+        return (
+          <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, color: hit ? '#C0392B' : '#555' }}>
+              {count}
+            </div>
+            <div style={{ width: '100%', height: BAR_H, background: 'rgba(200,200,200,0.06)', display: 'flex', alignItems: 'flex-end' }}>
+              <div style={{ width: '100%', height: fill, background: hit ? '#C0392B' : 'rgba(200,200,200,0.18)' }} />
+            </div>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 9, color: '#383838', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+              W{i + 1}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function WeightSparkline({ weightLogs }) {
+  if (!weightLogs || weightLogs.length < 2) {
+    return <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, color: '#333', letterSpacing: '0.06em' }}>No weight data this period</div>;
+  }
+  const W = 480, H = 64, PAD = 6;
+  const innerW = W - PAD * 2;
+  const innerH = H - PAD * 2;
+  const weights = weightLogs.map(l => Number(l.weight_kg));
+  const times   = weightLogs.map(l => new Date(l.logged_at).getTime());
+  const minW = Math.min(...weights), maxW = Math.max(...weights);
+  const minT = Math.min(...times),   maxT = Math.max(...times);
+  const rangeW = maxW - minW || 1;
+  const rangeT = maxT - minT || 1;
+  const pts = weights.map((w, i) => [
+    PAD + ((times[i] - minT) / rangeT) * innerW,
+    PAD + (1 - (w - minW) / rangeW) * innerH,
+  ]);
+  const polyPts = pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+  return (
+    <div>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: H, display: 'block', overflow: 'visible' }}>
+        <polyline points={polyPts} fill="none" stroke="#C0392B" strokeWidth="1.5" strokeLinejoin="round" />
+        {pts.map(([x, y], i) => <circle key={i} cx={x.toFixed(1)} cy={y.toFixed(1)} r="2.5" fill="#C0392B" />)}
+      </svg>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, color: '#444' }}>{weights[0]}kg</div>
+        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, color: '#444' }}>{weights[weights.length - 1]}kg</div>
+      </div>
+    </div>
+  );
+}
+
+function LiftDeltaCards({ lifts }) {
+  if (!lifts) return null;
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+      {lifts.map(lift => {
+        const hasData  = lift.currentKg !== null;
+        const hasDelta = lift.deltaKg !== null;
+        const isUp     = lift.deltaKg > 1.0;
+        const isDown   = lift.deltaKg < -1.0;
+        const sign     = lift.deltaKg > 0 ? '+' : '';
+        const deltaColor = isUp ? '#4CAF50' : isDown ? '#ef4444' : '#787878';
+        return (
+          <div key={lift.name} style={{ background: '#0d0d0d', border: '1px solid rgba(200,200,200,0.07)', padding: '10px 12px' }}>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 9, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: '#383838', marginBottom: 6 }}>
+              {lift.name}
+            </div>
+            {!hasData ? (
+              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, color: '#333' }}>No data</div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 20, letterSpacing: '0.04em', color: '#F5F3EE', lineHeight: 1 }}>
+                  {lift.currentKg}kg
+                </div>
+                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, color: hasDelta ? deltaColor : '#333' }}>
+                  {hasDelta
+                    ? `${isUp ? '↑' : isDown ? '↓' : '→'} ${sign}${lift.deltaKg}kg`
+                    : 'No comparison yet'}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function NutritionBars({ nutrition }) {
+  if (!nutrition) {
+    return <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, color: '#333', letterSpacing: '0.06em' }}>No tracking data this week</div>;
+  }
+  const { daysLogged, proteinDaysHit, calorieDaysHit } = nutrition;
+  function Bar({ label, value, total, color }) {
+    if (value === null || !total) return null;
+    const pct = Math.min(1, value / total);
+    return (
+      <div style={{ marginBottom: 8 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 9, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#444' }}>{label}</div>
+          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 9, color: '#444' }}>{value}/{total}</div>
+        </div>
+        <div style={{ height: 3, background: 'rgba(200,200,200,0.08)' }}>
+          <div style={{ height: '100%', width: `${pct * 100}%`, background: color }} />
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div>
+      <Bar label="Days logged" value={daysLogged} total={7} color="rgba(200,200,200,0.3)" />
+      <Bar label="Protein target" value={proteinDaysHit} total={daysLogged} color="#C0392B" />
+      <Bar label="Calorie target" value={calorieDaysHit} total={daysLogged} color="#C0392B" />
+    </div>
+  );
+}
+
+function CheckInResultsModal({ feedback, updatedNutrition, vizData, onClose }) {
   const adj     = feedback.calorie_adjustment;
   const hasAdj  = adj !== null && adj !== undefined && adj !== 0;
   const adjSign = adj > 0 ? '+' : '';
@@ -304,6 +447,42 @@ function CheckInResultsModal({ feedback, updatedNutrition, onClose }) {
 
   return (
     <Modal onClose={onClose}>
+      {/* ── Data visuals ────────────────────────────────────────── */}
+      {vizData && (
+        <div style={{ marginBottom: 20 }}>
+          <div style={{
+            fontFamily: "'Barlow Condensed', sans-serif",
+            fontSize: 11, fontWeight: 700,
+            letterSpacing: '0.3em', textTransform: 'uppercase',
+            color: '#555', marginBottom: 16,
+          }}>
+            This Week
+          </div>
+
+          <VizBlock label={`Sessions — ${vizData.sessions?.completed ?? 0} of ${vizData.sessions?.target ?? 0}`}>
+            <SessionWeekBars
+              weeklyBreakdown={vizData.sessions?.weeklyBreakdown}
+              targetPerWeek={vizData.sessions?.targetPerWeek}
+            />
+          </VizBlock>
+
+          <VizBlock label="Weight Trend (28 days)">
+            <WeightSparkline weightLogs={vizData.weightLogs} />
+          </VizBlock>
+
+          <VizBlock label="Strength — vs 3 weeks ago">
+            <LiftDeltaCards lifts={vizData.lifts} />
+          </VizBlock>
+
+          <VizBlock label="Nutrition Adherence (last 7 days)">
+            <NutritionBars nutrition={vizData.nutrition} />
+          </VizBlock>
+
+          <div style={{ borderTop: '1px solid rgba(200,200,200,0.07)', margin: '18px 0' }} />
+        </div>
+      )}
+
+      {/* ── AI coaching feedback ─────────────────────────────────── */}
       <div style={{
         fontFamily: "'Barlow Condensed', sans-serif",
         fontSize: 11, fontWeight: 700,
@@ -479,6 +658,7 @@ export default function MonthlyCheckIn({ weekNum, currentWeight }) {
   const [showHistory, setShowHistory]     = useState(false);
   const [latestFeedback, setLatestFeedback]               = useState(null);
   const [latestUpdatedNutrition, setLatestUpdatedNutrition] = useState(null);
+  const [latestVizData, setLatestVizData]                 = useState(null);
   const [checkinDay, setCheckinDay]       = useState(0); // default Sunday until prefs load
 
   const todayDow  = new Date().getDay();
@@ -539,9 +719,10 @@ export default function MonthlyCheckIn({ weekNum, currentWeight }) {
     if (data) setHistory(data);
   }
 
-  function handleSuccess(feedback, updatedNutrition) {
+  function handleSuccess(feedback, updatedNutrition, vizData) {
     setLatestFeedback(feedback);
     setLatestUpdatedNutrition(updatedNutrition || null);
+    setLatestVizData(vizData || null);
     setShowInput(false);
     setShowResults(true);
     reloadHistory();
@@ -677,6 +858,7 @@ export default function MonthlyCheckIn({ weekNum, currentWeight }) {
         <CheckInResultsModal
           feedback={latestFeedback}
           updatedNutrition={latestUpdatedNutrition}
+          vizData={latestVizData}
           onClose={() => setShowResults(false)}
         />
       )}

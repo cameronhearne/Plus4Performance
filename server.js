@@ -1731,7 +1731,7 @@ async function handleMonthlyCheckin(req, res) {
       { displayName: 'Overhead Press', exerciseName: 'Overhead Press' },
     ];
     const threeWeekCutoff = Date.now() - 21 * 86400000;
-    const liftSummaries = await Promise.all(keyLifts.map(async ({ displayName, exerciseName }) => {
+    const liftData = await Promise.all(keyLifts.map(async ({ displayName, exerciseName }) => {
       const { data: entries } = await supabaseAdmin
         .from('lift_logs')
         .select('weight_kg, logged_at')
@@ -1739,18 +1739,21 @@ async function handleMonthlyCheckin(req, res) {
         .eq('exercise_name', exerciseName)
         .order('logged_at', { ascending: false })
         .limit(30);
-      if (!entries || entries.length === 0) return `${displayName}: no data`;
-      const recent = entries[0];
-      const older  = entries.find(e => new Date(e.logged_at).getTime() < threeWeekCutoff);
-      if (!older) return `${displayName} ${recent.weight_kg}kg (no prior data to compare)`;
-      const diff = Number(recent.weight_kg) - Number(older.weight_kg);
-      let trend;
-      if (diff > 1.0)       trend = `up ${diff.toFixed(1)}kg vs 3 weeks ago`;
-      else if (diff < -1.0) trend = `down ${Math.abs(diff).toFixed(1)}kg vs 3 weeks ago`;
-      else                   trend = 'same vs 3 weeks ago';
-      return `${displayName} ${recent.weight_kg}kg (${trend})`;
+      if (!entries || entries.length === 0) return { name: displayName, currentKg: null, priorKg: null, deltaKg: null };
+      const recent    = entries[0];
+      const older     = entries.find(e => new Date(e.logged_at).getTime() < threeWeekCutoff);
+      const currentKg = Number(recent.weight_kg);
+      const priorKg   = older ? Number(older.weight_kg) : null;
+      const deltaKg   = priorKg !== null ? Math.round((currentKg - priorKg) * 10) / 10 : null;
+      return { name: displayName, currentKg, priorKg, deltaKg };
     }));
-    const strengthStr = liftSummaries.join(', ');
+    const strengthStr = liftData.map(l => {
+      if (l.currentKg === null) return `${l.name}: no data`;
+      if (l.deltaKg === null)   return `${l.name} ${l.currentKg}kg (no prior data to compare)`;
+      if (l.deltaKg > 1.0)      return `${l.name} ${l.currentKg}kg (up ${l.deltaKg}kg vs 3 weeks ago)`;
+      if (l.deltaKg < -1.0)     return `${l.name} ${l.currentKg}kg (down ${Math.abs(l.deltaKg)}kg vs 3 weeks ago)`;
+      return `${l.name} ${l.currentKg}kg (same vs 3 weeks ago)`;
+    }).join(', ');
 
     // Nutrition adherence from food_logs over the past 7 days
     const sevenDaysAgoDate = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10);
@@ -1758,7 +1761,8 @@ async function handleMonthlyCheckin(req, res) {
       .from('food_logs').select('logged_at, calories, protein')
       .eq('user_id', userId).gte('logged_at', sevenDaysAgoDate);
 
-    let nutritionAdherenceStr = 'No food tracking data this week';
+    let nutritionAdherenceStr  = 'No food tracking data this week';
+    let nutritionAdherenceData = null;
     if (recentFoodLogs?.length) {
       const byDay = {};
       for (const e of recentFoodLogs) {
@@ -1766,7 +1770,7 @@ async function handleMonthlyCheckin(req, res) {
         byDay[e.logged_at].calories += Number(e.calories);
         byDay[e.logged_at].protein  += Number(e.protein);
       }
-      const daysLogged = Object.keys(byDay).length;
+      const daysLogged     = Object.keys(byDay).length;
       const proteinTarget  = plan?.nutrition?.training_day?.protein  || null;
       const calorieTargetN = plan?.nutrition?.training_day?.calories || calorieTarget;
       const proteinDaysHit  = proteinTarget  ? Object.values(byDay).filter(d => d.protein  >= proteinTarget  * 0.9).length : null;
@@ -1774,6 +1778,7 @@ async function handleMonthlyCheckin(req, res) {
       nutritionAdherenceStr = `Food logged on ${daysLogged}/7 days`;
       if (proteinDaysHit  !== null) nutritionAdherenceStr += `; protein target hit ${proteinDaysHit}/${daysLogged} days`;
       if (calorieDaysHit !== null) nutritionAdherenceStr += `; calorie target hit ${calorieDaysHit}/${daysLogged} days`;
+      nutritionAdherenceData = { daysLogged, proteinDaysHit, calorieDaysHit, proteinTarget, calorieTarget: plan?.nutrition?.training_day?.calories || null };
     }
 
     const startingWeight = intake.currentWeight || weightLogs?.[0]?.weight_kg || null;
@@ -1909,7 +1914,13 @@ Apply the calorie adjustment rules precisely. Reference real numbers. Be specifi
     }
 
     console.log('[monthly-checkin] success for user', userId);
-    return json(res, 200, { feedback: aiResponse, checkinId: saved.id, sessionWeeklyBreakdown: weeklySessionCounts, updatedNutrition });
+    const vizData = {
+      sessions:   { completed: sessionsCompleted, target: targetTotal, weeklyBreakdown: weeklySessionCounts, targetPerWeek },
+      weightLogs: weightLogs || [],
+      lifts:      liftData,
+      nutrition:  nutritionAdherenceData,
+    };
+    return json(res, 200, { feedback: aiResponse, checkinId: saved.id, sessionWeeklyBreakdown: weeklySessionCounts, updatedNutrition, vizData });
 
   } catch (err) {
     console.error('[monthly-checkin] unhandled error:', err);
