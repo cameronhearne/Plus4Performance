@@ -1541,6 +1541,57 @@ async function handleSaveEmailPreferences(req, res) {
   return json(res, 200, { ok: true });
 }
 
+// POST /api/nutrition-preferences
+// Updates the dietary preference fields in the user's latest intake_submissions row.
+// The renewal flow reads from that same row, so changes take effect on the next plan generation.
+async function handleUpdateNutritionPreferences(req, res) {
+  const userId = await getUserIdFromToken(req.headers['authorization']);
+  if (!userId) return json(res, 401, { error: 'Unauthorized' });
+
+  const body = await readBody(req);
+  let parsed;
+  try { parsed = JSON.parse(body); } catch { return json(res, 400, { error: 'Invalid JSON' }); }
+
+  const VALID_DIETARY    = ['no_restrictions', 'vegetarian', 'vegan', 'pescatarian', 'gluten_free', 'dairy_free'];
+  const VALID_MEALS      = ['3', '4', '5', '6'];
+  const VALID_PLAN_TYPE  = ['full', 'macros'];
+  const VALID_SUPPS      = ['include', 'no'];
+
+  const { dietary, foodsNotEat, mealsPerDay, mealPlanType, supplements } = parsed;
+
+  if (dietary      !== undefined && !VALID_DIETARY.includes(dietary))              return json(res, 400, { error: 'Invalid dietary value' });
+  if (mealsPerDay  !== undefined && !VALID_MEALS.includes(String(mealsPerDay)))    return json(res, 400, { error: 'Invalid mealsPerDay value' });
+  if (mealPlanType !== undefined && !VALID_PLAN_TYPE.includes(mealPlanType))       return json(res, 400, { error: 'Invalid mealPlanType value' });
+  if (supplements  !== undefined && !VALID_SUPPS.includes(supplements))            return json(res, 400, { error: 'Invalid supplements value' });
+
+  const { data: intakeRow, error: fetchErr } = await supabaseAdmin
+    .from('intake_submissions').select('id, data')
+    .eq('user_id', userId).order('created_at', { ascending: false }).limit(1).maybeSingle();
+
+  if (fetchErr) {
+    console.error('[nutrition-preferences] fetch error:', fetchErr.message);
+    return json(res, 500, { error: 'Something went wrong. Please try again.' });
+  }
+  if (!intakeRow) return json(res, 400, { error: 'No intake data found. Complete the intake form first.' });
+
+  const updatedData = { ...intakeRow.data };
+  if (dietary      !== undefined) updatedData.dietary      = dietary;
+  if (foodsNotEat  !== undefined) updatedData.foodsNotEat  = sanitiseInput(String(foodsNotEat), 500);
+  if (mealsPerDay  !== undefined) updatedData.mealsPerDay  = String(mealsPerDay);
+  if (mealPlanType !== undefined) updatedData.mealPlanType = mealPlanType;
+  if (supplements  !== undefined) updatedData.supplements  = supplements;
+
+  const { error: updateErr } = await supabaseAdmin
+    .from('intake_submissions').update({ data: updatedData }).eq('id', intakeRow.id);
+
+  if (updateErr) {
+    console.error('[nutrition-preferences] update error:', updateErr.message);
+    return json(res, 500, { error: 'Something went wrong. Please try again.' });
+  }
+
+  return json(res, 200, { ok: true });
+}
+
 // POST /api/test-weekly-email
 // Runs the weekly progress summary email for the authenticated user only.
 // Identical logic to runWeeklyProgressEmails() but scoped to one user.
@@ -3445,6 +3496,10 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'POST' && url === '/api/email-preferences') {
       return await handleSaveEmailPreferences(req, res);
+    }
+
+    if (req.method === 'POST' && url === '/api/nutrition-preferences') {
+      return await handleUpdateNutritionPreferences(req, res);
     }
 
     if (req.method === 'POST' && url === '/api/test-weekly-email') {

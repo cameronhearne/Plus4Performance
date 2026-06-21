@@ -60,6 +60,10 @@ export async function requestRenewalPlan(option, newIntake, token) {
   return authedPost('/api/plan/renew', { option, new_intake: newIntake || null }, token);
 }
 
+export async function updateNutritionPreferences(prefs, token) {
+  return authedPost('/api/nutrition-preferences', prefs, token);
+}
+
 export async function listPlans(token)              { return authedGet('/api/plans', token); }
 export async function activatePlan(planId, token)   { return authedPost('/api/plan/activate', { plan_id: planId }, token); }
 

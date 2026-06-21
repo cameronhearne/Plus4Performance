@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { createPortalSession, deleteAccount, createCheckoutSession, getEmailPreferences, saveEmailPreferences, sendTestWeeklyEmail, requestRenewalPlan, listPlans, activatePlan } from '../lib/api';
+import { createPortalSession, deleteAccount, createCheckoutSession, getEmailPreferences, saveEmailPreferences, sendTestWeeklyEmail, requestRenewalPlan, listPlans, activatePlan, updateNutritionPreferences } from '../lib/api';
 
 /*
   ─── NO NEW SQL TABLES REQUIRED ────────────────────────────────────────────────
@@ -384,7 +384,141 @@ function ProfileSection({ user, intake, intakeLoading }) {
   );
 }
 
-// ─── SECTION 2: MY PLAN ──────────────────────────────────────────────────────
+// ─── SECTION 2: NUTRITION PREFERENCES ───────────────────────────────────────
+
+const DIETARY_OPTIONS = [
+  { value: 'no_restrictions', label: 'No restrictions' },
+  { value: 'vegetarian',      label: 'Vegetarian' },
+  { value: 'vegan',           label: 'Vegan' },
+  { value: 'pescatarian',     label: 'Pescatarian' },
+  { value: 'gluten_free',     label: 'Gluten free' },
+  { value: 'dairy_free',      label: 'Dairy free' },
+];
+const MEAL_PLAN_OPTIONS = [
+  { value: 'full',   label: 'Full meal plan with grocery list' },
+  { value: 'macros', label: 'Macros and targets only' },
+];
+const SUPPLEMENTS_OPTIONS = [
+  { value: 'include', label: 'Include supplement recommendations' },
+  { value: 'no',      label: 'No supplements' },
+];
+
+function NutritionPreferencesSection({ intake, intakeLoading }) {
+  const [dietary,      setDietary]      = useState('');
+  const [foodsNotEat,  setFoodsNotEat]  = useState('');
+  const [mealsPerDay,  setMealsPerDay]  = useState('');
+  const [mealPlanType, setMealPlanType] = useState('');
+  const [supplements,  setSupplements]  = useState('');
+  const [saving,       setSaving]       = useState(false);
+  const [saved,        setSaved]        = useState(false);
+  const [err,          setErr]          = useState('');
+
+  useEffect(() => {
+    if (!intake) return;
+    setDietary(intake.dietary       || '');
+    setFoodsNotEat(intake.foodsNotEat || '');
+    setMealsPerDay(String(intake.mealsPerDay || ''));
+    setMealPlanType(intake.mealPlanType || '');
+    setSupplements(intake.supplements  || '');
+  }, [intake]);
+
+  async function handleSave() {
+    setSaving(true); setErr(''); setSaved(false);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      await updateNutritionPreferences(
+        { dietary, foodsNotEat, mealsPerDay, mealPlanType, supplements },
+        session.access_token,
+      );
+      setSaved(true);
+    } catch (e) {
+      setErr(e.message || 'Something went wrong. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (intakeLoading) {
+    return (
+      <SectionCard title="NUTRITION PREFERENCES">
+        <SkeletonLine width="50%" />
+        <SkeletonLine width="60%" />
+        <SkeletonLine width="40%" />
+      </SectionCard>
+    );
+  }
+
+  if (!intake) {
+    return (
+      <SectionCard title="NUTRITION PREFERENCES">
+        <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, color: '#555', letterSpacing: '0.06em' }}>
+          Complete the intake form to set your nutrition preferences.
+        </p>
+      </SectionCard>
+    );
+  }
+
+  return (
+    <SectionCard title="NUTRITION PREFERENCES">
+      <FieldLabel label="Dietary preference">
+        <select value={dietary} onChange={e => setDietary(e.target.value)} style={{ ...inp(), appearance: 'none' }}>
+          <option value="">Select…</option>
+          {DIETARY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+      </FieldLabel>
+
+      <FieldLabel label="Meal plan type">
+        <select value={mealPlanType} onChange={e => setMealPlanType(e.target.value)} style={{ ...inp(), appearance: 'none' }}>
+          <option value="">Select…</option>
+          {MEAL_PLAN_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+      </FieldLabel>
+
+      <FieldLabel label="Meals per day">
+        <select value={mealsPerDay} onChange={e => setMealsPerDay(e.target.value)} style={{ ...inp(), appearance: 'none' }}>
+          <option value="">Select…</option>
+          {['3', '4', '5', '6'].map(n => <option key={n} value={n}>{n}</option>)}
+        </select>
+      </FieldLabel>
+
+      <FieldLabel label="Foods you will not eat">
+        <textarea
+          value={foodsNotEat}
+          onChange={e => setFoodsNotEat(e.target.value)}
+          rows={3}
+          placeholder="e.g. mushrooms, shellfish, nuts"
+          style={{ ...inp(), resize: 'vertical', lineHeight: 1.5 }}
+        />
+      </FieldLabel>
+
+      <FieldLabel label="Supplement preference">
+        <select value={supplements} onChange={e => setSupplements(e.target.value)} style={{ ...inp(), appearance: 'none' }}>
+          <option value="">Select…</option>
+          {SUPPLEMENTS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+      </FieldLabel>
+
+      {saved && (
+        <div style={{ background: '#0d1a0d', border: '1px solid rgba(76,175,80,0.3)', padding: '12px 16px', marginBottom: 14 }}>
+          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', color: '#4CAF50', marginBottom: 4 }}>
+            ✓ Preferences saved
+          </div>
+          <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, color: '#787878', letterSpacing: '0.04em', margin: 0, lineHeight: 1.5 }}>
+            Your new preferences will apply to your next plan generation or renewal.
+          </p>
+        </div>
+      )}
+
+      {err && <p style={{ color: '#ef4444', fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", marginBottom: 10 }}>{err}</p>}
+
+      <button onClick={handleSave} disabled={saving} style={primaryBtn(saving)}>
+        {saving ? '…' : saved ? '✓ Saved' : 'Save Preferences'}
+      </button>
+    </SectionCard>
+  );
+}
+
+// ─── SECTION 3: MY PLAN ──────────────────────────────────────────────────────
 
 const RENEWAL_GOALS = [
   { value: 'fat_loss',        label: 'Fat Loss' },
@@ -617,7 +751,7 @@ function MyPlanSection({ plan, intake, intakeLoading, planGeneratedAt, onPlanSwi
   );
 }
 
-// ─── SECTION 3: MY PLANS ─────────────────────────────────────────────────────
+// ─── SECTION 4: MY PLANS ─────────────────────────────────────────────────────
 
 const PLAN_GOAL_LABELS = { fat_loss: 'Fat Loss', muscle_building: 'Lean Bulk', maintenance: 'Recomposition' };
 const fmtDate = d => new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -739,7 +873,7 @@ function MyPlansSection({ isUnlocked, onPlanSwitch }) {
   );
 }
 
-// ─── SECTION 4: SUBSCRIPTION ─────────────────────────────────────────────────
+// ─── SECTION 5: SUBSCRIPTION ─────────────────────────────────────────────────
 
 function SubscriptionSection({ isUnlocked, subRow, user, onUnlock }) {
   const [portalLoading, setPortalLoading] = useState(false);
@@ -855,7 +989,7 @@ function EmailTestingCard() {
   );
 }
 
-// ─── SECTION 4: SETTINGS & PRIVACY ───────────────────────────────────────────
+// ─── SECTION 6: SETTINGS & PRIVACY ───────────────────────────────────────────
 
 function SettingsSection({ user }) {
   const [reminders,     setReminders]     = useState(true);
@@ -1081,8 +1215,9 @@ export default function AccountTab({ user, plan, isUnlocked, subRow, onUnlock, o
 
   return (
     <div>
-      <ProfileSection      user={user} intake={intake} intakeLoading={intakeLoading} />
-      <MyPlanSection       plan={plan} intake={intake} intakeLoading={intakeLoading} planGeneratedAt={planGeneratedAt} onPlanSwitch={onPlanSwitch} />
+      <ProfileSection             user={user} intake={intake} intakeLoading={intakeLoading} />
+      <NutritionPreferencesSection intake={intake} intakeLoading={intakeLoading} />
+      <MyPlanSection              plan={plan} intake={intake} intakeLoading={intakeLoading} planGeneratedAt={planGeneratedAt} onPlanSwitch={onPlanSwitch} />
       <MyPlansSection      isUnlocked={isUnlocked} onPlanSwitch={onPlanSwitch} />
       <SubscriptionSection isUnlocked={isUnlocked} subRow={subRow} user={user} onUnlock={onUnlock} />
       <SettingsSection    user={user} />
