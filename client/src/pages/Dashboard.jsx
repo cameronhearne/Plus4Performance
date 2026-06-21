@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { createCheckoutSession } from '../lib/api';
+import { createCheckoutSession, getExerciseSubstitutions, swapExercise } from '../lib/api';
 import AchievementsTab from './AchievementsTab';
 import ProgressTab from './ProgressTab';
 import TodayTab from './TodayTab';
@@ -63,6 +63,9 @@ function TabPlan({ plan, isUnlocked, onUnlock }) {
   const [selectedPhase, setSelectedPhase] = useState(0);
   const [startDate,     setStartDate]     = useState(null);
   const [lockedMsg,     setLockedMsg]     = useState('');
+  const [overrides,     setOverrides]     = useState(plan?.exercise_overrides || {});
+
+  useEffect(() => { setOverrides(plan?.exercise_overrides || {}); }, [plan]);
 
   useEffect(() => {
     if (!isUnlocked) return;
@@ -80,6 +83,18 @@ function TabPlan({ plan, isUnlocked, onUnlock }) {
     }
     loadStartDate();
   }, [isUnlocked]);
+
+  function handleSwap(phaseIdx, sessionIdx, exId, newName) {
+    const key      = `${phaseIdx}:${sessionIdx}:${exId}`;
+    const origName = plan?.exercise_library?.[exId]?.name;
+    setOverrides(prev => {
+      if (newName === origName || newName === null) {
+        const { [key]: _removed, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [key]: newName };
+    });
+  }
 
   if (!isUnlocked) return (
     <div>
@@ -135,7 +150,9 @@ function TabPlan({ plan, isUnlocked, onUnlock }) {
         <div>
           <div style={styles.phaseTag}>{phase.label} — Weeks {phase.weeks}</div>
           {(phase.sessions || []).map((s, i) => (
-            <SessionCard key={i} session={s} library={library} defaultOpen={i === 0} />
+            <SessionCard key={i} session={s} library={library} defaultOpen={i === 0}
+              phaseIndex={selectedPhase} sessionIndex={i}
+              overrides={overrides} onSwap={handleSwap} />
           ))}
         </div>
       )}
@@ -149,9 +166,45 @@ function TabPlan({ plan, isUnlocked, onUnlock }) {
 
 // ─── SUB-COMPONENTS ──────────────────────────────────────────────────────────
 
-function SessionCard({ session, library = {}, defaultOpen = false }) {
-  const [open, setOpen] = useState(defaultOpen);
+function SessionCard({ session, library = {}, defaultOpen = false, phaseIndex, sessionIndex, overrides = {}, onSwap }) {
+  const [open,       setOpen]       = useState(defaultOpen);
   const [expandedEx, setExpandedEx] = useState(null);
+  const [swappingEx, setSwappingEx] = useState(null);
+  const [altLoading, setAltLoading] = useState(false);
+  const [altList,    setAltList]    = useState([]);
+
+  function findLibraryByName(name) {
+    const lc = name.toLowerCase();
+    return Object.values(library).find(e => e.name && e.name.toLowerCase() === lc) || null;
+  }
+
+  async function handleSwapClick(i, originalName) {
+    if (swappingEx === i) { setSwappingEx(null); return; }
+    setSwappingEx(i);
+    setAltLoading(true);
+    setAltList([]);
+    try {
+      const { data: { session: authSess } } = await supabase.auth.getSession();
+      const { substitutions } = await getExerciseSubstitutions(originalName, authSess.access_token);
+      setAltList(substitutions || []);
+    } catch {
+      setAltList([]);
+    } finally {
+      setAltLoading(false);
+    }
+  }
+
+  async function handleSelectSwap(exId, newName, originalName) {
+    try {
+      const { data: { session: authSess } } = await supabase.auth.getSession();
+      await swapExercise(phaseIndex, sessionIndex, exId, newName, authSess.access_token);
+      onSwap?.(phaseIndex, sessionIndex, exId, newName === originalName ? null : newName);
+      setSwappingEx(null);
+    } catch (e) {
+      console.error('[swap]', e);
+    }
+  }
+
   return (
     <div style={styles.sessionCard}>
       <button type="button" style={styles.sessionHeader} onClick={() => setOpen(o => !o)}>
@@ -170,27 +223,112 @@ function SessionCard({ session, library = {}, defaultOpen = false }) {
             </thead>
             <tbody>
               {(session.exercises || []).map((ex, i) => {
-                const info = library[ex.ex] || {};
-                const name = info.name || ex.ex;
-                const isOpen = expandedEx === i;
+                const overrideKey  = `${phaseIndex}:${sessionIndex}:${ex.ex}`;
+                const overrideName = overrides[overrideKey];
+                const isOverridden = !!overrideName;
+                const originalInfo = library[ex.ex] || {};
+                const originalName = originalInfo.name || ex.ex;
+                const displayName  = overrideName || originalName;
+                const displayInfo  = overrideName ? (findLibraryByName(overrideName) || {}) : originalInfo;
+                const isCuesOpen   = expandedEx === i;
+                const isSwapOpen   = swappingEx === i;
+
                 return (
                   <React.Fragment key={i}>
-                    <tr style={{ background: i % 2 === 0 ? '#111' : '#0d0d0d', cursor: info.cues ? 'pointer' : 'default' }}
-                      onClick={() => info.cues && setExpandedEx(isOpen ? null : i)}>
+                    <tr
+                      style={{ background: i % 2 === 0 ? '#111' : '#0d0d0d', cursor: displayInfo.cues ? 'pointer' : 'default' }}
+                      onClick={() => displayInfo.cues && setExpandedEx(isCuesOpen ? null : i)}
+                    >
                       <td style={styles.td}>
-                        {name}
-                        {info.cues && <span style={{ color: '#555', fontSize: 11, marginLeft: 6 }}>{isOpen ? '▲' : '▼'}</span>}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
+                          <span style={{ flex: 1 }}>
+                            {displayName}
+                            {displayInfo.cues && (
+                              <span style={{ color: '#555', fontSize: 11, marginLeft: 6 }}>{isCuesOpen ? '▲' : '▼'}</span>
+                            )}
+                            {isOverridden && (
+                              <span style={{ color: '#C0392B', fontSize: 9, fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', marginLeft: 8 }}>swapped</span>
+                            )}
+                          </span>
+                          <button
+                            type="button"
+                            title="Swap exercise"
+                            onClick={e => { e.stopPropagation(); handleSwapClick(i, originalName); }}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: 14, lineHeight: 1, color: isSwapOpen ? '#C0392B' : '#3a3a3a', flexShrink: 0 }}
+                          >
+                            ⇄
+                          </button>
+                        </div>
                       </td>
                       <td style={styles.tdCenter}>{ex.sets}</td>
                       <td style={styles.tdCenter}>{ex.reps}</td>
                       <td style={styles.tdCenter}>{ex.rest}</td>
                     </tr>
-                    {isOpen && info.cues && (
+
+                    {isCuesOpen && displayInfo.cues && (
                       <tr style={{ background: '#0a0a0a' }}>
                         <td colSpan={4} style={{ padding: '10px 0 14px', fontSize: 12, color: '#CDCDC8', lineHeight: 1.6 }}>
-                          <div style={{ marginBottom: 4 }}><span style={{ color: '#787878', fontWeight: 700 }}>Cue: </span>{info.cues}</div>
-                          {info.common_mistakes && <div style={{ marginBottom: 4 }}><span style={{ color: '#787878', fontWeight: 700 }}>Avoid: </span>{info.common_mistakes}</div>}
-                          {info.injury_modifications && <div><span style={{ color: '#787878', fontWeight: 700 }}>Modification: </span>{info.injury_modifications}</div>}
+                          <div style={{ marginBottom: 4 }}><span style={{ color: '#787878', fontWeight: 700 }}>Cue: </span>{displayInfo.cues}</div>
+                          {displayInfo.common_mistakes && <div style={{ marginBottom: 4 }}><span style={{ color: '#787878', fontWeight: 700 }}>Avoid: </span>{displayInfo.common_mistakes}</div>}
+                          {displayInfo.injury_modifications && <div><span style={{ color: '#787878', fontWeight: 700 }}>Modification: </span>{displayInfo.injury_modifications}</div>}
+                        </td>
+                      </tr>
+                    )}
+
+                    {isSwapOpen && (
+                      <tr style={{ background: '#0a0a0a' }}>
+                        <td colSpan={4} style={{ padding: '12px 0 16px' }}>
+                          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: '#555', marginBottom: 10 }}>
+                            Swap with
+                          </div>
+                          {altLoading ? (
+                            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, color: '#444', letterSpacing: '0.06em' }}>
+                              Loading alternatives…
+                            </div>
+                          ) : altList.length === 0 ? (
+                            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, color: '#444', letterSpacing: '0.06em' }}>
+                              No alternatives available for this exercise.
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                              {altList.map(alt => {
+                                const isActive = overrideName === alt || (!isOverridden && alt === originalName);
+                                return (
+                                  <button
+                                    key={alt}
+                                    type="button"
+                                    onClick={() => handleSelectSwap(ex.ex, alt, originalName)}
+                                    style={{
+                                      background: isActive ? 'rgba(192,57,43,0.12)' : 'none',
+                                      border: isActive ? '1px solid rgba(192,57,43,0.4)' : '1px solid transparent',
+                                      color: isActive ? '#C0392B' : '#CDCDC8',
+                                      fontFamily: "'Barlow Condensed', sans-serif",
+                                      fontSize: 13,
+                                      letterSpacing: '0.04em',
+                                      textAlign: 'left',
+                                      padding: '7px 10px',
+                                      cursor: 'pointer',
+                                      width: '100%',
+                                    }}
+                                  >
+                                    {alt}
+                                    {isActive && <span style={{ float: 'right', fontSize: 11 }}>✓</span>}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                          {isOverridden && (
+                            <div style={{ marginTop: 10, borderTop: '1px solid #1a1a1a', paddingTop: 10 }}>
+                              <button
+                                type="button"
+                                onClick={() => handleSelectSwap(ex.ex, originalName, originalName)}
+                                style={{ background: 'none', border: 'none', color: '#555', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, letterSpacing: '0.06em', cursor: 'pointer', padding: 0 }}
+                              >
+                                ↺ Restore original — {originalName}
+                              </button>
+                            </div>
+                          )}
                         </td>
                       </tr>
                     )}

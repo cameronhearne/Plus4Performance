@@ -1544,6 +1544,73 @@ async function handleSaveEmailPreferences(req, res) {
   return json(res, 200, { ok: true });
 }
 
+// GET /api/exercise-substitutions?exercise=<name>
+async function handleGetExerciseSubstitutions(req, res) {
+  const userId = await getUserIdFromToken(req.headers['authorization']);
+  if (!userId) return json(res, 401, { error: 'Unauthorized' });
+  const exercise = new URL('http://x' + req.url).searchParams.get('exercise');
+  if (!exercise) return json(res, 400, { error: 'exercise param required' });
+  return json(res, 200, { substitutions: getSubstitutions(exercise) });
+}
+
+// POST /api/exercise-swap
+// Writes an exercise override into plan_data.exercise_overrides.
+// Key format: "{phaseIndex}:{sessionIndex}:{ex_id}" → canonical exercise name.
+// Passing new_exercise_name equal to the original name clears the override (restore).
+async function handleExerciseSwap(req, res) {
+  const userId = await getUserIdFromToken(req.headers['authorization']);
+  if (!userId) return json(res, 401, { error: 'Unauthorized' });
+
+  const body = await readBody(req);
+  let parsed;
+  try { parsed = JSON.parse(body); } catch { return json(res, 400, { error: 'Invalid JSON' }); }
+
+  const { phase_index, session_index, ex_id, new_exercise_name } = parsed;
+  if (typeof phase_index !== 'number' || typeof session_index !== 'number' ||
+      !ex_id || !new_exercise_name) {
+    return json(res, 400, { error: 'phase_index, session_index, ex_id, and new_exercise_name are required' });
+  }
+
+  const { data: planRow, error: planErr } = await supabaseAdmin
+    .from('plans').select('id, plan_data')
+    .eq('user_id', userId).eq('is_active', true).maybeSingle();
+  if (planErr || !planRow) return json(res, 404, { error: 'No active plan found' });
+
+  const library     = planRow.plan_data?.exercise_library || {};
+  const exerciseInfo = library[ex_id];
+  if (!exerciseInfo) return json(res, 400, { error: 'Exercise not found in plan library' });
+
+  const canonicalName = exerciseInfo.name;
+  const isRestore     = new_exercise_name === canonicalName;
+
+  if (!isRestore) {
+    const validSubs = getSubstitutions(canonicalName);
+    if (validSubs.length > 0 && !validSubs.includes(new_exercise_name)) {
+      return json(res, 400, { error: 'Invalid substitution for this exercise' });
+    }
+  }
+
+  const overrideKey      = `${phase_index}:${session_index}:${ex_id}`;
+  const currentOverrides = planRow.plan_data?.exercise_overrides || {};
+  let updatedOverrides;
+  if (isRestore) {
+    const { [overrideKey]: _removed, ...rest } = currentOverrides;
+    updatedOverrides = rest;
+  } else {
+    updatedOverrides = { ...currentOverrides, [overrideKey]: new_exercise_name };
+  }
+
+  const updatedPlanData = { ...planRow.plan_data, exercise_overrides: updatedOverrides };
+  const { error: updateErr } = await supabaseAdmin
+    .from('plans').update({ plan_data: updatedPlanData }).eq('id', planRow.id);
+  if (updateErr) {
+    console.error('[exercise-swap] update error:', updateErr.message);
+    return json(res, 500, { error: 'Something went wrong. Please try again.' });
+  }
+
+  return json(res, 200, { ok: true });
+}
+
 // POST /api/nutrition-preferences
 // Updates the dietary preference fields in the user's latest intake_submissions row.
 // The renewal flow reads from that same row, so changes take effect on the next plan generation.
@@ -3499,6 +3566,13 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'POST' && url === '/api/email-preferences') {
       return await handleSaveEmailPreferences(req, res);
+    }
+
+    if (req.method === 'GET'  && url.startsWith('/api/exercise-substitutions')) {
+      return await handleGetExerciseSubstitutions(req, res);
+    }
+    if (req.method === 'POST' && url === '/api/exercise-swap') {
+      return await handleExerciseSwap(req, res);
     }
 
     if (req.method === 'POST' && url === '/api/nutrition-preferences') {

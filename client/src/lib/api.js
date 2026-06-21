@@ -64,6 +64,19 @@ export async function updateNutritionPreferences(prefs, token) {
   return authedPost('/api/nutrition-preferences', prefs, token);
 }
 
+export async function getExerciseSubstitutions(exerciseName, token) {
+  return authedGet(`/api/exercise-substitutions?exercise=${encodeURIComponent(exerciseName)}`, token);
+}
+
+export async function swapExercise(phaseIndex, sessionIndex, exId, newExerciseName, token) {
+  return authedPost('/api/exercise-swap', {
+    phase_index:      phaseIndex,
+    session_index:    sessionIndex,
+    ex_id:            exId,
+    new_exercise_name: newExerciseName,
+  }, token);
+}
+
 export async function listPlans(token)              { return authedGet('/api/plans', token); }
 export async function activatePlan(planId, token)   { return authedPost('/api/plan/activate', { plan_id: planId }, token); }
 
