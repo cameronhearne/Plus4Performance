@@ -12,6 +12,9 @@ const sanitizeHtml = require('sanitize-html');
 const anthropic = new Anthropic();
 const coachingBible = fs.readFileSync(path.join(__dirname, 'coaching_bible.txt'), 'utf8');
 
+const { initSubstitutions, getSubstitutions } = require('./exerciseSubstitutions');
+initSubstitutions(path.join(__dirname, 'coaching_bible.txt'));
+
 // Two separate clients:
 // - supabaseAdmin: service role key, bypasses RLS, used for all DB writes
 // - supabaseAuth: anon key, used only to verify user JWTs (avoids contaminating admin client auth state)
