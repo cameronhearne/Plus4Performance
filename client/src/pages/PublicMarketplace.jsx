@@ -17,6 +17,7 @@ export default function PublicMarketplace() {
       <nav style={S.nav}>
         <a href="/marketplace" style={S.logo}>PLUS 4 PERFORMANCE</a>
         <div style={S.navRight}>
+          <a href="/faq" style={S.navLink}>FAQ</a>
           <a href="/login" style={S.navLink}>Log in</a>
           <a href="/signup" style={S.navCta}>Get started</a>
         </div>
