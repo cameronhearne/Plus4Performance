@@ -13,6 +13,7 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import AffiliateLogin from './pages/AffiliateLogin';
 import AffiliateDashboard from './pages/AffiliateDashboard';
 import PublicMarketplace from './pages/PublicMarketplace';
+import FAQ from './pages/FAQ';
 
 function RequireAuth({ children }) {
   const [session, setSession] = useState(undefined);
@@ -85,6 +86,7 @@ export default function App() {
       <Route path="/affiliate/login"     element={<AffiliateLogin />} />
       <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
       <Route path="/marketplace" element={<PublicMarketplace />} />
+      <Route path="/faq" element={<FAQ />} />
       {/* Catch-all for the app shell */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
