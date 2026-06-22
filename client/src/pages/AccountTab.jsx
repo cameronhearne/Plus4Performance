@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { createPortalSession, deleteAccount, createCheckoutSession, getEmailPreferences, saveEmailPreferences, sendTestWeeklyEmail, requestRenewalPlan, listPlans, activatePlan, updateNutritionPreferences } from '../lib/api';
+import { FAQ_SECTIONS } from '../lib/faqData';
 
 /*
   ─── NO NEW SQL TABLES REQUIRED ────────────────────────────────────────────────
@@ -1182,6 +1183,64 @@ function SettingsSection({ user }) {
   );
 }
 
+// ─── SECTION 7: HELP & FAQ ───────────────────────────────────────────────────
+
+function HelpSection() {
+  const [openKeys, setOpenKeys] = useState(new Set());
+
+  function toggle(key) {
+    setOpenKeys(prev => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  }
+
+  return (
+    <SectionCard title="HELP & FAQ">
+      {FAQ_SECTIONS.map((section, si) => (
+        <div key={si} style={{ marginBottom: si < FAQ_SECTIONS.length - 1 ? 24 : 0 }}>
+          <div style={{ ...eyebrowStyle, marginBottom: 10 }}>{section.heading}</div>
+          {section.items.map((item, qi) => {
+            const key    = `${si}:${qi}`;
+            const isOpen = openKeys.has(key);
+            return (
+              <div key={qi} style={{ borderBottom: '1px solid #1a1a1a' }}>
+                <button
+                  type="button"
+                  onClick={() => toggle(key)}
+                  aria-expanded={isOpen}
+                  style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, background: 'none', border: 'none', cursor: 'pointer', padding: '12px 0', textAlign: 'left', minHeight: 44 }}
+                >
+                  <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, color: '#CDCDC8', letterSpacing: '0.04em', flex: 1, lineHeight: 1.4 }}>
+                    {item.q}
+                  </span>
+                  <span style={{ color: isOpen ? '#C0392B' : '#555', fontSize: 20, lineHeight: 1, flexShrink: 0, fontWeight: 300, marginTop: 1 }}>
+                    {isOpen ? '−' : '+'}
+                  </span>
+                </button>
+                {isOpen && (
+                  <div style={{ fontFamily: "'Barlow', sans-serif", fontSize: 13, color: '#787878', lineHeight: 1.7, paddingBottom: 14, paddingRight: 24, fontWeight: 300 }}>
+                    {item.a}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ))}
+      <div style={{ borderTop: '1px solid #1a1a1a', paddingTop: 16, marginTop: 20 }}>
+        <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, color: '#555', letterSpacing: '0.04em', margin: 0 }}>
+          Still have a question?{' '}
+          <a href="mailto:hello@plus4performance.com" style={{ color: '#787878', textDecoration: 'none' }}>
+            hello@plus4performance.com
+          </a>
+        </p>
+      </div>
+    </SectionCard>
+  );
+}
+
 // ─── MAIN EXPORT ─────────────────────────────────────────────────────────────
 
 export default function AccountTab({ user, plan, isUnlocked, subRow, onUnlock, onPlanSwitch, planGeneratedAt }) {
@@ -1221,6 +1280,7 @@ export default function AccountTab({ user, plan, isUnlocked, subRow, onUnlock, o
       <MyPlansSection      isUnlocked={isUnlocked} onPlanSwitch={onPlanSwitch} />
       <SubscriptionSection isUnlocked={isUnlocked} subRow={subRow} user={user} onUnlock={onUnlock} />
       <SettingsSection    user={user} />
+      <HelpSection />
     </div>
   );
 }
