@@ -188,45 +188,59 @@ function Section3({ data, onChange }) {
   };
   return (
     <div>
+      <p className="if-eyebrow" style={{ animation: 'none', opacity: 1 }}>Tell us how you train</p>
       <h2 className="if-heading" style={{ animationDelay: '0s' }}>Training preferences</h2>
-      <div className="form-group">
-        <label>Training days per week</label>
-        <select value={data.trainingDays || ''} onChange={e => onChange('trainingDays', e.target.value)} required>
-          <option value="">Select…</option>
-          <option value="3">3 days</option>
-          <option value="4">4 days — recommended sweet spot</option>
-          <option value="5">5 days</option>
-          <option value="6">6 days</option>
-        </select>
+
+      <div className="if-form-group">
+        <label className="if-label">Training days per week</label>
+        <div className="if-select-wrap">
+          <select className="if-select" value={data.trainingDays || ''} onChange={e => onChange('trainingDays', e.target.value)} required>
+            <option value="">Select…</option>
+            <option value="3">3 days</option>
+            <option value="4">4 days — recommended sweet spot</option>
+            <option value="5">5 days</option>
+            <option value="6">6 days</option>
+          </select>
+        </div>
       </div>
-      <div className="form-group">
-        <label>Session length</label>
-        <select value={data.sessionLength || ''} onChange={e => onChange('sessionLength', e.target.value)} required>
-          <option value="">Select…</option>
-          <option value="45">45 minutes</option>
-          <option value="60">60 minutes</option>
-          <option value="90">90 minutes</option>
-          <option value="120">2 hours</option>
-        </select>
+
+      <div className="if-form-group">
+        <label className="if-label">Session length</label>
+        <div className="if-select-wrap">
+          <select className="if-select" value={data.sessionLength || ''} onChange={e => onChange('sessionLength', e.target.value)} required>
+            <option value="">Select…</option>
+            <option value="45">45 minutes</option>
+            <option value="60">60 minutes</option>
+            <option value="90">90 minutes</option>
+            <option value="120">2 hours</option>
+          </select>
+        </div>
       </div>
-      <div className="form-group">
-        <label>Schedule preference</label>
-        <select value={data.scheduleType || ''} onChange={e => onChange('scheduleType', e.target.value)} required>
-          <option value="">Select…</option>
-          <option value="fixed">Fixed schedule — same days every week</option>
-          <option value="rolling">Rolling programme — follow sessions in sequence</option>
-        </select>
+
+      <div className="if-form-group">
+        <label className="if-label">Schedule preference</label>
+        <div className="if-select-wrap">
+          <select className="if-select" value={data.scheduleType || ''} onChange={e => onChange('scheduleType', e.target.value)} required>
+            <option value="">Select…</option>
+            <option value="fixed">Fixed schedule — same days every week</option>
+            <option value="rolling">Rolling programme — follow sessions in sequence</option>
+          </select>
+        </div>
       </div>
+
       {data.scheduleType === 'fixed' && (
-        <div className="form-group">
-          <label>Preferred training days</label>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        <div className="if-form-group">
+          <label className="if-label">Preferred training days</label>
+          <div className="if-day-grid">
             {DAYS.map(day => {
               const active = (data.preferredDays || []).includes(day);
               return (
-                <button key={day} type="button"
-                  style={active ? oldStyles.dayActive : oldStyles.dayBtn}
-                  onClick={() => toggleDay(day)}>
+                <button
+                  key={day}
+                  type="button"
+                  className={`if-day-btn${active ? ' active' : ''}`}
+                  onClick={() => toggleDay(day)}
+                >
                   {day}
                 </button>
               );
@@ -234,39 +248,48 @@ function Section3({ data, onChange }) {
           </div>
         </div>
       )}
-      <div className="form-group">
-        <label>Training split</label>
-        <select value={data.trainingSplit || ''} onChange={e => onChange('trainingSplit', e.target.value)} required>
-          <option value="">Select…</option>
-          <option value="recommend">Recommend the best split for me</option>
-          <option value="push_pull_legs">Push Pull Legs</option>
-          <option value="upper_lower">Upper Lower</option>
-          <option value="full_body">Full Body</option>
-          <option value="arnold_split">Arnold Split</option>
-          <option value="chest_back_shoulders_arms">Chest & Back + Shoulders & Arms</option>
-          <option value="ppl_posterior">PPL + Posterior Chain</option>
-          <option value="upper_lower_x">Upper Lower Plus</option>
-        </select>
+
+      <div className="if-form-group">
+        <label className="if-label">Training split</label>
+        <div className="if-select-wrap">
+          <select className="if-select" value={data.trainingSplit || ''} onChange={e => onChange('trainingSplit', e.target.value)} required>
+            <option value="">Select…</option>
+            <option value="recommend">Recommend the best split for me</option>
+            <option value="push_pull_legs">Push Pull Legs</option>
+            <option value="upper_lower">Upper Lower</option>
+            <option value="full_body">Full Body</option>
+            <option value="arnold_split">Arnold Split</option>
+            <option value="chest_back_shoulders_arms">Chest & Back + Shoulders & Arms</option>
+            <option value="ppl_posterior">PPL + Posterior Chain</option>
+            <option value="upper_lower_x">Upper Lower Plus</option>
+          </select>
+        </div>
       </div>
-      <div className="form-group">
-        <label>Available equipment</label>
-        <select value={data.equipment || ''} onChange={e => onChange('equipment', e.target.value)} required>
-          <option value="">Select…</option>
-          <option value="specialist_gym">Specialist gym — powerlifting or serious lifting gym</option>
-          <option value="commercial_gym">Commercial gym — PureGym, Virgin, Fitness First</option>
-          <option value="budget_gym">Budget gym — dumbbells, barbells, cables, machines</option>
-          <option value="home_gym">Home gym</option>
-          <option value="bodyweight">Bodyweight only</option>
-        </select>
+
+      <div className="if-form-group">
+        <label className="if-label">Available equipment</label>
+        <div className="if-select-wrap">
+          <select className="if-select" value={data.equipment || ''} onChange={e => onChange('equipment', e.target.value)} required>
+            <option value="">Select…</option>
+            <option value="specialist_gym">Specialist gym — powerlifting or serious lifting gym</option>
+            <option value="commercial_gym">Commercial gym — PureGym, Virgin, Fitness First</option>
+            <option value="budget_gym">Budget gym — dumbbells, barbells, cables, machines</option>
+            <option value="home_gym">Home gym</option>
+            <option value="bodyweight">Bodyweight only</option>
+          </select>
+        </div>
       </div>
-      <div className="form-group">
-        <label>Training experience</label>
-        <select value={data.experience || ''} onChange={e => onChange('experience', e.target.value)} required>
-          <option value="">Select…</option>
-          <option value="beginner">Beginner — under 1 year consistent training</option>
-          <option value="intermediate">Intermediate — 1–3 years consistent training</option>
-          <option value="advanced">Advanced — 3+ years consistent training</option>
-        </select>
+
+      <div className="if-form-group">
+        <label className="if-label">Training experience</label>
+        <div className="if-select-wrap">
+          <select className="if-select" value={data.experience || ''} onChange={e => onChange('experience', e.target.value)} required>
+            <option value="">Select…</option>
+            <option value="beginner">Beginner — under 1 year consistent training</option>
+            <option value="intermediate">Intermediate — 1–3 years consistent training</option>
+            <option value="advanced">Advanced — 3+ years consistent training</option>
+          </select>
+        </div>
       </div>
     </div>
   );
@@ -523,10 +546,8 @@ export default function Intake() {
   );
 }
 
-// Temporary styles for Sections 3–5 internals (replaced screen by screen)
+// Temporary styles for Sections 4–5 internals (replaced screen by screen)
 const oldStyles = {
-  dayBtn:    { padding: '12px 8px', background: '#131119', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 8, color: '#5C5A62', fontFamily: "'Oswald', sans-serif", fontSize: 13, fontWeight: 600, cursor: 'pointer' },
-  dayActive: { padding: '12px 8px', background: '#131119', border: '1px solid rgba(255,79,196,0.4)', borderRadius: 8, color: '#F3F1ED', fontFamily: "'Oswald', sans-serif", fontSize: 13, fontWeight: 600, cursor: 'pointer', boxShadow: '0 0 16px -6px rgba(255,79,196,0.55)' },
-  checkRow:  { display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' },
-  redFlag:   { padding: 16, background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: 8, fontSize: 13, color: '#fca5a5', lineHeight: 1.6, marginBottom: 20 },
+  checkRow: { display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' },
+  redFlag:  { padding: 16, background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: 8, fontSize: 13, color: '#fca5a5', lineHeight: 1.6, marginBottom: 20 },
 };
