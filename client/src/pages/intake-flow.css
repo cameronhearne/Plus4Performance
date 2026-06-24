@@ -484,6 +484,82 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* ─── Unit toggles (cm/ft·in, kg/lbs) ───────────────────── */
+.if-unit-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.if-unit-opt {
+  flex: 1;
+  padding: 9px 0;
+  background: linear-gradient(160deg, #131119 0%, #0C0A0F 100%);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 8px;
+  color: var(--ash-dim);
+  font-family: 'Oswald', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    border-color 0.22s var(--ease),
+    box-shadow 0.22s var(--ease),
+    color 0.22s var(--ease),
+    transform 0.18s var(--ease);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.if-unit-opt.active {
+  border-color: rgba(255, 79, 196, 0.4);
+  box-shadow: 0 0 20px -6px var(--violet-glow), 0 1px 0 rgba(255,255,255,0.03) inset;
+  color: var(--bone);
+  transform: translateY(-1px);
+}
+
+.if-unit-opt:active {
+  transform: scale(0.97);
+}
+
+/* ─── Hint text ──────────────────────────────────────────── */
+.if-hint {
+  font-size: 12px;
+  color: var(--ash-dim);
+  line-height: 1.5;
+  margin-top: 6px;
+}
+
+/* ─── Textarea ───────────────────────────────────────────── */
+.if-textarea {
+  width: 100%;
+  padding: 13px 14px;
+  background: var(--surface);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-input);
+  color: var(--bone);
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  outline: none;
+  resize: vertical;
+  min-height: 80px;
+  transition: border-color 0.25s var(--ease), box-shadow 0.25s var(--ease);
+}
+.if-textarea::placeholder { color: var(--ash-dim); }
+.if-textarea:focus {
+  border-color: rgba(255, 79, 196, 0.5);
+  box-shadow: 0 0 0 3px rgba(255, 79, 196, 0.12), 0 0 12px -4px rgba(255, 79, 196, 0.3);
+}
+
+/* ─── Inside Intake steps: form groups appear instantly  ─── */
+/* (entry animation is on the step wrapper, not individual fields) */
+.if-intake .if-form-group {
+  animation: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+
 /* ─── Reduced motion ─────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .if-brand,

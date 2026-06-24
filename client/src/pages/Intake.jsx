@@ -2,24 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { submitSnapshot } from '../lib/api';
+import './intake-flow.css';
 
 const TOTAL_STEPS = 5;
-
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-function ProgressBar({ step }) {
-  return (
-    <div style={{ marginBottom: 32 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-        <span style={styles.label}>Progress</span>
-        <span style={styles.label}>Step {step} of {TOTAL_STEPS}</span>
-      </div>
-      <div style={styles.track}>
-        <div style={{ ...styles.fill, width: `${(step / TOTAL_STEPS) * 100}%` }} />
-      </div>
-    </div>
-  );
-}
+// ─── Section 1: Your Details ─────────────────────────────────────────────────
 
 function Section1({ data, onChange }) {
   const [heightUnit, setHeightUnit] = useState('cm');
@@ -27,87 +15,160 @@ function Section1({ data, onChange }) {
 
   return (
     <div>
-      <h2 style={styles.sectionTitle}>YOUR DETAILS</h2>
-      <div className="form-group">
-        <label>Biological sex</label>
-        <select value={data.sex || ''} onChange={e => onChange('sex', e.target.value)} required>
-          <option value="">Select…</option>
-          <option value="male">Male</option>
-          <option value="female">Female</option>
-        </select>
+      <h2 className="if-heading" style={{ animationDelay: '0s' }}>Your details</h2>
+
+      <div className="if-form-group">
+        <label className="if-label">Biological sex</label>
+        <div className="if-select-wrap">
+          <select
+            className="if-select"
+            value={data.sex || ''}
+            onChange={e => onChange('sex', e.target.value)}
+            required
+          >
+            <option value="">Select…</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+          </select>
+        </div>
       </div>
-      <div className="form-group">
-        <label>Age</label>
-        <input type="number" min="16" max="80" value={data.age || ''} onChange={e => onChange('age', e.target.value)} required />
+
+      <div className="if-form-group">
+        <label className="if-label">Age</label>
+        <input
+          className="if-input"
+          type="number"
+          min="16"
+          max="80"
+          placeholder="e.g. 28"
+          value={data.age || ''}
+          onChange={e => onChange('age', e.target.value)}
+          required
+        />
       </div>
-      <div className="form-group">
-        <label>Height</label>
-        <div style={styles.unitToggle}>
+
+      <div className="if-form-group">
+        <label className="if-label">Height</label>
+        <div className="if-unit-toggle">
           {['cm', 'ft/in'].map(u => (
-            <button key={u} type="button" style={heightUnit === u ? styles.unitActive : styles.unitBtn}
-              onClick={() => setHeightUnit(u)}>{u.toUpperCase()}</button>
+            <button
+              key={u}
+              type="button"
+              className={`if-unit-opt${heightUnit === u ? ' active' : ''}`}
+              onClick={() => setHeightUnit(u)}
+            >
+              {u.toUpperCase()}
+            </button>
           ))}
         </div>
         {heightUnit === 'cm' ? (
-          <input type="number" placeholder="Height (cm)" value={data.heightCm || ''}
-            onChange={e => onChange('heightCm', e.target.value)} />
+          <input
+            className="if-input"
+            type="number"
+            placeholder="Height (cm)"
+            value={data.heightCm || ''}
+            onChange={e => onChange('heightCm', e.target.value)}
+          />
         ) : (
           <div style={{ display: 'flex', gap: 8 }}>
-            <input type="number" placeholder="Feet" value={data.heightFeet || ''}
-              onChange={e => onChange('heightFeet', e.target.value)} style={{ flex: 1 }} />
-            <input type="number" placeholder="Inches" min="0" max="11" value={data.heightInches || ''}
-              onChange={e => onChange('heightInches', e.target.value)} style={{ flex: 1 }} />
+            <input
+              className="if-input"
+              type="number"
+              placeholder="Feet"
+              value={data.heightFeet || ''}
+              onChange={e => onChange('heightFeet', e.target.value)}
+              style={{ flex: 1 }}
+            />
+            <input
+              className="if-input"
+              type="number"
+              placeholder="Inches"
+              min="0"
+              max="11"
+              value={data.heightInches || ''}
+              onChange={e => onChange('heightInches', e.target.value)}
+              style={{ flex: 1 }}
+            />
           </div>
         )}
       </div>
-      <div className="form-group">
-        <label>Current weight</label>
-        <div style={styles.unitToggle}>
+
+      <div className="if-form-group">
+        <label className="if-label">Current weight</label>
+        <div className="if-unit-toggle">
           {['kg', 'lbs'].map(u => (
-            <button key={u} type="button" style={weightUnit === u ? styles.unitActive : styles.unitBtn}
-              onClick={() => setWeightUnit(u)}>{u.toUpperCase()}</button>
+            <button
+              key={u}
+              type="button"
+              className={`if-unit-opt${weightUnit === u ? ' active' : ''}`}
+              onClick={() => setWeightUnit(u)}
+            >
+              {u.toUpperCase()}
+            </button>
           ))}
         </div>
-        <input type="number" placeholder={`Weight (${weightUnit})`}
+        <input
+          className="if-input"
+          type="number"
+          placeholder={`Weight (${weightUnit})`}
           value={weightUnit === 'kg' ? data.weightKg || '' : data.weightLbs || ''}
-          onChange={e => onChange(weightUnit === 'kg' ? 'weightKg' : 'weightLbs', e.target.value)} />
+          onChange={e => onChange(weightUnit === 'kg' ? 'weightKg' : 'weightLbs', e.target.value)}
+        />
       </div>
-      <div className="form-group">
-        <label>Target weight ({weightUnit})</label>
-        <input type="number" value={data.targetWeight || ''} onChange={e => onChange('targetWeight', e.target.value)} required />
-        <p style={styles.hint}>We'll build your plan around a safe, sustainable target — up to 1 kg per week over 12 weeks.</p>
+
+      <div className="if-form-group">
+        <label className="if-label">Target weight ({weightUnit})</label>
+        <input
+          className="if-input"
+          type="number"
+          placeholder={`Target (${weightUnit})`}
+          value={data.targetWeight || ''}
+          onChange={e => onChange('targetWeight', e.target.value)}
+          required
+        />
+        <p className="if-hint">We'll build your plan around a safe, sustainable target — up to 1 kg per week over 12 weeks.</p>
       </div>
-      <div className="form-group">
-        <label>Activity level</label>
-        <select value={data.activity || ''} onChange={e => onChange('activity', e.target.value)} required>
-          <option value="">Select…</option>
-          <option value="sedentary">Sedentary</option>
-          <option value="lightly_active">Lightly Active</option>
-          <option value="moderately_active">Moderately Active</option>
-          <option value="very_active">Very Active</option>
-          <option value="extremely_active">Extremely Active</option>
-        </select>
+
+      <div className="if-form-group">
+        <label className="if-label">Activity level</label>
+        <div className="if-select-wrap">
+          <select
+            className="if-select"
+            value={data.activity || ''}
+            onChange={e => onChange('activity', e.target.value)}
+            required
+          >
+            <option value="">Select…</option>
+            <option value="sedentary">Sedentary</option>
+            <option value="lightly_active">Lightly Active</option>
+            <option value="moderately_active">Moderately Active</option>
+            <option value="very_active">Very Active</option>
+            <option value="extremely_active">Extremely Active</option>
+          </select>
+        </div>
       </div>
     </div>
   );
 }
 
+// ─── Sections 2–5: content unchanged, styled in subsequent screens ────────────
+
 function Section2({ data, onChange }) {
   const goals = [
-    { value: 'fat_loss', label: 'Fat Loss', desc: 'Lose body fat while preserving muscle' },
-    { value: 'muscle_building', label: 'Muscle Building', desc: 'Build size and increase strength' },
-    { value: 'maintenance', label: 'Maintenance & Recomposition', desc: 'Improve body composition at current weight' },
+    { value: 'fat_loss',     label: 'Fat Loss',                   desc: 'Lose body fat while preserving muscle' },
+    { value: 'muscle_building', label: 'Muscle Building',          desc: 'Build size and increase strength' },
+    { value: 'maintenance',  label: 'Maintenance & Recomposition', desc: 'Improve body composition at current weight' },
   ];
   return (
     <div>
-      <h2 style={styles.sectionTitle}>YOUR GOAL</h2>
+      <h2 className="if-heading" style={{ animationDelay: '0s' }}>Your goal</h2>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {goals.map(g => (
           <button key={g.value} type="button"
-            style={data.goal === g.value ? styles.goalCardActive : styles.goalCard}
+            style={data.goal === g.value ? oldStyles.goalCardActive : oldStyles.goalCard}
             onClick={() => onChange('goal', g.value)}>
-            <div style={styles.goalLabel}>{g.label}</div>
-            <div style={styles.goalDesc}>{g.desc}</div>
+            <div style={oldStyles.goalLabel}>{g.label}</div>
+            <div style={oldStyles.goalDesc}>{g.desc}</div>
           </button>
         ))}
       </div>
@@ -121,10 +182,9 @@ function Section3({ data, onChange }) {
     const next = current.includes(day) ? current.filter(d => d !== day) : [...current, day];
     onChange('preferredDays', next);
   };
-
   return (
     <div>
-      <h2 style={styles.sectionTitle}>TRAINING PREFERENCES</h2>
+      <h2 className="if-heading" style={{ animationDelay: '0s' }}>Training preferences</h2>
       <div className="form-group">
         <label>Training days per week</label>
         <select value={data.trainingDays || ''} onChange={e => onChange('trainingDays', e.target.value)} required>
@@ -161,7 +221,7 @@ function Section3({ data, onChange }) {
               const active = (data.preferredDays || []).includes(day);
               return (
                 <button key={day} type="button"
-                  style={active ? styles.dayActive : styles.dayBtn}
+                  style={active ? oldStyles.dayActive : oldStyles.dayBtn}
                   onClick={() => toggleDay(day)}>
                   {day}
                 </button>
@@ -211,7 +271,7 @@ function Section3({ data, onChange }) {
 function Section4({ data, onChange }) {
   return (
     <div>
-      <h2 style={styles.sectionTitle}>NUTRITION PREFERENCES</h2>
+      <h2 className="if-heading" style={{ animationDelay: '0s' }}>Nutrition preferences</h2>
       <div className="form-group">
         <label>Meals per day</label>
         <select value={data.mealsPerDay || ''} onChange={e => onChange('mealsPerDay', e.target.value)} required>
@@ -259,7 +319,7 @@ function Section4({ data, onChange }) {
 function Section5({ data, onChange }) {
   return (
     <div>
-      <h2 style={styles.sectionTitle}>HEALTH & INJURIES</h2>
+      <h2 className="if-heading" style={{ animationDelay: '0s' }}>Health & injuries</h2>
       <div className="form-group">
         <label>Any injuries or physical limitations?</label>
         <select value={data.injuries || ''} onChange={e => onChange('injuries', e.target.value)} required>
@@ -279,23 +339,23 @@ function Section5({ data, onChange }) {
         <label>Medical flags — tick any that apply</label>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>
           {[
-            { key: 'surgery', label: 'Recent surgery (last 6 months)' },
+            { key: 'surgery',       label: 'Recent surgery (last 6 months)' },
             { key: 'heartCondition', label: 'Heart condition or chest pain during exercise' },
-            { key: 'jointPain', label: 'Severe joint pain that stops you training' },
-            { key: 'pregnant', label: 'Currently pregnant' },
+            { key: 'jointPain',     label: 'Severe joint pain that stops you training' },
+            { key: 'pregnant',      label: 'Currently pregnant' },
             { key: 'doctorAdvised', label: 'Advised by a doctor not to exercise' },
           ].map(({ key, label }) => (
-            <label key={key} style={styles.checkRow}>
+            <label key={key} style={oldStyles.checkRow}>
               <input type="checkbox" checked={data[key] || false}
                 onChange={e => onChange(key, e.target.checked)}
-                style={{ width: 'auto', accentColor: '#C8C8C8' }} />
+                style={{ width: 'auto', accentColor: '#FF4FC4' }} />
               <span style={{ fontSize: 14, color: '#CDCDC8' }}>{label}</span>
             </label>
           ))}
         </div>
       </div>
       {(data.surgery || data.heartCondition || data.jointPain || data.pregnant || data.doctorAdvised) && (
-        <div style={styles.redFlag}>
+        <div style={oldStyles.redFlag}>
           Based on what you've shared, we recommend speaking with your GP or physiotherapist before starting this programme.
           Contact us at hello@plus4performance.com and we'll assist you.
         </div>
@@ -313,12 +373,24 @@ function Section5({ data, onChange }) {
   );
 }
 
+// ─── Main Intake component ────────────────────────────────────────────────────
+
 export default function Intake() {
   const navigate = useNavigate();
-  const [step, setStep] = useState(1);
-  const [data, setData] = useState({});
-  const [error, setError] = useState('');
+  const [step, setStep]           = useState(1);
+  const [direction, setDirection] = useState('forward');
+  const [data, setData]           = useState({});
+  const [error, setError]         = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [progressWidth, setProgressWidth] = useState('0%');
+
+  // Animate progress bar fill on mount and step changes
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setProgressWidth(`${(step / TOTAL_STEPS) * 100}%`);
+    }, 80);
+    return () => clearTimeout(t);
+  }, [step]);
 
   // Pre-fill name and email from auth user
   useEffect(() => {
@@ -342,10 +414,8 @@ export default function Intake() {
     setError('');
     if (step === 1) {
       if (!data.sex || !data.age || !data.activity) { setError('Please complete all required fields.'); return false; }
-      const hasCm = data.heightCm;
-      const hasFt = data.heightFeet;
-      if (!hasCm && !hasFt) { setError('Please enter your height.'); return false; }
-      if (!data.weightKg && !data.weightLbs) { setError('Please enter your current weight.'); return false; }
+      if (!data.heightCm && !data.heightFeet) { setError('Please enter your height.'); return false; }
+      if (!data.weightKg && !data.weightLbs)  { setError('Please enter your current weight.'); return false; }
       if (!data.targetWeight) { setError('Please enter your target weight.'); return false; }
     }
     if (step === 2 && !data.goal) { setError('Please select a goal.'); return false; }
@@ -367,11 +437,13 @@ export default function Intake() {
 
   function next() {
     if (!validateStep()) return;
+    setDirection('forward');
     setStep(s => s + 1);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   function back() {
+    setDirection('back');
     setStep(s => s - 1);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -384,7 +456,6 @@ export default function Intake() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
 
-      // Normalise height to cm
       const intakePayload = {
         ...data,
         heightCm: data.heightCm
@@ -405,81 +476,57 @@ export default function Intake() {
   }
 
   return (
-    <div style={styles.page}>
-      <div style={styles.card}>
-        <div style={styles.logo}>PLUS 4 PERFORMANCE</div>
-        <ProgressBar step={step} />
+    <div className="if-page if-intake">
+      <div className="if-ambient" />
+      <div className="if-content" style={{ paddingTop: 8 }}>
 
-        {step === 1 && <Section1 data={data} onChange={set} />}
-        {step === 2 && <Section2 data={data} onChange={set} />}
-        {step === 3 && <Section3 data={data} onChange={set} />}
-        {step === 4 && <Section4 data={data} onChange={set} />}
-        {step === 5 && <Section5 data={data} onChange={set} />}
+        <div className="if-brand">Plus 4 Performance</div>
 
-        {error && <p className="form-error" style={{ marginTop: 16 }}>{error}</p>}
+        <div className="if-progress-row">
+          <span className="if-progress-label">Progress</span>
+          <span className="if-progress-label">Step {step} of {TOTAL_STEPS}</span>
+        </div>
+        <div className="if-progress-track">
+          <div className="if-progress-fill" style={{ width: progressWidth }} />
+        </div>
 
-        <div style={styles.navRow}>
+        {/* Step content — keyed so it remounts and re-triggers the slide animation */}
+        <div key={step} className={`if-step-enter-${direction}`}>
+          {step === 1 && <Section1 data={data} onChange={set} />}
+          {step === 2 && <Section2 data={data} onChange={set} />}
+          {step === 3 && <Section3 data={data} onChange={set} />}
+          {step === 4 && <Section4 data={data} onChange={set} />}
+          {step === 5 && <Section5 data={data} onChange={set} />}
+        </div>
+
+        {error && <div className="if-error" style={{ marginTop: 16 }}>{error}</div>}
+
+        <div className="if-nav-row" style={{ marginTop: 28 }}>
           {step > 1 && (
-            <button type="button" className="btn-ghost" onClick={back}>← Back</button>
+            <button type="button" className="if-btn-back" onClick={back}>← Back</button>
           )}
-          <div style={{ flex: 1 }} />
           {step < TOTAL_STEPS ? (
-            <button type="button" className="btn-primary" onClick={next}>Continue →</button>
+            <button type="button" className="if-btn" onClick={next}>Continue →</button>
           ) : (
-            <button type="button" className="btn-primary" onClick={handleSubmit} disabled={submitting}>
-              {submitting ? 'Generating your snapshot…' : 'Generate my plan'}
+            <button type="button" className="if-btn" onClick={handleSubmit} disabled={submitting}>
+              {submitting ? 'Generating your snapshot…' : 'Generate my plan →'}
             </button>
           )}
         </div>
+
       </div>
     </div>
   );
 }
 
-const styles = {
-  page: {
-    minHeight: '100vh',
-    display: 'flex',
-    justifyContent: 'center',
-    padding: '40px 20px 80px',
-    background: 'radial-gradient(ellipse at center, #111 0%, #080808 100%)',
-  },
-  card: {
-    width: '100%',
-    maxWidth: 560,
-    background: '#0d0d0d',
-    border: '1px solid rgba(200,200,200,0.12)',
-    padding: '48px 40px',
-    height: 'fit-content',
-  },
-  logo: {
-    fontFamily: "'Bebas Neue', sans-serif",
-    fontSize: 18,
-    letterSpacing: '0.16em',
-    color: '#C8C8C8',
-    marginBottom: 32,
-  },
-  sectionTitle: {
-    fontFamily: "'Bebas Neue', sans-serif",
-    fontSize: 28,
-    letterSpacing: '0.04em',
-    color: '#F5F3EE',
-    marginBottom: 28,
-  },
-  label: { fontSize: 11, color: '#787878', fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.3em', textTransform: 'uppercase' },
-  track: { height: 3, background: '#222', borderRadius: 2 },
-  fill: { height: '100%', background: 'linear-gradient(90deg, #787878, #C8C8C8)', borderRadius: 2, transition: 'width 0.4s cubic-bezier(0.22,1,0.36,1)' },
-  hint: { fontSize: 12, color: '#787878', marginTop: 6 },
-  unitToggle: { display: 'flex', gap: 6, marginBottom: 10 },
-  unitBtn: { flex: 1, padding: '7px 0', background: '#111', border: '1px solid rgba(200,200,200,0.2)', color: '#787878', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: '0.12em', cursor: 'pointer' },
-  unitActive: { flex: 1, padding: '7px 0', background: '#111', border: '1px solid #C8C8C8', color: '#C8C8C8', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: '0.12em', cursor: 'pointer' },
-  goalCard: { width: '100%', padding: '20px 24px', background: '#111', border: '1px solid rgba(200,200,200,0.15)', textAlign: 'left', cursor: 'pointer', transition: 'border-color 0.2s' },
-  goalCardActive: { width: '100%', padding: '20px 24px', background: '#111', border: '1px solid #C8C8C8', textAlign: 'left', cursor: 'pointer' },
-  goalLabel: { fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, fontWeight: 700, color: '#F5F3EE', marginBottom: 4 },
-  goalDesc: { fontSize: 13, color: '#787878' },
-  dayBtn: { padding: '12px 8px', background: '#111', border: '1px solid rgba(200,200,200,0.15)', color: '#787878', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 600, cursor: 'pointer' },
-  dayActive: { padding: '12px 8px', background: '#111', border: '1px solid #C8C8C8', color: '#C8C8C8', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 600, cursor: 'pointer' },
-  checkRow: { display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' },
-  redFlag: { padding: 16, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', fontSize: 13, color: '#fca5a5', lineHeight: 1.6, marginBottom: 20 },
-  navRow: { display: 'flex', alignItems: 'center', marginTop: 32, gap: 12 },
+// Temporary styles for Sections 2–5 internals (replaced screen by screen)
+const oldStyles = {
+  goalCard:      { width: '100%', padding: '20px 24px', background: '#131119', border: '1px solid rgba(255,79,196,0.1)', borderRadius: 14, textAlign: 'left', cursor: 'pointer', transition: 'border-color 0.2s', marginBottom: 0 },
+  goalCardActive:{ width: '100%', padding: '20px 24px', background: '#131119', border: '1px solid rgba(255,79,196,0.4)', borderRadius: 14, textAlign: 'left', cursor: 'pointer', boxShadow: '0 0 24px -8px rgba(255,79,196,0.55)' },
+  goalLabel:     { fontFamily: "'Oswald', sans-serif", fontSize: 16, fontWeight: 600, color: '#F3F1ED', marginBottom: 4, textTransform: 'uppercase' },
+  goalDesc:      { fontSize: 13, color: '#87858E' },
+  dayBtn:        { padding: '12px 8px', background: '#131119', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 8, color: '#5C5A62', fontFamily: "'Oswald', sans-serif", fontSize: 13, fontWeight: 600, cursor: 'pointer' },
+  dayActive:     { padding: '12px 8px', background: '#131119', border: '1px solid rgba(255,79,196,0.4)', borderRadius: 8, color: '#F3F1ED', fontFamily: "'Oswald', sans-serif", fontSize: 13, fontWeight: 600, cursor: 'pointer', boxShadow: '0 0 16px -6px rgba(255,79,196,0.55)' },
+  checkRow:      { display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' },
+  redFlag:       { padding: 16, background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: 8, fontSize: 13, color: '#fca5a5', lineHeight: 1.6, marginBottom: 20 },
 };
