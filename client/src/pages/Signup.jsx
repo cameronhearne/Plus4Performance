@@ -2,19 +2,18 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useBranding } from '../lib/BrandingContext';
+import './intake-flow.css';
 
 const API = import.meta.env.VITE_API_URL || '';
 
 export default function Signup() {
-  const navigate  = useNavigate();
-  const branding  = useBranding();
+  const navigate = useNavigate();
+  const branding = useBranding();
   const [searchParams] = useSearchParams();
-  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', password: '' });
-  const [error, setError] = useState('');
+  const [form, setForm]       = useState({ firstName: '', lastName: '', email: '', password: '' });
+  const [error, setError]     = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Capture ?ref=CODE from URL and persist in sessionStorage so it survives
-  // navigation (e.g. homepage ?ref= → /signup without the param).
   useEffect(() => {
     const code = searchParams.get('ref');
     if (code) sessionStorage.setItem('p4p_ref', code.toUpperCase().trim());
@@ -32,9 +31,7 @@ export default function Signup() {
       const { error: signUpErr } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
-        options: {
-          data: { first_name: form.firstName, last_name: form.lastName },
-        },
+        options: { data: { first_name: form.firstName, last_name: form.lastName } },
       });
       if (signUpErr) throw signUpErr;
 
@@ -45,24 +42,19 @@ export default function Signup() {
           last_name: form.lastName,
         }).eq('id', session.user.id);
 
-        // If user arrived via a referral link, attribute them to the affiliate.
         const refCode = searchParams.get('ref')?.toUpperCase().trim()
           || sessionStorage.getItem('p4p_ref');
         if (refCode) {
           try {
             await fetch(API + '/api/affiliate/record-referral', {
               method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${session.access_token}`,
-              },
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
               body: JSON.stringify({ referral_code: refCode }),
             });
             sessionStorage.removeItem('p4p_ref');
           } catch { /* non-fatal */ }
         }
 
-        // Associate user with creator if they signed up on a creator subdomain.
         if (branding.slug) {
           try {
             await fetch(API + '/api/creator/associate', {
@@ -83,92 +75,91 @@ export default function Signup() {
   }
 
   return (
-    <div style={styles.page}>
-      <div style={styles.card}>
-        {branding.logo_url
-          ? <img src={branding.logo_url} alt={branding.name} style={{ height: 40, objectFit: 'contain', marginBottom: 32 }} />
-          : <div style={styles.logo}>{branding.name.toUpperCase()}</div>}
-        <h1 style={styles.heading}>Create your account</h1>
-        <p style={styles.sub}>Free to start. No card required.</p>
+    <div className="if-page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="if-ambient" />
 
-        <form onSubmit={handleSubmit}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label>First name</label>
-              <input type="text" value={form.firstName} onChange={set('firstName')} required />
+      <div className="if-content">
+        <div className="if-auth-card">
+
+          {branding.logo_url
+            ? <img src={branding.logo_url} alt={branding.name} style={{ height: 36, objectFit: 'contain', marginBottom: 28 }} />
+            : <div className="if-brand">{branding.name}</div>}
+
+          <h1 className="if-heading">Create your account</h1>
+          <p className="if-subheading">Free to start. No card required.</p>
+
+          <form onSubmit={handleSubmit}>
+            <div
+              className="if-form-group"
+              style={{ '--if-field-delay': '0.3s', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}
+            >
+              <div>
+                <label className="if-label">First name</label>
+                <input
+                  className="if-input"
+                  type="text"
+                  value={form.firstName}
+                  onChange={set('firstName')}
+                  placeholder="Cameron"
+                  required
+                />
+              </div>
+              <div>
+                <label className="if-label">Last name</label>
+                <input
+                  className="if-input"
+                  type="text"
+                  value={form.lastName}
+                  onChange={set('lastName')}
+                  placeholder="Hearne"
+                  required
+                />
+              </div>
             </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label>Last name</label>
-              <input type="text" value={form.lastName} onChange={set('lastName')} required />
+
+            <div className="if-form-group" style={{ '--if-field-delay': '0.36s' }}>
+              <label className="if-label">Email</label>
+              <input
+                className="if-input"
+                type="email"
+                value={form.email}
+                onChange={set('email')}
+                placeholder="you@example.com"
+                required
+              />
             </div>
-          </div>
-          <div className="form-group">
-            <label>Email</label>
-            <input type="email" value={form.email} onChange={set('email')} required />
-          </div>
-          <div className="form-group">
-            <label>Password</label>
-            <input type="password" value={form.password} onChange={set('password')} minLength={8} required />
-          </div>
 
-          {error && <p className="form-error" style={{ marginBottom: 16 }}>{error}</p>}
+            <div className="if-form-group" style={{ '--if-field-delay': '0.42s' }}>
+              <label className="if-label">Password</label>
+              <input
+                className="if-input"
+                type="password"
+                value={form.password}
+                onChange={set('password')}
+                placeholder="Min. 8 characters"
+                minLength={8}
+                required
+              />
+            </div>
 
-          <button type="submit" className="btn-primary" style={{ width: '100%' }} disabled={loading}>
-            {loading ? 'Creating account…' : 'Create account & start intake'}
-          </button>
-        </form>
+            {error && <div className="if-error">{error}</div>}
 
-        <p style={styles.footer}>
-          Already have an account? <Link to="/login" style={styles.link}>Log in</Link>
-        </p>
+            <div style={{ opacity: 0, animation: 'if-fadeUp 0.55s cubic-bezier(0.16,1,0.3,1) 0.5s forwards' }}>
+              <button type="submit" className="if-btn" disabled={loading}>
+                {loading ? 'Creating account…' : 'Create account & start intake →'}
+              </button>
+            </div>
+          </form>
+
+          <div className="if-divider" />
+
+          <p className="if-footer">
+            Already have an account?{' '}
+            <Link to="/login" className="if-link">Log in</Link>
+          </p>
+
+        </div>
       </div>
     </div>
   );
 }
-
-const styles = {
-  page: {
-    minHeight: '100vh',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '40px 20px',
-    background: 'radial-gradient(ellipse at center, #111 0%, #080808 100%)',
-  },
-  card: {
-    width: '100%',
-    maxWidth: 480,
-    background: '#0d0d0d',
-    border: '1px solid rgba(200,200,200,0.12)',
-    padding: '48px 40px',
-  },
-  logo: {
-    fontFamily: "'Bebas Neue', sans-serif",
-    fontSize: 18,
-    letterSpacing: '0.16em',
-    color: '#C8C8C8',
-    marginBottom: 32,
-  },
-  heading: {
-    fontFamily: "'Bebas Neue', sans-serif",
-    fontSize: 36,
-    letterSpacing: '0.04em',
-    color: '#F5F3EE',
-    marginBottom: 8,
-  },
-  sub: {
-    fontSize: 14,
-    color: '#787878',
-    marginBottom: 32,
-  },
-  footer: {
-    marginTop: 24,
-    fontSize: 13,
-    color: '#787878',
-    textAlign: 'center',
-  },
-  link: {
-    color: '#C8C8C8',
-    textDecoration: 'underline',
-  },
-};

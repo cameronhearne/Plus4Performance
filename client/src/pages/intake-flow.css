@@ -1,0 +1,510 @@
+/*
+  Shared design-system stylesheet for the intake / auth flow.
+  Import this in every screen in that flow — Login, Signup, Intake steps, (not SnapshotResult, which has its own).
+  Follows DESIGN-SPEC.md exactly. Do not add variations here; if a screen needs something unique, scope it with a page-specific class.
+*/
+
+/* ─── Tokens ─────────────────────────────────────────────── */
+:root {
+  --ink:             #08070A;
+  --ink-soft:        #0C0B10;
+  --surface:         #14121A;
+  --surface-2:       #1A1722;
+  --bone:            #F3F1ED;
+  --ash:             #87858E;
+  --ash-dim:         #5C5A62;
+  --violet-deep:     #4A1240;
+  --violet-mid:      #E8389E;
+  --violet-line:     #FF4FC4;
+  --violet-bright:   #FF8FE0;
+  --violet-glow:     rgba(255, 79, 196, 0.55);
+  --ease:            cubic-bezier(0.16, 1, 0.3, 1);
+  --radius-card:     14px;
+  --radius-pill:     10px;
+  --radius-input:    8px;
+}
+
+/* ─── Page shell ─────────────────────────────────────────── */
+.if-page {
+  min-height: 100vh;
+  background: var(--ink);
+  padding: 32px 20px 64px;
+  position: relative;
+  overflow-x: hidden;
+  font-family: 'Inter', -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  color: var(--bone);
+}
+
+.if-ambient {
+  position: fixed;
+  top: -180px;
+  left: -120px;
+  width: 480px;
+  height: 480px;
+  background: radial-gradient(circle, var(--violet-glow) 0%, transparent 65%);
+  opacity: 0.85;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.if-content {
+  position: relative;
+  z-index: 1;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+/* ─── Auth card (login / signup) ─────────────────────────── */
+/*
+  Auth screens centre their content in a subtle card.
+  Intake steps run full-bleed (no card wrapper — content uses if-content directly).
+*/
+.if-auth-card {
+  background: linear-gradient(160deg, #131119 0%, #0C0A0F 100%);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-card);
+  padding: 44px 36px;
+  box-shadow: 0 24px 48px -16px rgba(0, 0, 0, 0.7);
+}
+
+/* ─── Brand / logo ───────────────────────────────────────── */
+.if-brand {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 3px;
+  color: var(--ash);
+  text-transform: uppercase;
+  margin-bottom: 28px;
+  opacity: 0;
+  animation: if-fadeUp 0.6s var(--ease) forwards;
+}
+
+/* ─── Progress bar ───────────────────────────────────────── */
+.if-progress-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  opacity: 0;
+  animation: if-fadeUp 0.6s var(--ease) 0.08s forwards;
+}
+
+.if-progress-label {
+  font-size: 10.5px;
+  letter-spacing: 1.8px;
+  color: var(--ash-dim);
+  text-transform: uppercase;
+}
+
+.if-progress-track {
+  width: 100%;
+  height: 2.5px;
+  background: var(--surface-2);
+  border-radius: 2px;
+  margin-bottom: 32px;
+  overflow: hidden;
+  opacity: 0;
+  animation: if-fadeUp 0.6s var(--ease) 0.12s forwards;
+}
+
+.if-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--violet-mid), var(--violet-line));
+  box-shadow: 0 0 6px var(--violet-glow);
+  border-radius: 2px;
+  transition: width 1.1s var(--ease) 0.3s;
+}
+
+/* ─── Eyebrow + Heading ──────────────────────────────────── */
+.if-eyebrow {
+  font-size: 11.5px;
+  letter-spacing: 1.8px;
+  color: var(--ash);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  opacity: 0;
+  animation: if-fadeUp 0.6s var(--ease) 0.16s forwards;
+}
+
+.if-heading {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 700;
+  font-size: clamp(28px, 7vw, 36px);
+  line-height: 1.08;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--bone);
+  margin-bottom: 28px;
+  opacity: 0;
+  animation: if-fadeUp 0.65s var(--ease) 0.22s forwards;
+}
+
+.if-subheading {
+  font-size: 14px;
+  color: var(--ash);
+  line-height: 1.6;
+  margin-top: -16px;
+  margin-bottom: 28px;
+  opacity: 0;
+  animation: if-fadeUp 0.6s var(--ease) 0.28s forwards;
+}
+
+/* ─── Form fields ────────────────────────────────────────── */
+.if-form-group {
+  margin-bottom: 20px;
+  opacity: 0;
+  animation: if-fadeUp 0.55s var(--ease) var(--if-field-delay, 0.3s) forwards;
+}
+
+.if-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: var(--ash);
+}
+
+.if-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+
+.if-input,
+.if-select {
+  width: 100%;
+  padding: 13px 14px;
+  background: var(--surface);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-input);
+  color: var(--bone);
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.25s var(--ease), box-shadow 0.25s var(--ease);
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.if-input::placeholder { color: var(--ash-dim); }
+
+.if-input:focus,
+.if-select:focus {
+  border-color: rgba(255, 79, 196, 0.5);
+  box-shadow: 0 0 0 3px rgba(255, 79, 196, 0.12), 0 0 12px -4px rgba(255, 79, 196, 0.3);
+}
+
+/* Select arrow */
+.if-select-wrap {
+  position: relative;
+}
+.if-select-wrap::after {
+  content: '';
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 5px solid var(--ash);
+  pointer-events: none;
+}
+.if-select { padding-right: 36px; }
+.if-select option { background: var(--surface); color: var(--bone); }
+
+/* ─── Primary CTA button — identical across all screens ─── */
+.if-btn {
+  display: block;
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(160deg, #161318 0%, #0E0C10 100%);
+  border: 1px solid rgba(255, 79, 196, 0.22);
+  border-radius: var(--radius-pill);
+  color: var(--bone);
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 12px 36px -6px rgba(255, 79, 196, 0.38), 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+  transition: transform 0.18s var(--ease), box-shadow 0.18s var(--ease), border-color 0.18s var(--ease);
+  text-align: center;
+  text-decoration: none;
+}
+
+.if-btn:active {
+  transform: scale(0.97);
+  box-shadow: 0 4px 16px -2px rgba(255, 79, 196, 0.35), 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+  border-color: rgba(255, 79, 196, 0.4);
+}
+
+.if-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Back button — ghost variant, same pill shape, no bloom shadow */
+.if-btn-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 20px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-pill);
+  color: var(--ash);
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 0.18s var(--ease), color 0.18s var(--ease), transform 0.18s var(--ease);
+}
+
+.if-btn-back:active {
+  transform: scale(0.97);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: var(--bone);
+}
+
+/* ─── Error / helper text ────────────────────────────────── */
+.if-error {
+  font-size: 13px;
+  color: #f87171;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  background: rgba(248, 113, 113, 0.08);
+  border: 1px solid rgba(248, 113, 113, 0.2);
+  border-radius: 6px;
+}
+
+/* ─── Footer / nav links ─────────────────────────────────── */
+.if-footer {
+  margin-top: 20px;
+  font-size: 13px;
+  color: var(--ash);
+  text-align: center;
+  line-height: 1.7;
+}
+
+.if-footer + .if-footer { margin-top: 8px; }
+
+.if-link {
+  color: var(--bone);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.15s;
+}
+
+.if-link:hover { color: var(--violet-bright); }
+
+.if-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.06);
+  margin: 24px 0;
+}
+
+/* ─── Goal-picker cards (intake step 2) ──────────────────── */
+.if-goal-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.if-goal-card {
+  background: linear-gradient(160deg, #131119 0%, #0C0A0F 100%);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: var(--radius-card);
+  padding: 18px 20px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px -8px rgba(0, 0, 0, 0.5);
+  transition:
+    border-color 0.25s var(--ease),
+    box-shadow 0.25s var(--ease),
+    transform 0.2s var(--ease);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.if-goal-card:active {
+  transform: scale(0.98);
+}
+
+.if-goal-card.selected {
+  border-color: rgba(255, 79, 196, 0.4);
+  box-shadow:
+    0 0 28px -8px var(--violet-glow),
+    0 8px 20px -12px rgba(0, 0, 0, 0.6),
+    0 1px 0 rgba(255, 255, 255, 0.04) inset;
+  transform: translateY(-2px);
+}
+
+.if-goal-title {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--bone);
+  margin-bottom: 4px;
+}
+
+.if-goal-desc {
+  font-size: 13px;
+  color: var(--ash);
+  line-height: 1.5;
+}
+
+.if-goal-card.selected .if-goal-title { color: var(--bone); }
+.if-goal-card.selected .if-goal-desc  { color: #C9C6D1; }
+
+/* ─── Custom checkboxes (health & injuries step) ─────────── */
+.if-check-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.if-check-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  background: linear-gradient(160deg, #131119 0%, #0C0A0F 100%);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: var(--radius-card);
+  cursor: pointer;
+  transition:
+    border-color 0.2s var(--ease),
+    box-shadow 0.2s var(--ease);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.if-check-item.checked {
+  border-color: rgba(255, 79, 196, 0.25);
+  box-shadow: 0 0 18px -8px var(--violet-glow);
+}
+
+.if-checkbox {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  border-radius: 5px;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    border-color 0.2s var(--ease),
+    background 0.2s var(--ease),
+    transform 0.15s var(--ease);
+}
+
+.if-check-item.checked .if-checkbox {
+  border-color: var(--violet-line);
+  background: rgba(255, 79, 196, 0.15);
+  transform: scale(1.1);
+}
+
+.if-check-mark {
+  width: 10px;
+  height: 10px;
+  opacity: 0;
+  transform: scale(0) rotate(-10deg);
+  transition: opacity 0.15s var(--ease) 0.05s, transform 0.2s var(--ease) 0.05s;
+}
+
+.if-check-item.checked .if-check-mark {
+  opacity: 1;
+  transform: scale(1) rotate(0deg);
+}
+
+.if-check-label {
+  font-size: 14.5px;
+  color: var(--ash);
+  line-height: 1.4;
+  transition: color 0.2s;
+}
+
+.if-check-item.checked .if-check-label { color: var(--bone); }
+
+/* ─── Step slide transitions ─────────────────────────────── */
+.if-step-wrap {
+  position: relative;
+  overflow: hidden;
+}
+
+@keyframes if-slideInRight {
+  from { opacity: 0; transform: translateX(48px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes if-slideInLeft {
+  from { opacity: 0; transform: translateX(-48px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.if-step-enter-forward {
+  animation: if-slideInRight 0.42s var(--ease) forwards;
+}
+.if-step-enter-back {
+  animation: if-slideInLeft 0.42s var(--ease) forwards;
+}
+
+/* ─── Nav row (Back + Continue) ──────────────────────────── */
+.if-nav-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.if-nav-row .if-btn { flex: 1; }
+
+/* ─── Keyframes ──────────────────────────────────────────── */
+@keyframes if-fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes if-fadeUpSlow {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Reduced motion ─────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .if-brand,
+  .if-progress-row,
+  .if-progress-track,
+  .if-eyebrow,
+  .if-heading,
+  .if-subheading,
+  .if-form-group,
+  .if-btn,
+  .if-footer {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .if-progress-fill {
+    transition: none !important;
+  }
+  .if-step-enter-forward,
+  .if-step-enter-back {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+}

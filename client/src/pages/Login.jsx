@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useBranding } from '../lib/BrandingContext';
+import './intake-flow.css';
 
 export default function Login() {
-  const navigate  = useNavigate();
-  const branding  = useBranding();
-  const [form, setForm] = useState({ email: '', password: '' });
-  const [error, setError] = useState('');
+  const navigate = useNavigate();
+  const branding = useBranding();
+  const [form, setForm]     = useState({ email: '', password: '' });
+  const [error, setError]   = useState('');
   const [loading, setLoading] = useState(false);
 
   function set(field) {
@@ -33,82 +34,70 @@ export default function Login() {
   }
 
   return (
-    <div style={styles.page}>
-      <div style={styles.card}>
-        {branding.logo_url
-          ? <img src={branding.logo_url} alt={branding.name} style={{ height: 40, objectFit: 'contain', marginBottom: 32 }} />
-          : <div style={styles.logo}>{branding.name.toUpperCase()}</div>}
-        <h1 style={styles.heading}>Welcome back</h1>
+    <div className="if-page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="if-ambient" />
 
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Email</label>
-            <input type="email" value={form.email} onChange={set('email')} required />
-          </div>
-          <div className="form-group">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
-              <label style={{ margin: 0 }}>Password</label>
-              <Link to="/forgot-password" style={{ fontSize: 12, color: '#787878', textDecoration: 'underline' }}>Forgot password?</Link>
+      <div className="if-content">
+        <div className="if-auth-card">
+
+          {branding.logo_url
+            ? <img src={branding.logo_url} alt={branding.name} style={{ height: 36, objectFit: 'contain', marginBottom: 28 }} />
+            : <div className="if-brand">{branding.name}</div>}
+
+          <h1 className="if-heading">Welcome back</h1>
+
+          <form onSubmit={handleSubmit}>
+            <div className="if-form-group" style={{ '--if-field-delay': '0.3s' }}>
+              <label className="if-label">Email</label>
+              <input
+                className="if-input"
+                type="email"
+                value={form.email}
+                onChange={set('email')}
+                placeholder="you@example.com"
+                required
+              />
             </div>
-            <input type="password" value={form.password} onChange={set('password')} required />
-          </div>
 
-          {error && <p className="form-error" style={{ marginBottom: 16 }}>{error}</p>}
+            <div className="if-form-group" style={{ '--if-field-delay': '0.36s' }}>
+              <div className="if-label-row">
+                <label className="if-label" style={{ margin: 0 }}>Password</label>
+                <Link to="/forgot-password" className="if-link" style={{ fontSize: 12 }}>
+                  Forgot password?
+                </Link>
+              </div>
+              <input
+                className="if-input"
+                type="password"
+                value={form.password}
+                onChange={set('password')}
+                placeholder="••••••••"
+                required
+              />
+            </div>
 
-          <button type="submit" className="btn-primary" style={{ width: '100%' }} disabled={loading}>
-            {loading ? 'Signing in…' : 'Sign in'}
-          </button>
-        </form>
+            {error && <div className="if-error">{error}</div>}
 
-        <p style={styles.footer}>
-          Don't have an account? <Link to="/signup" style={styles.link}>Sign up free</Link>
-        </p>
-        <p style={{ ...styles.footer, marginTop: 10 }}>
-          Are you a partner? <Link to="/affiliate/login" style={styles.link}>Partner login →</Link>
-        </p>
+            <div style={{ opacity: 0, animation: 'if-fadeUp 0.55s cubic-bezier(0.16,1,0.3,1) 0.44s forwards' }}>
+              <button type="submit" className="if-btn" disabled={loading}>
+                {loading ? 'Signing in…' : 'Sign in →'}
+              </button>
+            </div>
+          </form>
+
+          <div className="if-divider" />
+
+          <p className="if-footer">
+            Don't have an account?{' '}
+            <Link to="/signup" className="if-link">Sign up free</Link>
+          </p>
+          <p className="if-footer">
+            Are you a partner?{' '}
+            <Link to="/affiliate/login" className="if-link">Partner login →</Link>
+          </p>
+
+        </div>
       </div>
     </div>
   );
 }
-
-const styles = {
-  page: {
-    minHeight: '100vh',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '40px 20px',
-    background: 'radial-gradient(ellipse at center, #111 0%, #080808 100%)',
-  },
-  card: {
-    width: '100%',
-    maxWidth: 420,
-    background: '#0d0d0d',
-    border: '1px solid rgba(200,200,200,0.12)',
-    padding: '48px 40px',
-  },
-  logo: {
-    fontFamily: "'Bebas Neue', sans-serif",
-    fontSize: 18,
-    letterSpacing: '0.16em',
-    color: '#C8C8C8',
-    marginBottom: 32,
-  },
-  heading: {
-    fontFamily: "'Bebas Neue', sans-serif",
-    fontSize: 36,
-    letterSpacing: '0.04em',
-    color: '#F5F3EE',
-    marginBottom: 32,
-  },
-  footer: {
-    marginTop: 24,
-    fontSize: 13,
-    color: '#787878',
-    textAlign: 'center',
-  },
-  link: {
-    color: '#C8C8C8',
-    textDecoration: 'underline',
-  },
-};

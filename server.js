@@ -1,3 +1,4 @@
+require('dotenv').config({ override: true });
 const http   = require('http');
 const https  = require('https');
 const crypto = require('crypto');
