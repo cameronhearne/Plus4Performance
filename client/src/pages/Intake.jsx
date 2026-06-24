@@ -155,20 +155,24 @@ function Section1({ data, onChange }) {
 
 function Section2({ data, onChange }) {
   const goals = [
-    { value: 'fat_loss',     label: 'Fat Loss',                   desc: 'Lose body fat while preserving muscle' },
-    { value: 'muscle_building', label: 'Muscle Building',          desc: 'Build size and increase strength' },
-    { value: 'maintenance',  label: 'Maintenance & Recomposition', desc: 'Improve body composition at current weight' },
+    { value: 'fat_loss',        label: 'Fat Loss',                   desc: 'Lose body fat while preserving muscle' },
+    { value: 'muscle_building', label: 'Muscle Building',            desc: 'Build size and increase strength' },
+    { value: 'maintenance',     label: 'Maintenance & Recomposition', desc: 'Improve body composition at current weight' },
   ];
   return (
     <div>
+      <p className="if-eyebrow" style={{ animation: 'none', opacity: 1 }}>What are you training for?</p>
       <h2 className="if-heading" style={{ animationDelay: '0s' }}>Your goal</h2>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div className="if-goal-grid">
         {goals.map(g => (
-          <button key={g.value} type="button"
-            style={data.goal === g.value ? oldStyles.goalCardActive : oldStyles.goalCard}
-            onClick={() => onChange('goal', g.value)}>
-            <div style={oldStyles.goalLabel}>{g.label}</div>
-            <div style={oldStyles.goalDesc}>{g.desc}</div>
+          <button
+            key={g.value}
+            type="button"
+            className={`if-goal-card${data.goal === g.value ? ' selected' : ''}`}
+            onClick={() => onChange('goal', g.value)}
+          >
+            <div className="if-goal-title">{g.label}</div>
+            <div className="if-goal-desc">{g.desc}</div>
           </button>
         ))}
       </div>
@@ -519,14 +523,10 @@ export default function Intake() {
   );
 }
 
-// Temporary styles for Sections 2–5 internals (replaced screen by screen)
+// Temporary styles for Sections 3–5 internals (replaced screen by screen)
 const oldStyles = {
-  goalCard:      { width: '100%', padding: '20px 24px', background: '#131119', border: '1px solid rgba(255,79,196,0.1)', borderRadius: 14, textAlign: 'left', cursor: 'pointer', transition: 'border-color 0.2s', marginBottom: 0 },
-  goalCardActive:{ width: '100%', padding: '20px 24px', background: '#131119', border: '1px solid rgba(255,79,196,0.4)', borderRadius: 14, textAlign: 'left', cursor: 'pointer', boxShadow: '0 0 24px -8px rgba(255,79,196,0.55)' },
-  goalLabel:     { fontFamily: "'Oswald', sans-serif", fontSize: 16, fontWeight: 600, color: '#F3F1ED', marginBottom: 4, textTransform: 'uppercase' },
-  goalDesc:      { fontSize: 13, color: '#87858E' },
-  dayBtn:        { padding: '12px 8px', background: '#131119', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 8, color: '#5C5A62', fontFamily: "'Oswald', sans-serif", fontSize: 13, fontWeight: 600, cursor: 'pointer' },
-  dayActive:     { padding: '12px 8px', background: '#131119', border: '1px solid rgba(255,79,196,0.4)', borderRadius: 8, color: '#F3F1ED', fontFamily: "'Oswald', sans-serif", fontSize: 13, fontWeight: 600, cursor: 'pointer', boxShadow: '0 0 16px -6px rgba(255,79,196,0.55)' },
-  checkRow:      { display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' },
-  redFlag:       { padding: 16, background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: 8, fontSize: 13, color: '#fca5a5', lineHeight: 1.6, marginBottom: 20 },
+  dayBtn:    { padding: '12px 8px', background: '#131119', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 8, color: '#5C5A62', fontFamily: "'Oswald', sans-serif", fontSize: 13, fontWeight: 600, cursor: 'pointer' },
+  dayActive: { padding: '12px 8px', background: '#131119', border: '1px solid rgba(255,79,196,0.4)', borderRadius: 8, color: '#F3F1ED', fontFamily: "'Oswald', sans-serif", fontSize: 13, fontWeight: 600, cursor: 'pointer', boxShadow: '0 0 16px -6px rgba(255,79,196,0.55)' },
+  checkRow:  { display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' },
+  redFlag:   { padding: 16, background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: 8, fontSize: 13, color: '#fca5a5', lineHeight: 1.6, marginBottom: 20 },
 };
