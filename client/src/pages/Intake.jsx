@@ -298,103 +298,157 @@ function Section3({ data, onChange }) {
 function Section4({ data, onChange }) {
   return (
     <div>
+      <p className="if-eyebrow" style={{ animation: 'none', opacity: 1 }}>Fine-tune your nutrition</p>
       <h2 className="if-heading" style={{ animationDelay: '0s' }}>Nutrition preferences</h2>
-      <div className="form-group">
-        <label>Meals per day</label>
-        <select value={data.mealsPerDay || ''} onChange={e => onChange('mealsPerDay', e.target.value)} required>
-          <option value="">Select…</option>
-          {['3', '4', '5', '6'].map(n => <option key={n} value={n}>{n}</option>)}
-        </select>
+
+      <div className="if-form-group">
+        <label className="if-label">Meals per day</label>
+        <div className="if-select-wrap">
+          <select className="if-select" value={data.mealsPerDay || ''} onChange={e => onChange('mealsPerDay', e.target.value)} required>
+            <option value="">Select…</option>
+            {['3', '4', '5', '6'].map(n => <option key={n} value={n}>{n}</option>)}
+          </select>
+        </div>
       </div>
-      <div className="form-group">
-        <label>Meal plan type</label>
-        <select value={data.mealPlanType || ''} onChange={e => onChange('mealPlanType', e.target.value)} required>
-          <option value="">Select…</option>
-          <option value="full">Full meal plan with grocery list</option>
-          <option value="macros">Macros and targets only</option>
-        </select>
+
+      <div className="if-form-group">
+        <label className="if-label">Meal plan type</label>
+        <div className="if-select-wrap">
+          <select className="if-select" value={data.mealPlanType || ''} onChange={e => onChange('mealPlanType', e.target.value)} required>
+            <option value="">Select…</option>
+            <option value="full">Full meal plan with grocery list</option>
+            <option value="macros">Macros and targets only</option>
+          </select>
+        </div>
       </div>
-      <div className="form-group">
-        <label>Dietary preference</label>
-        <select value={data.dietary || ''} onChange={e => onChange('dietary', e.target.value)} required>
-          <option value="">Select…</option>
-          <option value="no_restrictions">No restrictions</option>
-          <option value="vegetarian">Vegetarian</option>
-          <option value="vegan">Vegan</option>
-          <option value="pescatarian">Pescatarian</option>
-          <option value="gluten_free">Gluten free</option>
-          <option value="dairy_free">Dairy free</option>
-        </select>
+
+      <div className="if-form-group">
+        <label className="if-label">Dietary preference</label>
+        <div className="if-select-wrap">
+          <select className="if-select" value={data.dietary || ''} onChange={e => onChange('dietary', e.target.value)} required>
+            <option value="">Select…</option>
+            <option value="no_restrictions">No restrictions</option>
+            <option value="vegetarian">Vegetarian</option>
+            <option value="vegan">Vegan</option>
+            <option value="pescatarian">Pescatarian</option>
+            <option value="gluten_free">Gluten free</option>
+            <option value="dairy_free">Dairy free</option>
+          </select>
+        </div>
       </div>
-      <div className="form-group">
-        <label>Foods you will not eat</label>
-        <textarea rows={3} placeholder="e.g. mushrooms, shellfish, nuts"
-          value={data.foodsNotEat || ''} onChange={e => onChange('foodsNotEat', e.target.value)} />
+
+      <div className="if-form-group">
+        <label className="if-label">Foods you will not eat</label>
+        <textarea
+          className="if-textarea"
+          rows={3}
+          placeholder="e.g. mushrooms, shellfish, nuts"
+          value={data.foodsNotEat || ''}
+          onChange={e => onChange('foodsNotEat', e.target.value)}
+        />
       </div>
-      <div className="form-group">
-        <label>Supplement preference</label>
-        <select value={data.supplements || ''} onChange={e => onChange('supplements', e.target.value)} required>
-          <option value="">Select…</option>
-          <option value="include">Include supplement recommendations</option>
-          <option value="no">No supplements</option>
-        </select>
+
+      <div className="if-form-group">
+        <label className="if-label">Supplement preference</label>
+        <div className="if-select-wrap">
+          <select className="if-select" value={data.supplements || ''} onChange={e => onChange('supplements', e.target.value)} required>
+            <option value="">Select…</option>
+            <option value="include">Include supplement recommendations</option>
+            <option value="no">No supplements</option>
+          </select>
+        </div>
       </div>
     </div>
   );
 }
 
+const FLAGS = [
+  { key: 'surgery',        label: 'Recent surgery (last 6 months)' },
+  { key: 'heartCondition', label: 'Heart condition or chest pain during exercise' },
+  { key: 'jointPain',      label: 'Severe joint pain that stops you training' },
+  { key: 'pregnant',       label: 'Currently pregnant' },
+  { key: 'doctorAdvised',  label: 'Advised by a doctor not to exercise' },
+];
+
 function Section5({ data, onChange }) {
+  const anyFlag = FLAGS.some(({ key }) => data[key]);
+
   return (
     <div>
+      <p className="if-eyebrow" style={{ animation: 'none', opacity: 1 }}>Almost there</p>
       <h2 className="if-heading" style={{ animationDelay: '0s' }}>Health & injuries</h2>
-      <div className="form-group">
-        <label>Any injuries or physical limitations?</label>
-        <select value={data.injuries || ''} onChange={e => onChange('injuries', e.target.value)} required>
-          <option value="">Select…</option>
-          <option value="no">No injuries</option>
-          <option value="yes">Yes — I have injuries or limitations</option>
-        </select>
+
+      <div className="if-form-group">
+        <label className="if-label">Any injuries or physical limitations?</label>
+        <div className="if-select-wrap">
+          <select className="if-select" value={data.injuries || ''} onChange={e => onChange('injuries', e.target.value)} required>
+            <option value="">Select…</option>
+            <option value="no">No injuries</option>
+            <option value="yes">Yes — I have injuries or limitations</option>
+          </select>
+        </div>
       </div>
+
       {data.injuries === 'yes' && (
-        <div className="form-group">
-          <label>Describe your injury, area affected, and how it limits your training</label>
-          <textarea rows={4} value={data.injuryDescription || ''}
-            onChange={e => onChange('injuryDescription', e.target.value)} />
+        <div className="if-form-group">
+          <label className="if-label">Describe your injury, area affected, and how it limits your training</label>
+          <textarea
+            className="if-textarea"
+            rows={4}
+            placeholder="e.g. lower back disc issue — can't deadlift heavy"
+            value={data.injuryDescription || ''}
+            onChange={e => onChange('injuryDescription', e.target.value)}
+          />
         </div>
       )}
-      <div className="form-group">
-        <label>Medical flags — tick any that apply</label>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>
-          {[
-            { key: 'surgery',       label: 'Recent surgery (last 6 months)' },
-            { key: 'heartCondition', label: 'Heart condition or chest pain during exercise' },
-            { key: 'jointPain',     label: 'Severe joint pain that stops you training' },
-            { key: 'pregnant',      label: 'Currently pregnant' },
-            { key: 'doctorAdvised', label: 'Advised by a doctor not to exercise' },
-          ].map(({ key, label }) => (
-            <label key={key} style={oldStyles.checkRow}>
-              <input type="checkbox" checked={data[key] || false}
-                onChange={e => onChange(key, e.target.checked)}
-                style={{ width: 'auto', accentColor: '#FF4FC4' }} />
-              <span style={{ fontSize: 14, color: '#CDCDC8' }}>{label}</span>
-            </label>
+
+      <div className="if-form-group">
+        <label className="if-label">Medical flags — tick any that apply</label>
+        <div className="if-check-list" style={{ marginTop: 10 }}>
+          {FLAGS.map(({ key, label }) => (
+            <div
+              key={key}
+              className={`if-check-item${data[key] ? ' checked' : ''}`}
+              onClick={() => onChange(key, !data[key])}
+            >
+              <div className="if-checkbox">
+                <svg className="if-check-mark" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <polyline points="1.5,5.5 3.8,7.8 8.5,2.5" stroke="#FF4FC4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <span className="if-check-label">{label}</span>
+            </div>
           ))}
         </div>
       </div>
-      {(data.surgery || data.heartCondition || data.jointPain || data.pregnant || data.doctorAdvised) && (
-        <div style={oldStyles.redFlag}>
+
+      {anyFlag && (
+        <div className="if-red-flag">
           Based on what you've shared, we recommend speaking with your GP or physiotherapist before starting this programme.
           Contact us at hello@plus4performance.com and we'll assist you.
         </div>
       )}
-      <div className="form-group">
-        <label>Additional notes</label>
-        <textarea rows={3} placeholder="Anything else we should know"
-          value={data.additionalNotes || ''} onChange={e => onChange('additionalNotes', e.target.value)} />
+
+      <div className="if-form-group">
+        <label className="if-label">Additional notes</label>
+        <textarea
+          className="if-textarea"
+          rows={3}
+          placeholder="Anything else we should know"
+          value={data.additionalNotes || ''}
+          onChange={e => onChange('additionalNotes', e.target.value)}
+        />
       </div>
-      <div className="form-group">
-        <label>Plan start date</label>
-        <input type="date" value={data.startDate || ''} onChange={e => onChange('startDate', e.target.value)} required />
+
+      <div className="if-form-group">
+        <label className="if-label">Plan start date</label>
+        <input
+          className="if-input"
+          type="date"
+          value={data.startDate || ''}
+          onChange={e => onChange('startDate', e.target.value)}
+          required
+        />
       </div>
     </div>
   );
@@ -546,8 +600,3 @@ export default function Intake() {
   );
 }
 
-// Temporary styles for Sections 4–5 internals (replaced screen by screen)
-const oldStyles = {
-  checkRow: { display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' },
-  redFlag:  { padding: 16, background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: 8, fontSize: 13, color: '#fca5a5', lineHeight: 1.6, marginBottom: 20 },
-};

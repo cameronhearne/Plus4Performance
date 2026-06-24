@@ -590,6 +590,18 @@
   transform: scale(0.97);
 }
 
+/* ─── Red flag warning block (health & injuries) ────────── */
+.if-red-flag {
+  padding: 14px 16px;
+  background: rgba(248, 113, 113, 0.08);
+  border: 1px solid rgba(248, 113, 113, 0.2);
+  border-radius: 8px;
+  font-size: 13px;
+  color: #fca5a5;
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
 /* ─── Inside Intake steps: form groups appear instantly  ─── */
 /* (entry animation is on the step wrapper, not individual fields) */
 .if-intake .if-form-group {
