@@ -209,7 +209,7 @@ function SessionCard({ session, library = {}, defaultOpen = false, phaseIndex, s
     <div style={styles.sessionCard}>
       <button type="button" style={styles.sessionHeader} onClick={() => setOpen(o => !o)}>
         <span style={styles.sessionName}>{session.name}</span>
-        <span style={{ color: '#787878', fontSize: 20 }}>{open ? '−' : '+'}</span>
+        <span style={{ color: '#5C5A62', fontSize: 22, fontWeight: 600 }}>{open ? '−' : '+'}</span>
       </button>
       {open && (
         <div style={{ padding: '0 20px 20px' }}>
@@ -236,7 +236,7 @@ function SessionCard({ session, library = {}, defaultOpen = false, phaseIndex, s
                 return (
                   <React.Fragment key={i}>
                     <tr
-                      style={{ background: i % 2 === 0 ? '#111' : '#0d0d0d', cursor: displayInfo.cues ? 'pointer' : 'default' }}
+                      style={{ background: i % 2 === 0 ? '#131119' : '#0C0A0F', cursor: displayInfo.cues ? 'pointer' : 'default', borderTop: '1px solid rgba(255,255,255,0.04)' }}
                       onClick={() => displayInfo.cues && setExpandedEx(isCuesOpen ? null : i)}
                     >
                       <td style={styles.td}>
@@ -244,17 +244,17 @@ function SessionCard({ session, library = {}, defaultOpen = false, phaseIndex, s
                           <span style={{ flex: 1 }}>
                             {displayName}
                             {displayInfo.cues && (
-                              <span style={{ color: '#555', fontSize: 11, marginLeft: 6 }}>{isCuesOpen ? '▲' : '▼'}</span>
+                              <span style={{ color: '#5C5A62', fontSize: 11, marginLeft: 6 }}>{isCuesOpen ? '▲' : '▼'}</span>
                             )}
                             {isOverridden && (
-                              <span style={{ color: '#C0392B', fontSize: 9, fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', marginLeft: 8 }}>swapped</span>
+                              <span style={{ color: 'rgba(255,79,196,0.7)', fontSize: 9, fontFamily: "'Oswald', sans-serif", fontWeight: 600, letterSpacing: '1.2px', textTransform: 'uppercase', marginLeft: 8 }}>swapped</span>
                             )}
                           </span>
                           <button
                             type="button"
                             title="Swap exercise"
                             onClick={e => { e.stopPropagation(); handleSwapClick(i, originalName); }}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: 14, lineHeight: 1, color: isSwapOpen ? '#C0392B' : '#3a3a3a', flexShrink: 0 }}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px', fontSize: 14, lineHeight: 1, color: isSwapOpen ? 'rgba(255,79,196,0.7)' : '#5C5A62', flexShrink: 0 }}
                           >
                             ⇄
                           </button>
@@ -266,27 +266,27 @@ function SessionCard({ session, library = {}, defaultOpen = false, phaseIndex, s
                     </tr>
 
                     {isCuesOpen && displayInfo.cues && (
-                      <tr style={{ background: '#0a0a0a' }}>
-                        <td colSpan={4} style={{ padding: '10px 0 14px', fontSize: 12, color: '#CDCDC8', lineHeight: 1.6 }}>
-                          <div style={{ marginBottom: 4 }}><span style={{ color: '#787878', fontWeight: 700 }}>Cue: </span>{displayInfo.cues}</div>
-                          {displayInfo.common_mistakes && <div style={{ marginBottom: 4 }}><span style={{ color: '#787878', fontWeight: 700 }}>Avoid: </span>{displayInfo.common_mistakes}</div>}
-                          {displayInfo.injury_modifications && <div><span style={{ color: '#787878', fontWeight: 700 }}>Modification: </span>{displayInfo.injury_modifications}</div>}
+                      <tr style={{ background: '#0C0A0F', borderTop: '1px solid rgba(255,255,255,0.03)' }}>
+                        <td colSpan={4} style={{ padding: '14px 0 18px', fontSize: 13, color: '#87858E', lineHeight: 1.6 }}>
+                          <div style={{ marginBottom: 4 }}><span style={{ color: '#F3F1ED', fontWeight: 600 }}>Cue: </span>{displayInfo.cues}</div>
+                          {displayInfo.common_mistakes && <div style={{ marginBottom: 4 }}><span style={{ color: '#F3F1ED', fontWeight: 600 }}>Avoid: </span>{displayInfo.common_mistakes}</div>}
+                          {displayInfo.injury_modifications && <div><span style={{ color: '#F3F1ED', fontWeight: 600 }}>Mod: </span>{displayInfo.injury_modifications}</div>}
                         </td>
                       </tr>
                     )}
 
                     {isSwapOpen && (
-                      <tr style={{ background: '#0a0a0a' }}>
+                      <tr style={{ background: '#0C0A0F' }}>
                         <td colSpan={4} style={{ padding: '12px 0 16px' }}>
-                          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: '#555', marginBottom: 10 }}>
+                          <div style={{ fontFamily: "'Oswald', sans-serif", fontSize: 10, fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase', color: '#5C5A62', marginBottom: 10 }}>
                             Swap with
                           </div>
                           {altLoading ? (
-                            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, color: '#444', letterSpacing: '0.06em' }}>
+                            <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 12, color: '#5C5A62' }}>
                               Loading alternatives…
                             </div>
                           ) : altList.length === 0 ? (
-                            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, color: '#444', letterSpacing: '0.06em' }}>
+                            <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 12, color: '#5C5A62' }}>
                               No alternatives available for this exercise.
                             </div>
                           ) : (
@@ -299,16 +299,16 @@ function SessionCard({ session, library = {}, defaultOpen = false, phaseIndex, s
                                     type="button"
                                     onClick={() => handleSelectSwap(ex.ex, alt, originalName)}
                                     style={{
-                                      background: isActive ? 'rgba(192,57,43,0.12)' : 'none',
-                                      border: isActive ? '1px solid rgba(192,57,43,0.4)' : '1px solid transparent',
-                                      color: isActive ? '#C0392B' : '#CDCDC8',
-                                      fontFamily: "'Barlow Condensed', sans-serif",
+                                      background: isActive ? 'rgba(255,79,196,0.08)' : 'none',
+                                      border: isActive ? '1px solid rgba(255,79,196,0.3)' : '1px solid transparent',
+                                      color: isActive ? '#F3F1ED' : '#C4C2C9',
+                                      fontFamily: "'Inter', sans-serif",
                                       fontSize: 13,
-                                      letterSpacing: '0.04em',
                                       textAlign: 'left',
                                       padding: '7px 10px',
                                       cursor: 'pointer',
                                       width: '100%',
+                                      borderRadius: 6,
                                     }}
                                   >
                                     {alt}
@@ -319,11 +319,11 @@ function SessionCard({ session, library = {}, defaultOpen = false, phaseIndex, s
                             </div>
                           )}
                           {isOverridden && (
-                            <div style={{ marginTop: 10, borderTop: '1px solid #1a1a1a', paddingTop: 10 }}>
+                            <div style={{ marginTop: 10, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 10 }}>
                               <button
                                 type="button"
                                 onClick={() => handleSelectSwap(ex.ex, originalName, originalName)}
-                                style={{ background: 'none', border: 'none', color: '#555', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, letterSpacing: '0.06em', cursor: 'pointer', padding: 0 }}
+                                style={{ background: 'none', border: 'none', color: '#5C5A62', fontFamily: "'Inter', sans-serif", fontSize: 12, cursor: 'pointer', padding: 0 }}
                               >
                                 ↺ Restore original — {originalName}
                               </button>
@@ -742,21 +742,21 @@ const styles = {
   lockPrice: { fontFamily: "'Bebas Neue', sans-serif", fontSize: 48, color: '#C8C8C8', marginBottom: 24, lineHeight: 1 },
   lockPer: { fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, fontWeight: 600, color: '#787878', letterSpacing: '0.1em' },
 
-  sessionCard: { background: '#0d0d0d', border: '1px solid rgba(200,200,200,0.12)', marginBottom: 12 },
-  sessionHeader: { width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' },
-  sessionName: { fontFamily: "'Barlow Condensed', sans-serif", fontSize: 16, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#F5F3EE' },
-  exTable: { width: '100%', borderCollapse: 'collapse', marginTop: 12 },
-  th: { fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#787878', padding: '8px 8px 8px 0', textAlign: 'left', borderBottom: '1px solid #222' },
-  td: { fontSize: 13, color: '#CDCDC8', padding: '10px 8px 10px 0', verticalAlign: 'top' },
-  tdCenter: { fontSize: 13, color: '#CDCDC8', padding: '10px 8px', textAlign: 'center', verticalAlign: 'top' },
+  sessionCard: { background: 'linear-gradient(160deg, #131119 0%, #0C0A0F 100%)', border: '1px solid rgba(255,79,196,0.1)', borderRadius: 14, boxShadow: '0 10px 26px -14px rgba(0,0,0,0.55), 0 0 24px -16px rgba(255,79,196,0.5)', marginBottom: 12 },
+  sessionHeader: { width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 20px 12px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' },
+  sessionName: { fontFamily: "'Oswald', sans-serif", fontSize: 18, fontWeight: 700, letterSpacing: '0.3px', textTransform: 'uppercase', color: '#F3F1ED' },
+  exTable: { width: '100%', borderCollapse: 'collapse', marginTop: 4 },
+  th: { fontFamily: "'Inter', sans-serif", fontSize: 10.5, letterSpacing: '1.2px', textTransform: 'uppercase', color: '#5C5A62', padding: '12px 8px 12px 0', textAlign: 'left', borderBottom: '1px solid rgba(255,255,255,0.06)' },
+  td: { fontSize: 14, color: '#C4C2C9', padding: '16px 8px 16px 0', verticalAlign: 'top' },
+  tdCenter: { fontSize: 14, color: '#C4C2C9', padding: '16px 8px', textAlign: 'center', verticalAlign: 'top' },
 
   weekNav: { display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 20 },
-  weekBtn: { padding: '6px 10px', background: '#101010', border: '1px solid rgba(200,200,200,0.15)', color: '#787878', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, fontWeight: 700, cursor: 'pointer' },
-  weekBtnActive: { padding: '6px 10px', background: '#1a1a1a', border: '1px solid #C8C8C8', color: '#C8C8C8', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, fontWeight: 700, cursor: 'pointer' },
-  weekBtnLocked: { padding: '6px 10px', background: '#0a0a0a', border: '1px solid rgba(200,200,200,0.06)', color: '#2e2e2e', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, fontWeight: 700, cursor: 'default' },
-  lockLabel: { fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: '#2e2e2e' },
-  lockedMsg: { fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#444', marginBottom: 16 },
-  phaseTag: { fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.24em', textTransform: 'uppercase', color: '#787878', marginBottom: 14 },
+  weekBtn: { padding: '8px 14px', background: '#131119', border: '1px solid rgba(255,255,255,0.08)', color: '#87858E', fontFamily: "'Oswald', sans-serif", fontSize: 12, fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer', borderRadius: 7 },
+  weekBtnActive: { padding: '8px 14px', background: 'linear-gradient(160deg, #18151F, #100E15)', border: '1px solid rgba(255,79,196,0.25)', color: '#F3F1ED', fontFamily: "'Oswald', sans-serif", fontSize: 12, fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer', borderRadius: 7, boxShadow: '0 0 16px -4px rgba(255,79,196,0.5), 0 1px 0 rgba(255,255,255,0.04) inset' },
+  weekBtnLocked: { padding: '8px 14px', background: '#08070A', border: '1px solid rgba(255,255,255,0.04)', color: '#5C5A62', fontFamily: "'Oswald', sans-serif", fontSize: 12, fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', cursor: 'default', borderRadius: 7, opacity: 0.55 },
+  lockLabel: { fontSize: 10, fontWeight: 600, letterSpacing: '0.04em', color: 'inherit' },
+  lockedMsg: { fontFamily: "'Oswald', sans-serif", fontSize: 11, fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase', color: '#5C5A62', marginBottom: 16 },
+  phaseTag: { fontFamily: "'Oswald', sans-serif", fontSize: 11, fontWeight: 600, letterSpacing: '1.8px', textTransform: 'uppercase', color: '#87858E', marginBottom: 14 },
 
   comingSoon: { textAlign: 'center', padding: '80px 24px', color: '#787878' },
   comingSoonIcon: { fontSize: 48, marginBottom: 20 },
