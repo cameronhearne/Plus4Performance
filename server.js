@@ -1341,6 +1341,7 @@ async function handleCreateCheckout(req, res) {
       payment_method_types: ['card'],
       customer_email: email,
       line_items: [{ price: process.env.STRIPE_PRICE_ID, quantity: 1 }],
+      discounts: [{ coupon: 'p7JHSoCT' }],
       client_reference_id: userId,
       success_url: `${origin}/dashboard?payment=success`,
       cancel_url: `${origin}/dashboard`,
