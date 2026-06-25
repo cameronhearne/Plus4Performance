@@ -69,7 +69,7 @@ const pinkCardStyle = {
   background: `linear-gradient(160deg, ${C.surface} 0%, ${C.surface2} 100%)`,
   border: '1px solid rgba(255,79,196,0.1)',
   borderRadius: 14,
-  boxShadow: `0 10px 26px -14px rgba(0,0,0,0.55), 0 0 24px -16px ${C.glow}`,
+  boxShadow: `0 8px 18px -10px rgba(0,0,0,0.55), 0 0 22px -14px rgba(255,79,196,0.55), 0 1px 0 rgba(255,255,255,0.03) inset`,
 };
 
 const btnPrimary = {

@@ -247,7 +247,7 @@ function SessionCard({ session, library = {}, defaultOpen = false, phaseIndex, s
                               <span style={{ color: '#5C5A62', fontSize: 11, marginLeft: 6 }}>{isCuesOpen ? '▲' : '▼'}</span>
                             )}
                             {isOverridden && (
-                              <span style={{ color: 'rgba(255,79,196,0.7)', fontSize: 9, fontFamily: "'Oswald', sans-serif", fontWeight: 600, letterSpacing: '1.2px', textTransform: 'uppercase', marginLeft: 8 }}>swapped</span>
+                              <span style={{ color: '#F3F1ED', fontSize: 9, fontFamily: "'Oswald', sans-serif", fontWeight: 600, letterSpacing: '1.2px', textTransform: 'uppercase', marginLeft: 8, border: '1px solid rgba(255,79,196,0.3)', borderRadius: 3, padding: '1px 5px' }}>swapped</span>
                             )}
                           </span>
                           <button
@@ -625,6 +625,8 @@ export default function Dashboard() {
 
   return (
     <div style={styles.page}>
+      {/* Ambient glow — matches intake/snapshot screens exactly */}
+      <div style={{ position: 'fixed', top: -180, left: -120, width: 480, height: 480, background: 'radial-gradient(circle, rgba(255,79,196,0.55) 0%, transparent 65%)', opacity: 0.85, pointerEvents: 'none', zIndex: 0 }} />
       {planGenerating && (
         <PlanGeneratingOverlay
           error={planGenError}
@@ -701,7 +703,7 @@ const styles = {
   nav: { position: 'sticky', top: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 40px', background: 'rgba(8,8,8,0.95)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(200,200,200,0.1)' },
   navLogo: { fontFamily: "'Bebas Neue', sans-serif", fontSize: 18, letterSpacing: '0.16em', color: '#C8C8C8' },
   signOut: { background: 'none', border: 'none', color: '#787878', fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer', padding: 0 },
-  inner: { maxWidth: 860, margin: '0 auto', padding: '40px 24px 80px' },
+  inner: { maxWidth: 860, margin: '0 auto', padding: '40px 24px 80px', position: 'relative', zIndex: 1 },
   header: { marginBottom: 40 },
   heading: { fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(24px, 3.5vw, 40px)', letterSpacing: '0.03em', color: '#F5F3EE', marginBottom: 8 },
   headingSub: { fontSize: 15, color: '#787878', fontWeight: 300 },
