@@ -562,7 +562,8 @@ async function sendResendEmail(to, subject, html) {
 
 async function handleCoachingApply(req, res) {
   if (!cors(req, res)) return;
-  const body = await readBody(req);
+  let body;
+  try { body = JSON.parse(await readBody(req)); } catch { return json(res, 400, { error: 'Invalid JSON' }); }
   const name  = (body.name  || '').toString().trim().slice(0, 200);
   const email = (body.email || '').toString().trim().slice(0, 200);
   const goals = (body.goals || '').toString().trim().slice(0, 2000);
