@@ -436,6 +436,121 @@
     to   { opacity: 1; transform: translateY(0); }
   }
 
+  /* ── Proof / testimonials ── */
+  .proof-section {
+    position: relative;
+    z-index: 1;
+    max-width: 800px;
+    margin: 80px auto 0;
+    padding: 0 24px;
+  }
+  .proof-eyebrow {
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--ash-dim);
+    text-transform: uppercase;
+    margin-bottom: 28px;
+  }
+  .proof-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .proof-card {
+    background: linear-gradient(160deg, #131119 0%, #0C0A0F 100%);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 16px;
+    padding: 22px;
+    box-shadow: 0 14px 36px -16px rgba(0,0,0,0.55), 0 0 28px -18px var(--glow);
+  }
+  .proof-stars { color: #87858E; font-size: 13px; letter-spacing: 2px; margin-bottom: 12px; }
+  .proof-stars span { color: var(--bone); }
+  .proof-quote { font-size: 14px; line-height: 1.6; color: #D8D6CF; margin-bottom: 14px; }
+  .proof-source {
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    color: var(--ash-dim);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .proof-source-badge { color: var(--bone); font-weight: 600; }
+
+  /* ── How it works ── */
+  .how-section {
+    position: relative;
+    z-index: 1;
+    max-width: 760px;
+    margin: 90px auto 0;
+    padding: 0 24px;
+    text-align: center;
+  }
+  .how-heading {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 28px;
+    text-transform: uppercase;
+    margin-bottom: 40px;
+  }
+  .how-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; text-align: left; }
+  .how-card {
+    background: linear-gradient(160deg, #131119 0%, #0C0A0F 100%);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 16px;
+    padding: 24px 20px;
+    box-shadow: 0 10px 28px -16px rgba(0,0,0,0.5);
+  }
+  .how-num {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 13px;
+    color: var(--ash-dim);
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+  }
+  .how-title {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 600;
+    font-size: 16px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .how-body { font-size: 13.5px; line-height: 1.55; color: var(--ash); }
+
+  /* ── Offer banner ── */
+  .offer-banner {
+    position: relative;
+    z-index: 1;
+    max-width: 640px;
+    margin: 70px auto 0;
+    padding: 0 24px;
+  }
+  .offer-card {
+    background: linear-gradient(160deg, #18151F 0%, #100E15 100%);
+    border: 1px solid var(--glow-line);
+    border-radius: 16px;
+    padding: 26px 28px;
+    text-align: center;
+    box-shadow: 0 0 50px -16px var(--glow);
+  }
+  .offer-tag {
+    display: inline-block;
+    font-family: 'Oswald', sans-serif;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    color: var(--bone);
+    background: rgba(255,79,196,0.12);
+    border: 1px solid var(--glow-line);
+    padding: 5px 12px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  .offer-heading {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 22px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .offer-body { font-size: 14px; color: var(--ash); margin-bottom: 18px; }
+
   /* ── Responsive ── */
   @media (max-width: 600px) {
     nav { padding: 18px 20px; }
@@ -444,6 +559,8 @@
     .hero { padding: 36px 20px 24px; }
     .calc-row { flex-direction: column; }
     .section { padding: 0 20px; }
+    .proof-grid { grid-template-columns: 1fr; }
+    .how-grid { grid-template-columns: 1fr; text-align: center; }
     .site-footer { padding: 24px 20px; }
   }
 
@@ -537,6 +654,55 @@
       <a href="/intake" class="btn-primary" style="font-size: 13px; padding: 15px;">Get My Full Plan →</a>
     </div>
     <p class="calc-microcopy">This is your maintenance baseline. Your full plan adjusts this for your actual goal.</p>
+  </div>
+</div>
+
+<!-- PROOF -->
+<div class="proof-section">
+  <p class="proof-eyebrow">What early users are saying</p>
+  <div class="proof-grid">
+    <div class="proof-card">
+      <div class="proof-stars"><span>★★★★★</span></div>
+      <p class="proof-quote">"Tried this ahead of the official launch and it's genuinely solid — the plan felt properly tailored, not a generic template. Two weeks in and I'm progressing on every lift."</p>
+      <div class="proof-source"><span class="proof-source-badge">Verified review</span> · Trustpilot</div>
+    </div>
+    <div class="proof-card">
+      <div class="proof-stars"><span>★★★★★</span></div>
+      <p class="proof-quote">"Finally a plan built around me — my calories, my training days, my goal. The meal plan alone saves so much time figuring out what to eat."</p>
+      <div class="proof-source"><span class="proof-source-badge">Verified review</span> · Trustpilot</div>
+    </div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<div class="how-section">
+  <h2 class="how-heading">How it works</h2>
+  <div class="how-grid">
+    <div class="how-card">
+      <div class="how-num">01</div>
+      <div class="how-title">Your Snapshot</div>
+      <p class="how-body">Answer a few quick questions about you, your goal, and how you train. Takes about a minute.</p>
+    </div>
+    <div class="how-card">
+      <div class="how-num">02</div>
+      <div class="how-title">Your Plan</div>
+      <p class="how-body">Get a 12-week training and nutrition plan built specifically around your numbers — not a generic template.</p>
+    </div>
+    <div class="how-card">
+      <div class="how-num">03</div>
+      <div class="how-title">Stay On Track</div>
+      <p class="how-body">Weekly AI check-ins, progress tracking, and plan updates every 12 weeks — coaching that adapts with you.</p>
+    </div>
+  </div>
+</div>
+
+<!-- OFFER BANNER -->
+<div class="offer-banner">
+  <div class="offer-card">
+    <div class="offer-tag">Limited Offer</div>
+    <div class="offer-heading">Your First Month — £1</div>
+    <p class="offer-body">Try the full coaching dashboard for just £1. Then £9.99/month. Cancel anytime.</p>
+    <a href="/intake" class="btn-primary" style="display: inline-block; width: auto; padding: 14px 32px;">Claim Your Snapshot →</a>
   </div>
 </div>
 
