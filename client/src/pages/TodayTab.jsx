@@ -45,6 +45,64 @@ import { getSessionForToday, DAY_ORDER_MON, DAY_NAMES_JS, getWeekNum } from '../
   ───────────────────────────────────────────────────────────────────────────
 */
 
+// ─── DESIGN TOKENS ───────────────────────────────────────────────────────────
+
+const C = {
+  surface:   '#131119',
+  surface2:  '#0C0A0F',
+  bone:      '#F3F1ED',
+  ash:       '#87858E',
+  ashDim:    '#5C5A62',
+  glow:      'rgba(255,79,196,0.5)',
+  glowLine:  'rgba(255,79,196,0.22)',
+  ease:      'cubic-bezier(0.16,1,0.3,1)',
+};
+
+const cardStyle = {
+  background: `linear-gradient(160deg, ${C.surface} 0%, ${C.surface2} 100%)`,
+  border: '1px solid rgba(255,255,255,0.06)',
+  borderRadius: 16,
+  boxShadow: `0 14px 36px -18px rgba(0,0,0,0.55), 0 0 30px -18px ${C.glow}`,
+};
+
+const pinkCardStyle = {
+  background: `linear-gradient(160deg, ${C.surface} 0%, ${C.surface2} 100%)`,
+  border: '1px solid rgba(255,79,196,0.1)',
+  borderRadius: 14,
+  boxShadow: `0 10px 26px -14px rgba(0,0,0,0.55), 0 0 24px -16px ${C.glow}`,
+};
+
+const btnPrimary = {
+  background: 'linear-gradient(160deg, #18151F, #100E15)',
+  border: `1px solid ${C.glowLine}`,
+  color: C.bone,
+  borderRadius: 9,
+  padding: '13px 20px',
+  fontFamily: "'Oswald', sans-serif",
+  fontWeight: 600,
+  fontSize: 12.5,
+  letterSpacing: '1.2px',
+  textTransform: 'uppercase',
+  cursor: 'pointer',
+  boxShadow: `0 0 18px -10px ${C.glow}`,
+  transition: `transform 0.2s ${C.ease}`,
+};
+
+const btnGhost = {
+  background: 'transparent',
+  border: '1px solid rgba(255,255,255,0.1)',
+  color: C.ash,
+  borderRadius: 10,
+  padding: 15,
+  fontFamily: "'Oswald', sans-serif",
+  fontWeight: 600,
+  fontSize: 12.5,
+  letterSpacing: '1.2px',
+  textTransform: 'uppercase',
+  cursor: 'pointer',
+  width: '100%',
+};
+
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 
 function localDayKey(date) {
@@ -54,17 +112,15 @@ function localDayKey(date) {
 function calcStreak(completions, trainingDays) {
   if (!completions?.length || !trainingDays) return 0;
 
-  // Returns 'YYYY-MM-DD' of the Monday starting the ISO week containing `date`
   function weekMonday(date) {
     const d = new Date(date);
-    const daysSinceMonday = (d.getDay() + 6) % 7; // Sun=6, Mon=0, …, Sat=5
+    const daysSinceMonday = (d.getDay() + 6) % 7;
     d.setDate(d.getDate() - daysSinceMonday);
     return d.getFullYear() + '-' +
       String(d.getMonth() + 1).padStart(2, '0') + '-' +
       String(d.getDate()).padStart(2, '0');
   }
 
-  // Count completions per week
   const weekCounts = {};
   completions.forEach(c => {
     const k = weekMonday(new Date(c.completed_at));
@@ -81,8 +137,6 @@ function calcStreak(completions, trainingDays) {
       String(dt.getDate()).padStart(2, '0');
   }
 
-  // If the current week already hit the target, include it; otherwise skip it
-  // (still in progress — don't penalise an incomplete week)
   let checkKey = (weekCounts[currentKey] || 0) >= trainingDays
     ? currentKey
     : subWeek(currentKey);
@@ -94,7 +148,6 @@ function calcStreak(completions, trainingDays) {
   }
   return streak;
 }
-
 
 function getProgress(startDateStr) {
   if (!startDateStr) return 0;
@@ -125,102 +178,103 @@ function inferFocus(sessionName) {
   return FOCUS_MAP[first] || (sessionName?.split(/\s+/)[0]) || 'Mixed';
 }
 
-// ─── FLIP CARD ───────────────────────────────────────────────────────────────
+// ─── COUNT-UP HOOK ───────────────────────────────────────────────────────────
 
-function FlipCard({ currentWeight, targetWeight }) {
-  const [flipped, setFlipped] = useState(false);
+function useCountUp(target, { delay = 500, duration = 900 } = {}) {
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    if (target == null || target === 0) return;
+    const timer = setTimeout(() => {
+      const t0 = performance.now();
+      function tick(now) {
+        const p = Math.min((now - t0) / duration, 1);
+        const eased = 1 - Math.pow(1 - p, 3);
+        setVal(Math.round(eased * target));
+        if (p < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [target, delay, duration]);
+  return val;
+}
+
+// ─── PROGRESS RING — purple/violet gradient, not pink ────────────────────────
+
+function ProgressRing({ startDate }) {
+  const weekNum  = getWeekNum(startDate);
+  const progress = getProgress(startDate);
+  const size = 130;
+  const sw   = 8;
+  const r    = (size - sw) / 2;
+  const circ = 2 * Math.PI * r;
+  const cx   = size / 2;
+  const cy   = size / 2;
+
+  const [animOffset, setAnimOffset] = useState(circ);
+  useEffect(() => {
+    const t = setTimeout(() => setAnimOffset(circ * (1 - progress)), 500);
+    return () => clearTimeout(t);
+  }, [progress, circ]);
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-      <div
-        onClick={() => setFlipped(f => !f)}
-        style={{ perspective: '1000px', width: 160, height: 160, cursor: 'pointer' }}
-      >
-        <div style={{
-          width: '100%',
-          height: '100%',
-          position: 'relative',
-          transformStyle: 'preserve-3d',
-          transition: 'transform 0.55s cubic-bezier(0.4,0,0.2,1)',
-          transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
-        }}>
-          {/* Front — current weight */}
-          <div style={{
-            position: 'absolute', inset: 0,
-            backfaceVisibility: 'hidden',
-            background: '#111',
-            border: '1px solid rgba(200,200,200,0.1)',
-            display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center', gap: 6,
-          }}>
-            <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 52, color: '#F5F3EE', lineHeight: 1 }}>
-              {currentWeight != null ? currentWeight : '—'}
-            </div>
-            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: '#555' }}>
-              Current Weight
-            </div>
-          </div>
-          {/* Back — target weight */}
-          <div style={{
-            position: 'absolute', inset: 0,
-            backfaceVisibility: 'hidden',
-            transform: 'rotateY(180deg)',
-            background: '#111',
-            border: '1px solid rgba(200,200,200,0.1)',
-            display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center', gap: 6,
-          }}>
-            <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 52, color: '#C0392B', lineHeight: 1 }}>
-              {targetWeight != null ? targetWeight : '—'}
-            </div>
-            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: '#555' }}>
-              Target Weight
-            </div>
-          </div>
+    <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
+      <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+        <defs>
+          <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%"   stopColor="#6B1FB8" />
+            <stop offset="45%"  stopColor="#9B2FE0" />
+            <stop offset="100%" stopColor="#C961F5" />
+          </linearGradient>
+        </defs>
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke={C.surface} strokeWidth={sw} />
+        <circle
+          cx={cx} cy={cy} r={r}
+          fill="none"
+          stroke="url(#ringGrad)"
+          strokeWidth={sw + 1}
+          strokeDasharray={circ}
+          strokeDashoffset={animOffset}
+          strokeLinecap="round"
+          style={{
+            filter: 'drop-shadow(0 0 10px rgba(155,47,224,0.6)) drop-shadow(0 0 22px rgba(201,97,245,0.3))',
+            transition: `stroke-dashoffset 1.2s ${C.ease}`,
+          }}
+        />
+      </svg>
+      <div style={{
+        position: 'absolute', inset: 0,
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+      }}>
+        <div style={{ fontFamily: "'Roboto Mono', monospace", fontSize: 32, fontWeight: 600, color: C.bone, lineHeight: 1 }}>
+          {weekNum}
         </div>
-      </div>
-      {/* Discovery hint */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-        <span className="tap-dot" style={{ display: 'block', width: 4, height: 4, borderRadius: '50%', background: '#444' }} />
-        <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 8, letterSpacing: '0.22em', color: '#444', textTransform: 'uppercase' }}>tap</span>
+        <div style={{ fontSize: 10, letterSpacing: '1px', color: C.ashDim, textTransform: 'uppercase', marginTop: 4 }}>
+          of 12
+        </div>
       </div>
     </div>
   );
 }
 
-// ─── PROGRESS RING ───────────────────────────────────────────────────────────
+// ─── WEIGHT STAT CARD ────────────────────────────────────────────────────────
 
-function ProgressRing({ startDate }) {
-  const weekNum  = getWeekNum(startDate);
-  const progress = getProgress(startDate);
-  const size = 120;
-  const sw = 8;
-  const r = (size - sw) / 2;
-  const circ = 2 * Math.PI * r;
-  const offset = circ * (1 - progress);
-  const cx = size / 2;
-  const cy = size / 2;
+function WeightStatCard({ currentWeight }) {
+  const intPart = currentWeight != null ? Math.round(currentWeight * 10) : 0;
+  const counted = useCountUp(intPart, { delay: 500, duration: 900 });
+  const display = currentWeight != null
+    ? (Number.isInteger(currentWeight) ? counted : (counted / 10).toFixed(1))
+    : '—';
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0, flexShrink: 0 }}>
-      <svg width={size} height={size}>
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke="#1a1a1a" strokeWidth={sw} />
-        <circle
-          cx={cx} cy={cy} r={r}
-          fill="none" stroke="#C0392B" strokeWidth={sw}
-          strokeDasharray={circ}
-          strokeDashoffset={offset}
-          strokeLinecap="round"
-          transform={`rotate(-90, ${cx}, ${cy})`}
-        />
-        <text x={cx} y={cy - 6} textAnchor="middle" dominantBaseline="auto"
-          fill="#F5F3EE" fontFamily="'Bebas Neue', sans-serif" fontSize={36}>
-          {weekNum}
-        </text>
-        <text x={cx} y={cy + 18} textAnchor="middle" dominantBaseline="auto"
-          fill="#555" fontFamily="'Barlow Condensed', sans-serif" fontSize={11} letterSpacing="0.14em">
-          OF 12
-        </text>
-      </svg>
+    <div style={{ ...pinkCardStyle, padding: '18px 24px', textAlign: 'center', minWidth: 130 }}>
+      <div style={{ fontFamily: "'Roboto Mono', monospace", fontSize: 30, fontWeight: 600, lineHeight: 1, color: C.bone }}>
+        {currentWeight != null ? display : '—'}
+      </div>
+      <div style={{ fontSize: 10.5, letterSpacing: '1.2px', color: C.ashDim, textTransform: 'uppercase', marginTop: 8 }}>
+        Current Weight
+      </div>
     </div>
   );
 }
@@ -228,33 +282,32 @@ function ProgressRing({ startDate }) {
 // ─── STREAK BADGE ────────────────────────────────────────────────────────────
 
 function StreakBadge({ streak }) {
-  const flameSize  = streak >= 8 ? 40 : streak >= 3 ? 36 : 32;
-  const flameColor = streak === 0 ? '#333333' : streak >= 8 ? '#FF4500' : streak >= 3 ? '#FF6B00' : '#C0392B';
+  const counted   = useCountUp(streak, { delay: 500, duration: 900 });
+  const isActive  = streak > 0;
+  const flameSize = streak >= 8 ? 40 : streak >= 3 ? 36 : 32;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, flexShrink: 0, width: 120 }}>
-      <span className={streak >= 30 ? 'flame-pulse' : ''}>
-        <Flame size={flameSize} color={flameColor} strokeWidth={1.5} />
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+      <span className={streak >= 30 ? 'flame-pulse' : ''} style={{
+        color: isActive ? C.bone : C.ashDim,
+        filter: isActive ? `drop-shadow(0 0 10px ${C.glow})` : 'none',
+      }}>
+        <Flame size={flameSize} strokeWidth={1.5} />
       </span>
-      <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 52, color: '#F5F3EE', lineHeight: 1 }}>
-        {streak}
-      </span>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: '#555' }}>
-          Week Streak
-        </div>
-        {streak === 0 && (
-          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 9, letterSpacing: '0.1em', color: '#333', textAlign: 'center' }}>
-            Complete a session to begin
-          </div>
-        )}
+      <div style={{ fontFamily: "'Roboto Mono', monospace", fontSize: 24, fontWeight: 600, color: C.bone, lineHeight: 1 }}>
+        {counted}
       </div>
+      <div style={{ fontSize: 10.5, letterSpacing: '1.2px', color: C.ashDim, textTransform: 'uppercase' }}>
+        Week Streak
+      </div>
+      {streak === 0 && (
+        <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 10, color: C.ashDim, textAlign: 'center', maxWidth: 80 }}>
+          Complete a session to begin
+        </div>
+      )}
     </div>
   );
 }
-
-// ─── SESSION FOR TODAY ────────────────────────────────────────────────────────
-// getSessionForToday, DAY_ORDER_MON, DAY_NAMES_JS imported from ../lib/schedule
 
 // ─── MOTIVATIONAL LINE ───────────────────────────────────────────────────────
 
@@ -285,12 +338,12 @@ function MotivationalLine({ streak, currentWeight, startingWeight, targetWeight,
     <p style={{
       textAlign: 'center',
       fontStyle: 'italic',
-      color: '#888',
-      fontSize: 13,
-      fontFamily: "'Barlow', sans-serif",
-      fontWeight: 300,
-      letterSpacing: '0.02em',
+      color: '#C4C2C9',
+      fontSize: 14.5,
+      fontFamily: "'Inter', sans-serif",
       margin: '0 0 28px',
+      opacity: 0,
+      animation: `todayFadeUp 0.6s ${C.ease} 0.22s forwards`,
     }}>
       {line}
     </p>
@@ -301,15 +354,15 @@ function MotivationalLine({ streak, currentWeight, startingWeight, targetWeight,
 
 function RestDayCard({ tomorrowSession }) {
   return (
-    <div style={{ background: '#0d0d0d', border: '1px solid rgba(200,200,200,0.12)', padding: '24px 20px', marginBottom: 12 }}>
-      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, letterSpacing: '0.3em', textTransform: 'uppercase', color: '#C0392B', marginBottom: 12 }}>
+    <div style={{ ...cardStyle, padding: '24px 20px', marginBottom: 12 }}>
+      <div style={{ fontFamily: "'Oswald', sans-serif", fontSize: 13, fontWeight: 600, letterSpacing: '1.8px', textTransform: 'uppercase', color: C.ash, marginBottom: 12 }}>
         Rest Day
       </div>
-      <p style={{ fontFamily: "'Barlow', sans-serif", fontSize: 13, color: '#CDCDC8', lineHeight: 1.7, margin: '0 0 16px', fontWeight: 300 }}>
+      <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 14, color: '#C4C2C9', lineHeight: 1.7, margin: '0 0 16px' }}>
         Recovery is part of the programme. Stay active, hit your nutrition targets, and come back strong tomorrow.
       </p>
       {tomorrowSession && (
-        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: '#555' }}>
+        <div style={{ fontFamily: "'Oswald', sans-serif", fontSize: 11, fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', color: C.ashDim }}>
           TOMORROW: {tomorrowSession.name}
         </div>
       )}
@@ -320,18 +373,24 @@ function RestDayCard({ tomorrowSession }) {
 // ─── STAT CHIPS ──────────────────────────────────────────────────────────────
 
 const GOAL_LABELS = {
-  fat_loss:         'FAT LOSS',
-  muscle_building:  'LEAN BULK',
-  maintenance:      'RECOMP',
+  fat_loss:        'FAT LOSS',
+  muscle_building: 'LEAN BULK',
+  maintenance:     'RECOMP',
 };
 
 function StatChip({ label, value }) {
   return (
-    <div style={{ background: '#111', border: '1px solid rgba(192,57,43,0.35)', padding: '10px 16px', flex: '1 1 80px', minWidth: 80 }}>
-      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 9, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: '#555', marginBottom: 4 }}>
+    <div style={{
+      background: `linear-gradient(160deg, ${C.surface} 0%, ${C.surface2} 100%)`,
+      border: `1px solid ${C.glowLine}`,
+      borderRadius: 10,
+      padding: '12px 20px',
+      boxShadow: `0 0 18px -10px ${C.glow}`,
+    }}>
+      <div style={{ fontSize: 10, letterSpacing: '1.3px', color: C.ashDim, textTransform: 'uppercase', fontFamily: "'Inter', sans-serif" }}>
         {label}
       </div>
-      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 16, fontWeight: 700, color: '#F5F3EE', letterSpacing: '0.06em' }}>
+      <div style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 600, fontSize: 14, marginTop: 4, color: C.bone }}>
         {value}
       </div>
     </div>
@@ -349,30 +408,20 @@ function formatGoal(goal) {
   return labels[goal?.toLowerCase()] || (goal ? goal.toUpperCase().replace(/_/g, ' ') : 'LEAN BULK');
 }
 
-function StatChips() {
-  return (
-    <div style={{ display: 'flex', gap: 10, marginBottom: 28, flexWrap: 'wrap' }}>
-      <StatChip label="Goal"     value="LEAN BULK" />
-      <StatChip label="Calories" value="3456 KCAL" />
-      <StatChip label="Protein"  value="228G" />
-    </div>
-  );
-}
-
 // ─── MISSION CARD ────────────────────────────────────────────────────────────
 
-function Pill({ children }) {
+function TagPill({ children }) {
   return (
     <span style={{
-      background: '#1a1a1a',
-      border: '1px solid #2a2a2a',
-      padding: '4px 12px',
-      fontFamily: "'Barlow Condensed', sans-serif",
+      background: C.surface2,
+      border: '1px solid rgba(255,255,255,0.07)',
+      borderRadius: 6,
+      padding: '6px 12px',
+      fontFamily: "'Inter', sans-serif",
       fontSize: 11,
-      fontWeight: 700,
-      letterSpacing: '0.14em',
+      letterSpacing: '0.8px',
       textTransform: 'uppercase',
-      color: '#555',
+      color: C.ash,
     }}>
       {children}
     </span>
@@ -380,13 +429,13 @@ function Pill({ children }) {
 }
 
 function MissionCard({ session, library, sessionLength, weekNum, onComplete, onOpenLogbook, videoMap = {} }) {
-  const [open, setOpen]             = useState(false);
-  const [expandedEx, setExpandedEx] = useState(null);
-  const [watchingVideo, setWatchingVideo]   = useState(null);
-  const [completing, setCompleting]         = useState(false);
-  const [completed, setCompleted]           = useState(false);
+  const [open, setOpen]                         = useState(false);
+  const [expandedEx, setExpandedEx]             = useState(null);
+  const [watchingVideo, setWatchingVideo]       = useState(null);
+  const [completing, setCompleting]             = useState(false);
+  const [completed, setCompleted]               = useState(false);
   const [logNudgeDismissed, setLogNudgeDismissed] = useState(false);
-  const [hasBeenOpened, setHasBeenOpened] = useState(
+  const [hasBeenOpened, setHasBeenOpened]       = useState(
     () => localStorage.getItem('missionCardOpened') === 'true'
   );
 
@@ -417,45 +466,40 @@ function MissionCard({ session, library, sessionLength, weekNum, onComplete, onO
   }
 
   return (
-    <div style={{ background: '#0d0d0d', border: '1px solid rgba(200,200,200,0.12)', marginBottom: 12 }}>
+    <div style={{ ...cardStyle, marginBottom: 12 }}>
       {/* Collapsible header */}
       <button
         type="button"
         onClick={handleToggle}
         style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: '20px 20px 12px', textAlign: 'left' }}
       >
-        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.3em', textTransform: 'uppercase', color: '#C0392B', marginBottom: 8 }}>
+        <div style={{ fontFamily: "'Oswald', sans-serif", fontSize: 11, fontWeight: 600, letterSpacing: '1.8px', textTransform: 'uppercase', color: C.bone, marginBottom: 6 }}>
           Today's Mission
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 28, letterSpacing: '0.04em', color: '#F5F3EE', lineHeight: 1 }}>
+          <div style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 700, fontSize: 24, textTransform: 'uppercase', color: C.bone, lineHeight: 1 }}>
             {session.name}
           </div>
           <span
             className={!open && !hasBeenOpened ? 'pulse-expand' : ''}
-            style={{ color: !open && !hasBeenOpened ? '#C0392B' : '#555', fontSize: 24, fontWeight: 700, paddingTop: 2 }}
+            style={{ color: !open && !hasBeenOpened ? C.bone : C.ashDim, fontSize: 22, fontWeight: 600, paddingTop: 2 }}
           >
             {open ? '−' : '+'}
           </span>
         </div>
         <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-          <Pill>{exCount} exercises</Pill>
-          {duration && <Pill>{duration}</Pill>}
-          <Pill>{focus}</Pill>
+          <TagPill>{exCount} exercises</TagPill>
+          {duration && <TagPill>{duration}</TagPill>}
+          <TagPill>{focus}</TagPill>
         </div>
       </button>
 
-      {/* OPEN LOGBOOK — always visible, below pills */}
+      {/* Open Logbook — always visible */}
       <div style={{ padding: '10px 20px 16px' }}>
         <button
           type="button"
           onClick={() => onOpenLogbook?.(session.name)}
-          style={{
-            background: 'none', border: '1px solid #C0392B',
-            color: '#C0392B', fontFamily: "'Barlow Condensed', sans-serif",
-            fontSize: 12, fontWeight: 700, letterSpacing: '0.18em',
-            textTransform: 'uppercase', padding: '9px 20px', cursor: 'pointer',
-          }}
+          style={{ ...btnPrimary, display: 'inline-block' }}
         >
           Open Logbook →
         </button>
@@ -468,7 +512,16 @@ function MissionCard({ session, library, sessionLength, weekNum, onComplete, onO
             <thead>
               <tr>
                 {['Exercise', 'Sets', 'Reps', 'Rest'].map(h => (
-                  <th key={h} style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#787878', padding: '8px 8px 8px 0', textAlign: 'left', borderBottom: '1px solid #222' }}>
+                  <th key={h} style={{
+                    fontFamily: "'Inter', sans-serif",
+                    fontSize: 10.5,
+                    letterSpacing: '1.2px',
+                    color: C.ashDim,
+                    textTransform: 'uppercase',
+                    padding: '12px 8px 12px 0',
+                    textAlign: 'left',
+                    borderBottom: '1px solid rgba(255,255,255,0.06)',
+                  }}>
                     {h}
                   </th>
                 ))}
@@ -485,37 +538,55 @@ function MissionCard({ session, library, sessionLength, weekNum, onComplete, onO
                 return (
                   <React.Fragment key={i}>
                     <tr
-                      style={{ background: i % 2 === 0 ? '#111' : '#0d0d0d', cursor: hasCue ? 'pointer' : 'default' }}
+                      style={{
+                        background: i % 2 === 0 ? C.surface : C.surface2,
+                        cursor: hasCue ? 'pointer' : 'default',
+                        borderTop: '1px solid rgba(255,255,255,0.04)',
+                      }}
                       onClick={() => hasCue && setExpandedEx(isOpen ? null : i)}
                     >
-                      <td style={{ fontSize: 13, color: '#CDCDC8', padding: '10px 8px 10px 0', verticalAlign: 'top' }}>
+                      <td style={{ fontSize: 14, color: '#C4C2C9', padding: '16px 8px 16px 0', verticalAlign: 'top' }}>
                         {name}
-                        {hasCue && <span style={{ color: '#444', fontSize: 11, marginLeft: 6 }}>{isOpen ? '▲' : '▼'}</span>}
+                        {hasCue && <span style={{ color: C.ashDim, fontSize: 11, marginLeft: 6 }}>{isOpen ? '▲' : '▼'}</span>}
                         {videoSrc && (
                           <button
                             type="button"
                             onClick={e => { e.stopPropagation(); setWatchingVideo(isWatching ? null : i); }}
-                            style={{ display: 'block', marginTop: 6, background: 'none', border: '1px solid #C0392B', color: '#C0392B', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', padding: '4px 10px', cursor: 'pointer' }}
+                            style={{
+                              display: 'block',
+                              marginTop: 6,
+                              background: 'none',
+                              border: `1px solid ${C.glowLine}`,
+                              color: C.bone,
+                              fontFamily: "'Oswald', sans-serif",
+                              fontSize: 11,
+                              fontWeight: 600,
+                              letterSpacing: '1px',
+                              textTransform: 'uppercase',
+                              padding: '4px 10px',
+                              cursor: 'pointer',
+                              borderRadius: 6,
+                            }}
                           >
                             {isWatching ? '▼ Hide' : '▶ Watch Form'}
                           </button>
                         )}
                       </td>
-                      <td style={{ fontSize: 13, color: '#CDCDC8', padding: '10px 8px', textAlign: 'center', verticalAlign: 'top' }}>{ex.sets}</td>
-                      <td style={{ fontSize: 13, color: '#CDCDC8', padding: '10px 8px', textAlign: 'center', verticalAlign: 'top' }}>{ex.reps}</td>
-                      <td style={{ fontSize: 13, color: '#CDCDC8', padding: '10px 8px', textAlign: 'center', verticalAlign: 'top' }}>{ex.rest}</td>
+                      <td style={{ fontSize: 14, color: '#C4C2C9', padding: '16px 8px', textAlign: 'center', verticalAlign: 'top' }}>{ex.sets}</td>
+                      <td style={{ fontSize: 14, color: '#C4C2C9', padding: '16px 8px', textAlign: 'center', verticalAlign: 'top' }}>{ex.reps}</td>
+                      <td style={{ fontSize: 14, color: '#C4C2C9', padding: '16px 8px', textAlign: 'center', verticalAlign: 'top' }}>{ex.rest}</td>
                     </tr>
                     {isOpen && hasCue && (
-                      <tr style={{ background: '#0a0a0a' }}>
-                        <td colSpan={4} style={{ padding: '10px 0 14px', fontSize: 12, color: '#CDCDC8', lineHeight: 1.6 }}>
-                          {info.cues && <div style={{ marginBottom: 4 }}><span style={{ color: '#787878', fontWeight: 700 }}>Cue: </span>{info.cues}</div>}
-                          {info.common_mistakes && <div style={{ marginBottom: 4 }}><span style={{ color: '#787878', fontWeight: 700 }}>Avoid: </span>{info.common_mistakes}</div>}
-                          {info.injury_modifications && <div><span style={{ color: '#787878', fontWeight: 700 }}>Mod: </span>{info.injury_modifications}</div>}
+                      <tr style={{ background: C.surface2, borderTop: '1px solid rgba(255,255,255,0.03)' }}>
+                        <td colSpan={4} style={{ padding: '14px 0 18px', fontSize: 13, color: C.ash, lineHeight: 1.6 }}>
+                          {info.cues            && <div style={{ marginBottom: 4 }}><span style={{ color: C.bone, fontWeight: 600 }}>Cue: </span>{info.cues}</div>}
+                          {info.common_mistakes && <div style={{ marginBottom: 4 }}><span style={{ color: C.bone, fontWeight: 600 }}>Avoid: </span>{info.common_mistakes}</div>}
+                          {info.injury_modifications && <div><span style={{ color: C.bone, fontWeight: 600 }}>Mod: </span>{info.injury_modifications}</div>}
                         </td>
                       </tr>
                     )}
                     {isWatching && videoSrc && (
-                      <tr style={{ background: '#0a0a0a' }}>
+                      <tr style={{ background: C.surface2 }}>
                         <td colSpan={4} style={{ padding: '0 0 14px' }}>
                           <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden' }}>
                             <iframe
@@ -542,25 +613,49 @@ function MissionCard({ session, library, sessionLength, weekNum, onComplete, onO
                 type="button"
                 onClick={handleComplete}
                 disabled={completing}
-                style={{ width: '100%', background: '#C0392B', border: 'none', color: '#fff', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', padding: '16px 0', cursor: completing ? 'default' : 'pointer', opacity: completing ? 0.7 : 1 }}
+                style={{
+                  width: '100%',
+                  background: 'linear-gradient(160deg, #18151F, #100E15)',
+                  border: `1px solid ${C.glowLine}`,
+                  color: C.bone,
+                  borderRadius: 10,
+                  padding: 16,
+                  fontFamily: "'Oswald', sans-serif",
+                  fontWeight: 700,
+                  fontSize: 13,
+                  letterSpacing: '1.8px',
+                  textTransform: 'uppercase',
+                  cursor: completing ? 'default' : 'pointer',
+                  boxShadow: `0 10px 28px -8px ${C.glow}`,
+                  opacity: completing ? 0.6 : 1,
+                }}
               >
                 {completing ? '…' : 'Session Complete'}
               </button>
             ) : (
               <div>
-                <div style={{ textAlign: 'center', padding: '16px 0 12px', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, fontWeight: 700, letterSpacing: '0.14em', color: '#4CAF50' }}>
+                <div style={{ textAlign: 'center', padding: '16px 0 12px', fontFamily: "'Oswald', sans-serif", fontSize: 14, fontWeight: 600, letterSpacing: '1px', color: C.bone }}>
                   ✓ Session logged.
                 </div>
                 {!logNudgeDismissed && (
-                  <div style={{ background: '#111', border: '1px solid rgba(200,200,200,0.1)', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                    <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#CDCDC8' }}>
+                  <div style={{
+                    background: `linear-gradient(160deg, ${C.surface} 0%, ${C.surface2} 100%)`,
+                    border: '1px solid rgba(255,255,255,0.07)',
+                    borderRadius: 10,
+                    padding: '12px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 12,
+                  }}>
+                    <span style={{ fontFamily: "'Oswald', sans-serif", fontSize: 12, fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', color: '#C4C2C9' }}>
                       Log your working weights?
                     </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                       <button
                         type="button"
                         onClick={() => onOpenLogbook?.(session.name)}
-                        style={{ background: 'none', border: '1px solid #C0392B', color: '#C0392B', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', padding: '8px 16px', cursor: 'pointer' }}
+                        style={{ ...btnPrimary, padding: '8px 16px', fontSize: 12 }}
                       >
                         Log Now →
                       </button>
@@ -568,7 +663,7 @@ function MissionCard({ session, library, sessionLength, weekNum, onComplete, onO
                         type="button"
                         onClick={() => setLogNudgeDismissed(true)}
                         aria-label="Dismiss"
-                        style={{ background: 'none', border: 'none', color: '#555', fontSize: 18, lineHeight: 1, cursor: 'pointer', padding: '4px 6px' }}
+                        style={{ background: 'none', border: 'none', color: C.ashDim, fontSize: 18, lineHeight: 1, cursor: 'pointer', padding: '4px 6px' }}
                       >
                         ✕
                       </button>
@@ -600,7 +695,6 @@ function LogWeightModal({ onClose, onSuccess }) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setErr('Not authenticated.'); setSaving(false); return; }
 
-      // Upsert today's entry if one already exists
       const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
       const endOfDay   = new Date(); endOfDay.setHours(23, 59, 59, 999);
 
@@ -629,8 +723,14 @@ function LogWeightModal({ onClose, onSuccess }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ background: '#111', border: '1px solid rgba(200,200,200,0.12)', padding: '32px 28px', width: 320, maxWidth: '90vw' }}>
-        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.28em', textTransform: 'uppercase', color: '#555', marginBottom: 20 }}>
+      <div style={{
+        ...cardStyle,
+        padding: '32px 28px',
+        width: 320,
+        maxWidth: '90vw',
+        boxShadow: `0 20px 50px -10px rgba(0,0,0,0.8), 0 0 30px -16px ${C.glow}`,
+      }}>
+        <div style={{ fontFamily: "'Oswald', sans-serif", fontSize: 11, fontWeight: 600, letterSpacing: '1.8px', textTransform: 'uppercase', color: C.ash, marginBottom: 20 }}>
           Log Today's Weight
         </div>
         <div style={{ position: 'relative', marginBottom: 16 }}>
@@ -641,22 +741,52 @@ function LogWeightModal({ onClose, onSuccess }) {
             onKeyDown={e => e.key === 'Enter' && handleConfirm()}
             autoFocus
             placeholder="e.g. 84.5"
-            style={{ width: '100%', padding: '14px 52px 14px 16px', background: '#1a1a1a', border: '1px solid rgba(200,200,200,0.15)', color: '#F5F3EE', fontFamily: "'Bebas Neue', sans-serif", fontSize: 28, outline: 'none', boxSizing: 'border-box' }}
+            style={{
+              width: '100%',
+              padding: '14px 52px 14px 16px',
+              background: C.surface,
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: 8,
+              color: C.bone,
+              fontFamily: "'Roboto Mono', monospace",
+              fontSize: 28,
+              outline: 'none',
+              boxSizing: 'border-box',
+            }}
           />
-          <span style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', color: '#555', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, pointerEvents: 'none' }}>kg</span>
+          <span style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', color: C.ashDim, fontFamily: "'Oswald', sans-serif", fontSize: 13, fontWeight: 600, pointerEvents: 'none' }}>kg</span>
         </div>
-        {err && <p style={{ color: '#ef4444', fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", marginBottom: 12 }}>{err}</p>}
+        {err && <p style={{ color: '#fca5a5', fontSize: 12, fontFamily: "'Inter', sans-serif", marginBottom: 12 }}>{err}</p>}
         <div style={{ display: 'flex', gap: 10 }}>
           <button
             onClick={handleConfirm}
             disabled={saving || !val}
-            style={{ flex: 1, background: '#C0392B', border: 'none', color: '#fff', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', padding: '14px 0', cursor: 'pointer', opacity: saving || !val ? 0.5 : 1 }}
+            style={{
+              ...btnPrimary,
+              flex: 1,
+              padding: '14px 0',
+              opacity: saving || !val ? 0.5 : 1,
+              boxShadow: `0 10px 28px -8px ${C.glow}`,
+            }}
           >
             {saving ? '…' : 'Confirm'}
           </button>
           <button
             onClick={onClose}
-            style={{ flex: 1, background: 'none', border: '1px solid rgba(200,200,200,0.15)', color: '#555', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', padding: '14px 0', cursor: 'pointer' }}
+            style={{
+              flex: 1,
+              background: 'none',
+              border: '1px solid rgba(255,255,255,0.12)',
+              color: C.ash,
+              borderRadius: 9,
+              padding: '14px 0',
+              fontFamily: "'Oswald', sans-serif",
+              fontSize: 12,
+              fontWeight: 600,
+              letterSpacing: '1px',
+              textTransform: 'uppercase',
+              cursor: 'pointer',
+            }}
           >
             Cancel
           </button>
@@ -682,24 +812,32 @@ function RenewalBanner({ planGeneratedAt, onGoToAccount }) {
   }
 
   return (
-    <div style={{ background: 'rgba(192,57,43,0.08)', border: '1px solid #C0392B', padding: '20px 24px', marginBottom: 28, position: 'relative' }}>
+    <div style={{
+      background: `linear-gradient(160deg, ${C.surface} 0%, ${C.surface2} 100%)`,
+      border: `1px solid ${C.glowLine}`,
+      borderRadius: 16,
+      padding: '20px 24px',
+      marginBottom: 28,
+      position: 'relative',
+      boxShadow: `0 0 30px -16px ${C.glow}`,
+    }}>
       <button
         onClick={handleDismiss}
         aria-label="Dismiss"
-        style={{ position: 'absolute', top: 12, right: 14, background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}
+        style={{ position: 'absolute', top: 12, right: 14, background: 'none', border: 'none', color: C.ashDim, cursor: 'pointer', fontSize: 16, lineHeight: 1 }}
       >✕</button>
-      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.28em', textTransform: 'uppercase', color: '#C0392B', marginBottom: 10 }}>
+      <div style={{ fontFamily: "'Oswald', sans-serif", fontSize: 11, fontWeight: 600, letterSpacing: '1.8px', textTransform: 'uppercase', color: C.ash, marginBottom: 10 }}>
         Plan Complete
       </div>
-      <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(22px, 3vw, 28px)', letterSpacing: '0.04em', color: '#F5F3EE', lineHeight: 1, marginBottom: 12 }}>
+      <div style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 700, fontSize: 'clamp(22px, 3vw, 28px)', textTransform: 'uppercase', color: C.bone, lineHeight: 1.08, marginBottom: 12 }}>
         12 Weeks Done. Ready for What's Next?
       </div>
-      <p style={{ fontFamily: "'Barlow', sans-serif", fontSize: 14, fontWeight: 300, color: '#787878', lineHeight: 1.65, marginBottom: 18, maxWidth: 480 }}>
+      <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 14, color: C.ash, lineHeight: 1.65, marginBottom: 18, maxWidth: 480 }}>
         You've completed your full 12-week programme. Head to My Plan to generate your next cycle — same goal with a fresh structure, or a new direction entirely.
       </p>
       <button
         onClick={() => { onGoToAccount?.(); handleDismiss(); }}
-        style={{ background: '#C0392B', border: 'none', color: '#fff', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', padding: '13px 24px', cursor: 'pointer' }}
+        style={{ ...btnPrimary, boxShadow: `0 10px 28px -8px ${C.glow}` }}
       >
         Go to My Plan →
       </button>
@@ -710,18 +848,17 @@ function RenewalBanner({ planGeneratedAt, onGoToAccount }) {
 // ─── MAIN EXPORT ─────────────────────────────────────────────────────────────
 
 export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenLogbook, planGeneratedAt, onGoToAccount }) {
-  const [currentWeight, setCurrentWeight] = useState(null);
+  const [currentWeight, setCurrentWeight]   = useState(null);
   const [startingWeight, setStartingWeight] = useState(null);
-  const [targetWeight, setTargetWeight]   = useState(null);
-  const [startDate, setStartDate]         = useState(null);
-  const [sessionLength, setSessionLength] = useState(null);
-  const [streak, setStreak]               = useState(0);
-  const [showModal, setShowModal]         = useState(false);
-  const [logSuccess, setLogSuccess]       = useState(false);
-  const [videoMap, setVideoMap]           = useState({});
+  const [targetWeight, setTargetWeight]     = useState(null);
+  const [startDate, setStartDate]           = useState(null);
+  const [sessionLength, setSessionLength]   = useState(null);
+  const [streak, setStreak]                 = useState(0);
+  const [showModal, setShowModal]           = useState(false);
+  const [logSuccess, setLogSuccess]         = useState(false);
+  const [videoMap, setVideoMap]             = useState({});
   const [intakeSchedule, setIntakeSchedule] = useState({ scheduleType: 'rolling', trainingDays: '4', preferredDays: [], goal: null });
-  // Stored as JSON { type: 'training'|'rest', session?: string } keyed to today
-  const [dayOverride, setDayOverride]     = useState(() => {
+  const [dayOverride, setDayOverride]       = useState(() => {
     try {
       const raw = localStorage.getItem(`dayOverride_${new Date().toISOString().split('T')[0]}`);
       return raw ? (JSON.parse(raw).type ?? null) : null;
@@ -733,16 +870,15 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
       return raw ? (JSON.parse(raw).session ?? null) : null;
     } catch { return null; }
   });
-  const [showPicker,          setShowPicker]          = useState(false);
-  const [showWeeklySchedule,  setShowWeeklySchedule]  = useState(false);
-  const [weeklyOverride,      setWeeklyOverride]       = useState(null); // null = no override loaded yet / no override
+  const [showPicker,         setShowPicker]         = useState(false);
+  const [showWeeklySchedule, setShowWeeklySchedule] = useState(false);
+  const [weeklyOverride,     setWeeklyOverride]     = useState(null);
 
   useEffect(() => {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Weight logs
       const { data: logs } = await supabase
         .from('weight_logs')
         .select('weight_kg, logged_at')
@@ -754,7 +890,6 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
         setCurrentWeight(logs[logs.length - 1].weight_kg);
       }
 
-      // Intake data
       const { data: intake } = await supabase
         .from('intake_submissions')
         .select('data')
@@ -775,7 +910,6 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
         });
       }
 
-      // Streak — handle gracefully if table absent
       try {
         const trainingDays = parseInt(intake?.data?.trainingDays || '4', 10);
         const { data: completions, error: cErr } = await supabase
@@ -786,7 +920,6 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
         if (!cErr && completions) setStreak(calcStreak(completions, trainingDays));
       } catch { /* table may not exist yet */ }
 
-      // Exercise videos — global lookup table, no user filter needed
       try {
         const { data: videoRows } = await supabase
           .from('exercise_videos')
@@ -798,7 +931,6 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
         }
       } catch { /* table may not exist yet */ }
 
-      // Weekly schedule override for the current week
       try {
         const { data: { session: authSession } } = await supabase.auth.getSession();
         if (authSession) {
@@ -819,21 +951,18 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
   const library   = plan?.exercise_library || {};
   const nutrition = plan?.nutrition;
 
-  const todayInfo       = (plan && isUnlocked)
+  const todayInfo = (plan && isUnlocked)
     ? getSessionForToday(plan, { ...intakeSchedule, startDate })
     : { session: null, isRestDay: false, tomorrowSession: null };
 
-  // Apply weekly schedule override (if it exists) on top of the plan default.
-  // The single-day dayOverride (localStorage) takes final precedence.
-  const todayDayIdx    = (() => { const d = new Date().getDay(); return d === 0 ? 6 : d - 1; })(); // 0=Mon
-  const weeklyEntry    = weeklyOverride?.[String(todayDayIdx)]; // undefined = no override, null = rest
+  const todayDayIdx    = (() => { const d = new Date().getDay(); return d === 0 ? 6 : d - 1; })();
+  const weeklyEntry    = weeklyOverride?.[String(todayDayIdx)];
   const hasWeeklyEntry = weeklyOverride !== null && String(todayDayIdx) in (weeklyOverride || {});
 
   const baseIsRestDay = hasWeeklyEntry ? (weeklyEntry === null || weeklyEntry === undefined)
                                        : todayInfo.isRestDay;
   const baseTodaySession = (() => {
     if (!hasWeeklyEntry || !weeklyEntry) return todayInfo.session;
-    // Find the session in the current phase by name
     const phaseIdx = Math.min((plan?.phases?.length || 1) - 1, Math.max(0, Math.floor((weekNum - 1) / 4)));
     const phase = plan?.phases?.[phaseIdx] || plan?.phases?.[0];
     return phase?.sessions?.find(s => s.name === weeklyEntry) ?? todayInfo.session;
@@ -843,21 +972,16 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
   const todaySession    = baseTodaySession;
   const tomorrowSession = todayInfo.tomorrowSession;
 
-  // Phase 1 sessions for the picker
   const phase1Sessions = plan?.phases?.[0]?.sessions || [];
 
-  // Override logic — persists in localStorage keyed to today's date
   const effectiveIsRestDay = dayOverride === 'rest'     ? true
                            : dayOverride === 'training' ? false
                            : isRestDay;
 
-  // Resolve picked session object from phase 1 by stored name
   const pickedSession = overrideSession
     ? (phase1Sessions.find(s => s.name === overrideSession) ?? null)
     : null;
 
-  // pickedSession wins; training override with no pick yet → null (show picker only);
-  // otherwise fall through to the natural session
   const effectiveSession = pickedSession
     ?? (dayOverride === 'training' ? null : isRestDay ? null : todaySession);
 
@@ -890,42 +1014,14 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
       const newStreak = calcStreak(completions, numTrainingDays);
       setStreak(newStreak);
 
-      // first_rep — unlock on every session call; upsert ignoreDuplicates makes it idempotent
-      try {
-        await unlockAchievement(supabase, user.id, 'first_rep', 100);
-      } catch (e) {
-        console.error('[Achievements] error unlocking first_rep:', e);
-      }
+      try { await unlockAchievement(supabase, user.id, 'first_rep', 100); } catch {}
+      if (newStreak >= 3)  { try { await unlockAchievement(supabase, user.id, 'on_fire', 100); } catch {} }
+      if (newStreak >= 8)  { try { await unlockAchievement(supabase, user.id, 'unstoppable', 300); } catch {} }
 
-      // on_fire — 3 consecutive successful weeks
-      if (newStreak >= 3) {
-        try {
-          await unlockAchievement(supabase, user.id, 'on_fire', 100);
-        } catch (e) {
-          console.error('[Achievements] error unlocking on_fire:', e);
-        }
-      }
-
-      // unstoppable — 8 consecutive successful weeks
-      if (newStreak >= 8) {
-        try {
-          await unlockAchievement(supabase, user.id, 'unstoppable', 300);
-        } catch (e) {
-          console.error('[Achievements] error unlocking unstoppable:', e);
-        }
-      }
-
-      // week1_warrior — completed all scheduled sessions in week 1
       const week1Count = completions.filter(c => c.week_number === 1).length;
-      if (week1Count >= numTrainingDays) {
-        try {
-          await unlockAchievement(supabase, user.id, 'week1_warrior', 150);
-        } catch (e) {
-          console.error('[Achievements] error unlocking week1_warrior:', e);
-        }
-      }
+      if (week1Count >= numTrainingDays) { try { await unlockAchievement(supabase, user.id, 'week1_warrior', 150); } catch {} }
     } catch (e) {
-      console.error('[Achievements] handleSessionComplete error:', e);
+      console.error('[TodayTab] handleSessionComplete error:', e);
     }
   }
 
@@ -939,29 +1035,45 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
   return (
     <div>
       <style>{`
-        .today-stats-row { display:flex; justify-content:center; align-items:center; gap:40px; flex-wrap:wrap; margin-bottom:20px; }
-        @media (max-width:600px) {
-          .today-stats-row { flex-direction:column; gap:24px; align-items:center; }
-          .today-mission-card { font-size:0.9em; }
-          .today-btn { min-height:44px; }
+        .today-stats-row {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          gap: 40px;
+          flex-wrap: wrap;
+          margin-bottom: 20px;
+          opacity: 0;
+          animation: todayFadeUp 0.65s cubic-bezier(0.16,1,0.3,1) 0.16s forwards;
         }
+        @media (max-width: 600px) {
+          .today-stats-row { flex-direction: column; gap: 24px; align-items: center; }
+          .today-mission-card { font-size: 0.9em; }
+          .today-btn { min-height: 44px; }
+        }
+        @keyframes todayFadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
         @keyframes tapPulse { 0%,100%{opacity:0.3} 50%{opacity:1} }
         .tap-dot { animation: tapPulse 2s ease-in-out infinite; }
         @keyframes flamePulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
         .flame-pulse { animation: flamePulse 1.5s ease-in-out infinite; display:inline-flex; }
-        @keyframes pulseExpand { 0%,100%{transform:scale(1);filter:drop-shadow(0 0 0px #C0392B)} 50%{transform:scale(1.2);filter:drop-shadow(0 0 6px #C0392B)} }
+        @keyframes pulseExpand { 0%,100%{transform:scale(1)} 50%{transform:scale(1.15)} }
         .pulse-expand { display:inline-block; animation: pulseExpand 1.5s ease-in-out infinite; }
-        .override-link { background:none; border:none; color:#555; font-family:'Barlow Condensed',sans-serif; font-size:12px; letter-spacing:0.06em; cursor:pointer; padding:0; text-decoration:none; }
-        .override-link:hover { text-decoration:underline; color:#787878; }
+        .override-link {
+          background: none; border: none;
+          color: #5C5A62;
+          font-family: 'Inter', sans-serif;
+          font-size: 12px; letter-spacing: 0.06em;
+          cursor: pointer; padding: 0; text-decoration: none;
+        }
+        .override-link:hover { text-decoration: underline; color: #87858E; }
       `}</style>
 
-      {/* ── Renewal banner (shown after 84 days on current plan) ─ */}
+      {/* ── Renewal banner ────────────────────────────────────── */}
       <RenewalBanner planGeneratedAt={planGeneratedAt} onGoToAccount={onGoToAccount} />
 
       {/* ── Stats row ─────────────────────────────────────────── */}
       <div className="today-stats-row">
         <ProgressRing startDate={startDate} />
-        <FlipCard currentWeight={currentWeight} targetWeight={targetWeight} />
+        <WeightStatCard currentWeight={currentWeight} />
         <StreakBadge streak={streak} />
       </div>
 
@@ -975,34 +1087,24 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
       />
 
       {/* ── Stat chips ─────────────────────────────────────────── */}
-      <div style={{ display: 'flex', gap: '12px', margin: '24px 0', justifyContent: 'center', flexWrap: 'wrap' }}>
-        <div style={{ background: '#111', border: '1px solid #C0392B', borderRadius: '8px', padding: '12px 20px', textAlign: 'center', minWidth: '100px' }}>
-          <div style={{ fontSize: '10px', color: '#666', letterSpacing: '0.15em', marginBottom: '6px', fontFamily: 'inherit' }}>GOAL</div>
-          <div style={{ fontSize: '16px', color: '#fff', fontWeight: '700', fontFamily: 'inherit' }}>
-            {formatGoal(plan?.user_summary?.goal || plan?.nutrition?.goal)}
-          </div>
-        </div>
-        <div style={{ background: '#111', border: '1px solid #C0392B', borderRadius: '8px', padding: '12px 20px', textAlign: 'center', minWidth: '100px' }}>
-          <div style={{ fontSize: '10px', color: '#666', letterSpacing: '0.15em', marginBottom: '6px', fontFamily: 'inherit' }}>CALORIES</div>
-          <div style={{ fontSize: '16px', color: '#fff', fontWeight: '700', fontFamily: 'inherit' }}>
-            {(isRestDay ? nutrition?.rest_day?.calories : nutrition?.training_day?.calories) ?? '—'} KCAL
-          </div>
-        </div>
-        <div style={{ background: '#111', border: '1px solid #C0392B', borderRadius: '8px', padding: '12px 20px', textAlign: 'center', minWidth: '100px' }}>
-          <div style={{ fontSize: '10px', color: '#666', letterSpacing: '0.15em', marginBottom: '6px', fontFamily: 'inherit' }}>PROTEIN</div>
-          <div style={{ fontSize: '16px', color: '#fff', fontWeight: '700', fontFamily: 'inherit' }}>
-            {(isRestDay ? nutrition?.rest_day?.protein : nutrition?.training_day?.protein) ?? '—'}G
-          </div>
-        </div>
+      <div style={{
+        display: 'flex', gap: 12, margin: '24px 0',
+        justifyContent: 'center', flexWrap: 'wrap',
+        opacity: 0,
+        animation: `todayFadeUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.28s forwards`,
+      }}>
+        <StatChip label="Goal"     value={formatGoal(plan?.user_summary?.goal || plan?.nutrition?.goal)} />
+        <StatChip label="Calories" value={`${(isRestDay ? nutrition?.rest_day?.calories : nutrition?.training_day?.calories) ?? '—'} kcal`} />
+        <StatChip label="Protein"  value={`${(isRestDay ? nutrition?.rest_day?.protein  : nutrition?.training_day?.protein)  ?? '—'}g`} />
       </div>
 
       {/* ── Monthly check-in ───────────────────────────────────── */}
       <MonthlyCheckIn weekNum={weekNum} currentWeight={currentWeight} />
 
-      {/* ── Today's Mission ────────────────────────────────────── */}
+      {/* ── Today's Session ────────────────────────────────────── */}
       <div style={{ marginBottom: 28 }} className="today-mission-card">
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 14, marginTop: 4 }}>
-          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 22, letterSpacing: '0.06em', color: '#F5F3EE' }}>
+          <div style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 700, fontSize: 18, textTransform: 'uppercase', color: C.bone, letterSpacing: '0.3px' }}>
             Today's Session
           </div>
           {isUnlocked && phase1Sessions.length > 0 && (
@@ -1015,7 +1117,6 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
           )}
         </div>
 
-        {/* Weekly schedule view */}
         {showWeeklySchedule && isUnlocked && (
           <WeeklyScheduleView
             plan={plan}
@@ -1029,25 +1130,32 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
 
         {isUnlocked ? (
           <>
-            {/* Card */}
             {effectiveIsRestDay ? (
               <RestDayCard tomorrowSession={tomorrowSession} />
             ) : effectiveSession ? (
-              <MissionCard session={effectiveSession} library={library} sessionLength={sessionLength} weekNum={weekNum} onComplete={handleSessionComplete} onOpenLogbook={onOpenLogbook} videoMap={videoMap} />
+              <MissionCard
+                session={effectiveSession}
+                library={library}
+                sessionLength={sessionLength}
+                weekNum={weekNum}
+                onComplete={handleSessionComplete}
+                onOpenLogbook={onOpenLogbook}
+                videoMap={videoMap}
+              />
             ) : null}
           </>
         ) : (
           <div style={{ position: 'relative' }}>
-            <div style={{ filter: 'blur(6px)', userSelect: 'none', pointerEvents: 'none', background: '#0d0d0d', border: '1px solid rgba(200,200,200,0.12)', padding: '20px' }}>
-              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.3em', textTransform: 'uppercase', color: '#C0392B', marginBottom: 8 }}>Today's Mission</div>
-              <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 28, color: '#F5F3EE' }}>Upper Body A</div>
+            <div style={{ filter: 'blur(6px)', userSelect: 'none', pointerEvents: 'none', ...cardStyle, padding: '20px' }}>
+              <div style={{ fontFamily: "'Oswald', sans-serif", fontSize: 11, fontWeight: 600, letterSpacing: '1.8px', textTransform: 'uppercase', color: C.bone, marginBottom: 8 }}>Today's Mission</div>
+              <div style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 700, fontSize: 24, textTransform: 'uppercase', color: C.bone }}>Upper Body A</div>
               <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                 {['6 exercises', '45 min', 'Upper Body'].map(t => (
-                  <span key={t} style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', padding: '4px 12px', fontSize: 11, color: '#555', fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.14em', textTransform: 'uppercase' }}>{t}</span>
+                  <TagPill key={t}>{t}</TagPill>
                 ))}
               </div>
             </div>
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(8,8,8,0.5)' }}>
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(8,7,10,0.5)' }}>
               <button className="btn-primary today-btn" onClick={onUnlock} style={{ fontSize: 12, padding: '10px 20px' }}>
                 Unlock — £9.99/month
               </button>
@@ -1055,7 +1163,7 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
           </div>
         )}
 
-        {/* ── Session picker / override ───────────────────────── */}
+        {/* ── Session picker / override ─────────────────────── */}
         {isUnlocked && phase1Sessions.length > 0 && (
           <div style={{ marginTop: 16 }}>
             {!showPicker ? (
@@ -1072,7 +1180,7 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
               </div>
             ) : (
               <div style={{ padding: '12px 0 4px' }}>
-                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: '#555', marginBottom: 10, textAlign: 'center' }}>
+                <div style={{ fontFamily: "'Oswald', sans-serif", fontSize: 10, fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase', color: C.ashDim, marginBottom: 10, textAlign: 'center' }}>
                   Choose a session for today
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginBottom: 10 }}>
@@ -1083,7 +1191,19 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
                     return (
                       <button key={s.name} type="button"
                         onClick={() => { handleOverride('training', s.name); setShowPicker(false); }}
-                        style={{ padding: '7px 14px', background: '#111', border: `1px solid ${active ? '#C0392B' : '#2a2a2a'}`, color: active ? '#C0392B' : '#787878', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', cursor: 'pointer', transition: 'border-color 0.15s, color 0.15s' }}
+                        style={{
+                          padding: '7px 14px',
+                          background: C.surface,
+                          border: `1px solid ${active ? C.glowLine : 'rgba(255,255,255,0.08)'}`,
+                          color: active ? C.bone : C.ash,
+                          fontFamily: "'Oswald', sans-serif",
+                          fontSize: 12, fontWeight: 600,
+                          letterSpacing: '1px',
+                          textTransform: 'uppercase',
+                          cursor: 'pointer',
+                          borderRadius: 7,
+                          transition: 'border-color 0.15s, color 0.15s',
+                        }}
                       >
                         {s.name}
                       </button>
@@ -1091,7 +1211,19 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
                   })}
                   <button type="button"
                     onClick={() => { handleOverride('rest'); setShowPicker(false); }}
-                    style={{ padding: '7px 14px', background: '#111', border: `1px solid ${dayOverride === 'rest' || (dayOverride === null && isRestDay) ? '#C0392B' : '#2a2a2a'}`, color: dayOverride === 'rest' || (dayOverride === null && isRestDay) ? '#C0392B' : '#787878', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', cursor: 'pointer', transition: 'border-color 0.15s, color 0.15s' }}
+                    style={{
+                      padding: '7px 14px',
+                      background: C.surface,
+                      border: `1px solid ${dayOverride === 'rest' || (dayOverride === null && isRestDay) ? C.glowLine : 'rgba(255,255,255,0.08)'}`,
+                      color: dayOverride === 'rest' || (dayOverride === null && isRestDay) ? C.bone : C.ash,
+                      fontFamily: "'Oswald', sans-serif",
+                      fontSize: 12, fontWeight: 600,
+                      letterSpacing: '1px',
+                      textTransform: 'uppercase',
+                      cursor: 'pointer',
+                      borderRadius: 7,
+                      transition: 'border-color 0.15s, color 0.15s',
+                    }}
                   >
                     Rest Day
                   </button>
@@ -1108,11 +1240,13 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
       </div>
 
       {/* ── Today's Nutrition ──────────────────────────────────── */}
-      <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 22, letterSpacing: '0.06em', color: '#F5F3EE', marginBottom: 14 }}>
-        Today's Nutrition
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 }}>
+        <div style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 700, fontSize: 18, textTransform: 'uppercase', color: C.bone, letterSpacing: '0.3px' }}>
+          Today's Nutrition
+        </div>
       </div>
       {isUnlocked && nutrition ? (
-        <div style={{ background: '#0d0d0d', border: '1px solid rgba(200,200,200,0.12)', padding: '20px', marginBottom: 28 }}>
+        <div style={{ ...cardStyle, padding: '6px 24px', marginBottom: 24 }}>
           {(() => {
             const dayNutrition = isRestDay ? nutrition.rest_day : nutrition.training_day;
             return [
@@ -1122,22 +1256,22 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
               ['Fat',      dayNutrition?.fat      != null ? dayNutrition.fat      + 'g'     : '—'],
             ];
           })().map(([k, v]) => (
-            <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#CDCDC8', padding: '8px 0', borderBottom: '1px solid #1a1a1a' }}>
-              <span style={{ color: '#787878' }}>{k}</span>
-              <span style={{ color: '#F5F3EE', fontWeight: 600 }}>{v}</span>
+            <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '16px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: 14.5 }}>
+              <span style={{ color: C.ash, fontFamily: "'Inter', sans-serif" }}>{k}</span>
+              <span style={{ fontWeight: 600, color: C.bone, fontFamily: "'Inter', sans-serif" }}>{v}</span>
             </div>
           ))}
         </div>
       ) : (
-        <div style={{ position: 'relative', marginBottom: 28 }}>
-          <div style={{ filter: 'blur(6px)', userSelect: 'none', pointerEvents: 'none', background: '#0d0d0d', border: '1px solid rgba(200,200,200,0.12)', padding: '20px' }}>
-            {[['Calories','2,800 kcal'],['Protein','180g'],['Carbs','320g'],['Fat','78g']].map(([k,v]) => (
-              <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#CDCDC8', padding: '8px 0', borderBottom: '1px solid #1a1a1a' }}>
-                <span style={{ color: '#787878' }}>{k}</span><span>{v}</span>
+        <div style={{ position: 'relative', marginBottom: 24 }}>
+          <div style={{ filter: 'blur(6px)', userSelect: 'none', pointerEvents: 'none', ...cardStyle, padding: '20px' }}>
+            {[['Calories','2,800 kcal'],['Protein','180g'],['Carbs','320g'],['Fat','78g']].map(([k, v]) => (
+              <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <span style={{ color: C.ash }}>{k}</span><span style={{ color: C.bone }}>{v}</span>
               </div>
             ))}
           </div>
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(8,8,8,0.5)' }}>
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(8,7,10,0.5)' }}>
             <button className="btn-primary" onClick={onUnlock} style={{ fontSize: 12, padding: '10px 20px' }}>
               Unlock — £9.99/month
             </button>
@@ -1150,12 +1284,12 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
         <button
           type="button"
           onClick={() => setShowModal(true)}
-          style={{ background: 'none', border: '1px solid rgba(200,200,200,0.2)', color: '#787878', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', padding: '12px 24px', cursor: 'pointer' }}
+          style={{ ...btnGhost, width: 'auto', padding: '13px 24px' }}
         >
           Log Today's Weight →
         </button>
         {logSuccess && (
-          <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, letterSpacing: '0.1em', color: '#4CAF50' }}>
+          <span style={{ fontFamily: "'Oswald', sans-serif", fontSize: 13, fontWeight: 600, letterSpacing: '1px', color: C.bone }}>
             ✓ Weight logged.
           </span>
         )}
