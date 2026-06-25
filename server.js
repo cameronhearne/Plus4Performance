@@ -575,7 +575,7 @@ async function handleCoachingApply(req, res) {
     <p><strong>Goals:</strong></p>
     <p style="white-space:pre-wrap">${esc(goals)}</p>
   `;
-  await sendResendEmail('hello@plus4performance.com', `Coaching application from ${esc(name)}`, html);
+  await sendResendEmail('cameron@plus4performance.com', `Coaching application from ${esc(name)}`, html);
   return json(res, 200, { ok: true });
 }
 
