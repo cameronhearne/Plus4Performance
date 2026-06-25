@@ -560,6 +560,24 @@ async function sendResendEmail(to, subject, html) {
   }
 }
 
+async function handleCoachingApply(req, res) {
+  if (!cors(req, res)) return;
+  const body = await readBody(req);
+  const name  = (body.name  || '').toString().trim().slice(0, 200);
+  const email = (body.email || '').toString().trim().slice(0, 200);
+  const goals = (body.goals || '').toString().trim().slice(0, 2000);
+  if (!name || !email || !goals) return json(res, 400, { error: 'name, email and goals are required.' });
+  const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const html = `
+    <p><strong>Name:</strong> ${esc(name)}</p>
+    <p><strong>Email:</strong> ${esc(email)}</p>
+    <p><strong>Goals:</strong></p>
+    <p style="white-space:pre-wrap">${esc(goals)}</p>
+  `;
+  await sendResendEmail('hello@plus4performance.com', `Coaching application from ${esc(name)}`, html);
+  return json(res, 200, { ok: true });
+}
+
 function isTrainingDayForUser(intakeData) {
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const todayName = dayNames[new Date().getDay()];
@@ -3645,6 +3663,8 @@ const server = http.createServer(async (req, res) => {
       if (friendIdM && req.method === 'DELETE') return await handleFriendRemove(req, res, friendIdM[1]);
       return json(res, 404, { error: 'Not found' });
     }
+
+    if (req.method === 'POST' && url === '/api/coaching-apply') return await handleCoachingApply(req, res);
 
     json(res, 404, { error: 'Not found' });
   } catch (err) {
