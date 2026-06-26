@@ -2,6 +2,18 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { adminGetFlagged1rm, adminApprove1rm, adminReject1rm } from '../../lib/api';
 
+// ─── DESIGN TOKENS ───────────────────────────────────────────────────────────
+
+const C = {
+  surface:  '#131119',
+  surface2: '#0C0A0F',
+  bone:     '#F3F1ED',
+  ash:      '#ABA9B0',
+  ashDim:   '#7A7880',
+};
+
+// ─── LABEL MAPS ──────────────────────────────────────────────────────────────
+
 const LIFT_LABELS = {
   bench_press:    'Bench Press',
   squat:          'Squat',
@@ -10,32 +22,36 @@ const LIFT_LABELS = {
 };
 
 const FLAG_LABELS = {
-  exceeds_4x_bodyweight:                    '> 4× bodyweight',
-  exceeds_50pct_jump:                       '> 50% jump from PB',
-  exceeds_4x_bodyweight_and_50pct_jump:     '> 4× BW + > 50% jump',
+  exceeds_4x_bodyweight:                '> 4× bodyweight',
+  exceeds_50pct_jump:                   '> 50% jump from PB',
+  exceeds_4x_bodyweight_and_50pct_jump: '> 4× BW + > 50% jump',
 };
 
-const S = {
-  heading:  { fontFamily: "'Bebas Neue', sans-serif", fontSize: 28, letterSpacing: '0.04em', color: '#F5F3EE', marginBottom: 6 },
-  sub:      { fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, color: '#555', letterSpacing: '0.06em', marginBottom: 28 },
-  empty:    { fontFamily: "'Barlow', sans-serif", fontSize: 14, color: '#555', fontWeight: 300, padding: '40px 0', textAlign: 'center' },
-  table:    { width: '100%', borderCollapse: 'collapse' },
-  th:       { fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: '#555', textAlign: 'left', padding: '10px 14px', borderBottom: '1px solid #1a1a1a' },
-  td:       { fontFamily: "'Barlow', sans-serif", fontSize: 13, color: '#CDCDC8', fontWeight: 300, padding: '12px 14px', borderBottom: '1px solid #111', verticalAlign: 'middle' },
-  mono:     { fontFamily: 'monospace', fontSize: 13, color: '#F5F3EE' },
-  flagBadge:{ display: 'inline-block', padding: '3px 8px', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', background: 'rgba(255,152,0,0.12)', color: '#FF9800', border: '1px solid rgba(255,152,0,0.3)' },
-  approveBtn:{ padding: '7px 14px', background: 'rgba(76,175,80,0.15)', border: '1px solid rgba(76,175,80,0.4)', color: '#4CAF50', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', cursor: 'pointer', marginRight: 8 },
-  rejectBtn: { padding: '7px 14px', background: 'rgba(192,57,43,0.12)', border: '1px solid rgba(192,57,43,0.35)', color: '#C0392B', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', cursor: 'pointer' },
-  busyBtn:   { opacity: 0.5, cursor: 'default' },
+// ─── TABLE STYLES ─────────────────────────────────────────────────────────────
+
+const thStyle = {
+  textAlign: 'left', fontFamily: "'Inter', sans-serif",
+  fontSize: '10px', letterSpacing: '1.2px', color: C.ashDim,
+  textTransform: 'uppercase', padding: '10px 14px',
+  borderBottom: '1px solid rgba(255,255,255,0.07)',
+};
+const tdStyle = {
+  fontFamily: "'Inter', sans-serif", fontSize: 13, color: C.ash,
+  padding: '12px 14px', borderBottom: '1px solid rgba(255,255,255,0.04)',
+  verticalAlign: 'middle',
 };
 
-const fmtDate = iso => new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+const fmtDate = iso => new Date(iso).toLocaleString('en-GB', {
+  day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+});
+
+// ─── MAIN EXPORT ─────────────────────────────────────────────────────────────
 
 export default function AdminFlagged1rm() {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busyIds, setBusyIds] = useState(new Set());
-  const [token, setToken] = useState(null);
+  const [token,   setToken]   = useState(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -85,26 +101,46 @@ export default function AdminFlagged1rm() {
 
   return (
     <div>
-      <div style={S.heading}>Flagged 1RMs</div>
-      <div style={S.sub}>Entries pending review before appearing on leaderboards</div>
+      {/* Heading */}
+      <div style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 700, fontSize: 28, textTransform: 'uppercase', color: C.bone, marginBottom: 10 }}>
+        Flagged 1RMs
+      </div>
+      <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 14.5, color: C.ash, marginBottom: 36 }}>
+        Entries pending review before appearing on leaderboards
+      </p>
 
       {loading ? (
-        <div style={S.empty}>Loading…</div>
+        <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, color: C.ash }}>Loading…</div>
       ) : entries.length === 0 ? (
-        <div style={S.empty}>No flagged entries pending review.</div>
+        /* Empty state — dark gradient surface card, grey body text, exact existing copy */
+        <div style={{
+          background: `linear-gradient(160deg, ${C.surface} 0%, ${C.surface2} 100%)`,
+          border: '1px solid rgba(255,255,255,0.06)',
+          borderRadius: 16, padding: '60px 24px', textAlign: 'center',
+          boxShadow: '0 12px 30px -16px rgba(0,0,0,0.55)',
+        }}>
+          <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 14.5, color: C.ash }}>
+            No flagged entries pending review.
+          </div>
+        </div>
       ) : (
-        <div style={{ background: '#0d0d0d', border: '1px solid rgba(200,200,200,0.1)' }}>
-          <table style={S.table}>
+        <div style={{
+          background: `linear-gradient(160deg, ${C.surface} 0%, ${C.surface2} 100%)`,
+          border: '1px solid rgba(255,255,255,0.06)',
+          borderRadius: 16, overflow: 'hidden',
+          boxShadow: '0 12px 30px -16px rgba(0,0,0,0.55)',
+        }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                <th style={S.th}>User</th>
-                <th style={S.th}>Lift</th>
-                <th style={S.th}>Logged</th>
-                <th style={S.th}>Prev Best</th>
-                <th style={S.th}>Bodyweight</th>
-                <th style={S.th}>Flag Reason</th>
-                <th style={S.th}>Logged At</th>
-                <th style={S.th}>Actions</th>
+                <th style={thStyle}>User</th>
+                <th style={thStyle}>Lift</th>
+                <th style={thStyle}>Logged</th>
+                <th style={thStyle}>Prev Best</th>
+                <th style={thStyle}>Bodyweight</th>
+                <th style={thStyle}>Flag Reason</th>
+                <th style={thStyle}>Logged At</th>
+                <th style={thStyle}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -112,31 +148,49 @@ export default function AdminFlagged1rm() {
                 const busy = busyIds.has(e.id);
                 return (
                   <tr key={e.id}>
-                    <td style={S.td}>
-                      <span style={{ fontFamily: "'Barlow Condensed', sans-serif", color: '#F5F3EE', letterSpacing: '0.04em' }}>
-                        {e.username}
+                    <td style={{ ...tdStyle, color: C.bone, fontWeight: 500 }}>{e.username}</td>
+                    <td style={tdStyle}>{LIFT_LABELS[e.lift] || e.lift}</td>
+                    <td style={{ ...tdStyle, fontFamily: "'Roboto Mono', monospace", color: C.bone }}>
+                      {e.weight_kg} kg{e.is_calculated ? ' (est.)' : ''}
+                    </td>
+                    <td style={{ ...tdStyle, color: C.ashDim }}>{e.previous_best != null ? `${e.previous_best} kg` : '—'}</td>
+                    <td style={{ ...tdStyle, color: C.ashDim }}>{e.bodyweight != null ? `${e.bodyweight} kg` : '—'}</td>
+                    <td style={tdStyle}>
+                      {/* Flag badge — amber warning indicator, communicative colour */}
+                      <span style={{
+                        display: 'inline-block', padding: '3px 8px', borderRadius: 6,
+                        fontFamily: "'Oswald', sans-serif", fontSize: 10, fontWeight: 700,
+                        letterSpacing: '0.8px', textTransform: 'uppercase',
+                        background: 'rgba(255,152,0,0.1)', border: '1px solid rgba(255,152,0,0.3)', color: '#E8A020',
+                      }}>
+                        {FLAG_LABELS[e.flagged_reason] || e.flagged_reason || '—'}
                       </span>
                     </td>
-                    <td style={S.td}>{LIFT_LABELS[e.lift] || e.lift}</td>
-                    <td style={{ ...S.td, ...S.mono }}>{e.weight_kg} kg{e.is_calculated ? ' (est.)' : ''}</td>
-                    <td style={{ ...S.td, color: '#787878' }}>{e.previous_best != null ? `${e.previous_best} kg` : '—'}</td>
-                    <td style={{ ...S.td, color: '#787878' }}>{e.bodyweight != null ? `${e.bodyweight} kg` : '—'}</td>
-                    <td style={S.td}>
-                      <span style={S.flagBadge}>{FLAG_LABELS[e.flagged_reason] || e.flagged_reason || '—'}</span>
-                    </td>
-                    <td style={{ ...S.td, color: '#555', fontSize: 11 }}>{fmtDate(e.logged_at)}</td>
-                    <td style={S.td}>
+                    <td style={{ ...tdStyle, color: C.ashDim, fontSize: 11 }}>{fmtDate(e.logged_at)}</td>
+                    <td style={tdStyle}>
                       <button
                         onClick={() => approve(e.id)}
                         disabled={busy}
-                        style={{ ...S.approveBtn, ...(busy ? S.busyBtn : {}) }}
+                        style={{
+                          padding: '7px 14px', borderRadius: 7, cursor: busy ? 'default' : 'pointer',
+                          background: 'rgba(74,153,104,0.12)', border: '1px solid rgba(74,153,104,0.4)', color: '#4A9968',
+                          fontFamily: "'Oswald', sans-serif", fontSize: 11, fontWeight: 700,
+                          letterSpacing: '0.8px', textTransform: 'uppercase', marginRight: 8,
+                          opacity: busy ? 0.5 : 1,
+                        }}
                       >
                         Approve
                       </button>
                       <button
                         onClick={() => reject(e.id)}
                         disabled={busy}
-                        style={{ ...S.rejectBtn, ...(busy ? S.busyBtn : {}) }}
+                        style={{
+                          padding: '7px 14px', borderRadius: 7, cursor: busy ? 'default' : 'pointer',
+                          background: 'rgba(192,57,43,0.1)', border: '1px solid rgba(192,57,43,0.35)', color: '#C0392B',
+                          fontFamily: "'Oswald', sans-serif", fontSize: 11, fontWeight: 700,
+                          letterSpacing: '0.8px', textTransform: 'uppercase',
+                          opacity: busy ? 0.5 : 1,
+                        }}
                       >
                         Reject
                       </button>
