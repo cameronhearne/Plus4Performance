@@ -2,42 +2,76 @@ import React, { useEffect, useState } from 'react';
 
 const API = import.meta.env.VITE_API_URL || '';
 
-// Add a creator's slug here once their subdomain is live to restore full card behaviour.
+// Restore full card behaviour by adding a creator's slug here once their subdomain is live.
 const LIVE_CREATOR_SLUGS = new Set([]);
 
-// ─── SHARED COMING-SOON SECTION ──────────────────────────────────────────────
+// ─── DESIGN TOKENS ───────────────────────────────────────────────────────────
+
+const C = {
+  surface:    '#131119',
+  surface2:   '#0C0A0F',
+  bone:       '#F3F1ED',
+  ash:        '#ABA9B0',
+  ashDim:     '#7A7880',
+  pinkGlow:   'rgba(255,79,196,0.5)',
+  pinkLine:   'rgba(255,79,196,0.25)',
+};
+
+// ─── COMING SOON SECTION ─────────────────────────────────────────────────────
 
 function ComingSoonSection({ title, children }) {
   return (
-    <div style={{ padding: '44px 0 8px', textAlign: 'center' }}>
-      <div style={{
-        fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700,
-        letterSpacing: '0.32em', textTransform: 'uppercase', color: '#C0392B',
-        marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
-      }}>
-        <span style={{ display: 'block', width: 28, height: 1, background: '#C0392B' }} />
-        Coming Soon
-        <span style={{ display: 'block', width: 28, height: 1, background: '#C0392B' }} />
+    <div style={{ padding: '36px 0 8px', textAlign: 'center', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+      {/* Pink-line-flanked eyebrow */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, marginBottom: 14 }}>
+        <div style={{ width: 26, height: 1, background: C.pinkLine }} />
+        <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 11, letterSpacing: '2px', color: C.bone, textTransform: 'uppercase' }}>
+          Coming Soon
+        </span>
+        <div style={{ width: 26, height: 1, background: C.pinkLine }} />
       </div>
-      <div style={{
-        fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(44px, 8vw, 72px)',
-        letterSpacing: '0.04em', color: '#F5F3EE', lineHeight: 1, marginBottom: 24,
-      }}>
+      {/* White heading */}
+      <div style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 700, fontSize: 30, textTransform: 'uppercase', marginBottom: 14, color: C.bone, lineHeight: 1 }}>
         {title}
       </div>
-      <p style={{
-        fontFamily: "'Barlow', sans-serif", fontSize: 15, fontWeight: 300,
-        color: '#787878', lineHeight: 1.75, maxWidth: 380, margin: '0 auto',
-      }}>
+      {/* Grey body text — exact existing copy */}
+      <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 14.5, color: C.ash, maxWidth: 440, margin: '0 auto', lineHeight: 1.6 }}>
         {children}
       </p>
     </div>
   );
 }
 
-function SectionDivider() {
-  return <div style={{ borderTop: '1px solid rgba(200,200,200,0.08)', margin: '48px 0 0' }} />;
-}
+// ─── CREATOR CARD ────────────────────────────────────────────────────────────
+
+const creatorCardBase = {
+  background: `linear-gradient(160deg, #131119 0%, #0C0A0F 100%)`,
+  border: '1px solid rgba(255,255,255,0.06)',
+  borderRadius: 16,
+  padding: 24,
+  position: 'relative',
+  boxShadow: '0 12px 30px -16px rgba(0,0,0,0.55)',
+  cursor: 'pointer',
+  transition: 'border-color 0.25s',
+};
+
+const soonBadgeStyle = {
+  position: 'absolute', top: 20, right: 20,
+  background: '#0C0A0F',
+  border: '1px solid rgba(255,79,196,0.25)',
+  borderRadius: 7, padding: '6px 12px',
+  fontFamily: "'Oswald', sans-serif", fontSize: 10.5, fontWeight: 700,
+  letterSpacing: '1px', textTransform: 'uppercase', color: '#F3F1ED',
+  boxShadow: '0 0 14px -4px rgba(255,79,196,0.5)',
+};
+
+const creatorAvatarStyle = {
+  width: 56, height: 56, borderRadius: 12,
+  background: '#0C0A0F', border: '1px solid rgba(255,255,255,0.08)',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  fontFamily: "'Oswald', sans-serif", fontWeight: 700, fontSize: 16, color: '#7A7880',
+  marginBottom: 20,
+};
 
 // ─── MAIN EXPORT ─────────────────────────────────────────────────────────────
 
@@ -74,43 +108,58 @@ export default function ShopTab({ onCardClick } = {}) {
 
   return (
     <div>
-
       {/* ── Section 1: Creator Plans ─────────────────────────────── */}
-      <div style={S.eyebrow}>Creator Plans</div>
-      <h2 style={S.heading}>Specialist Programmes</h2>
-      <p style={S.sub}>
+      <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 11, letterSpacing: '2px', textTransform: 'uppercase', color: C.ashDim, marginBottom: 14 }}>
+        Creator Plans
+      </div>
+      <h2 style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 700, fontSize: 'clamp(32px,5vw,38px)', textTransform: 'uppercase', color: C.bone, marginBottom: 12, lineHeight: 1 }}>
+        Specialist Programmes
+      </h2>
+      <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 15, color: C.ash, lineHeight: 1.7, maxWidth: 560, marginBottom: 40 }}>
         Coaching programmes from expert creators, all powered by the Plus 4 Performance platform.
       </p>
 
       {loading ? (
-        <p style={S.empty}>Loading…</p>
+        <p style={{ color: C.ash, fontFamily: "'Inter', sans-serif", fontSize: 13 }}>Loading…</p>
       ) : creators.length === 0 ? (
-        <div style={S.emptyState}>
-          <div style={S.emptyHeading}>No creator plans available yet</div>
-          <p style={S.emptyBody}>Check back soon — we're onboarding specialist coaches and creators to the platform.</p>
+        /* Placeholder creator card matching prototype */
+        <div style={{ ...creatorCardBase, maxWidth: 420, marginBottom: 50 }}>
+          <div style={soonBadgeStyle}>Coming Soon</div>
+          <div style={creatorAvatarStyle}>SP</div>
+          <div style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 700, fontSize: 20, textTransform: 'uppercase', marginBottom: 6, color: C.bone }}>
+            Specialist Creator
+          </div>
+          <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 12.5, color: C.ashDim, letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+            Coming Soon
+          </div>
         </div>
       ) : (
-        <div style={S.grid}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginBottom: 50 }}>
           {creators.map(c => {
             const isLive = LIVE_CREATOR_SLUGS.has(c.slug);
             return (
               <div
                 key={c.id}
-                style={S.card}
+                style={{ ...creatorCardBase, minWidth: 240, flex: '1 1 240px', maxWidth: 420, opacity: isLive ? 1 : 1 }}
                 onClick={() => handleCardClick(c.slug)}
-                onMouseEnter={e => e.currentTarget.style.borderColor = isLive ? (c.primary_color || '#C0392B') : 'rgba(200,200,200,0.2)'}
-                onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(200,200,200,0.12)'}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = isLive ? C.pinkLine : 'rgba(255,255,255,0.12)'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; }}
               >
-                {!isLive && <div style={S.badge}>Coming Soon</div>}
-                <div style={{ ...S.cardAccent, background: c.primary_color || '#C0392B', opacity: isLive ? 1 : 0.35 }} />
-                <div style={{ ...S.cardInner, opacity: isLive ? 1 : 0.45 }}>
-                  {c.logo_url
-                    ? <img src={c.logo_url} alt={c.name} style={S.logo} />
-                    : <div style={{ ...S.logoPlaceholder, color: c.primary_color || '#C0392B' }}>
-                        {c.name.slice(0, 2).toUpperCase()}
-                      </div>}
-                  <div style={S.cardName}>{c.name}</div>
-                  <div style={S.cardCta}>{isLive ? 'View Programme →' : 'Coming Soon'}</div>
+                {!isLive && <div style={soonBadgeStyle}>Coming Soon</div>}
+
+                <div style={{ ...creatorAvatarStyle, opacity: isLive ? 1 : 0.85 }}>
+                  {c.logo_url ? (
+                    <img src={c.logo_url} alt={c.name} style={{ height: 44, objectFit: 'contain' }} />
+                  ) : (
+                    c.name.slice(0, 2).toUpperCase()
+                  )}
+                </div>
+
+                <div style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 700, fontSize: 20, textTransform: 'uppercase', marginBottom: 6, color: C.bone, opacity: isLive ? 1 : 0.7 }}>
+                  {c.name}
+                </div>
+                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 12.5, color: C.ashDim, letterSpacing: '0.5px', textTransform: 'uppercase', opacity: isLive ? 1 : 0.7 }}>
+                  {isLive ? 'View Programme →' : 'Coming Soon'}
                 </div>
               </div>
             );
@@ -119,44 +168,27 @@ export default function ShopTab({ onCardClick } = {}) {
       )}
 
       {toast && (
-        <div style={S.toast}>
+        <div style={{
+          position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)',
+          background: C.surface, border: '1px solid rgba(255,255,255,0.08)',
+          color: C.ash, fontFamily: "'Inter', sans-serif", fontSize: 13,
+          padding: '12px 20px', zIndex: 100, borderRadius: 10,
+          boxShadow: '0 8px 22px -8px rgba(0,0,0,0.7)', whiteSpace: 'nowrap',
+        }}>
           This creator's programme isn't available yet — check back soon
         </div>
       )}
 
       {/* ── Section 2: Supplements ───────────────────────────────── */}
-      <SectionDivider />
       <ComingSoonSection title="Supplements">
         Trusted supplement recommendations — creatine, pre-workout, and more
         from brands we rate. Coming soon.
       </ComingSoonSection>
 
       {/* ── Section 3: Clothing ──────────────────────────────────── */}
-      <SectionDivider />
       <ComingSoonSection title="Clothing">
         Plus 4 Performance clothing — coming soon.
       </ComingSoonSection>
-
     </div>
   );
 }
-
-const S = {
-  eyebrow:      { fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.3em', textTransform: 'uppercase', color: '#C0392B', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10 },
-  heading:      { fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(36px,5vw,56px)', letterSpacing: '0.03em', color: '#F5F3EE', marginBottom: 12, lineHeight: 1 },
-  sub:          { fontSize: 14, color: '#787878', lineHeight: 1.7, maxWidth: 560, marginBottom: 40 },
-  empty:        { color: '#555', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, letterSpacing: '0.06em' },
-  emptyState:   { background: '#0d0d0d', border: '1px solid rgba(200,200,200,0.1)', padding: '48px 40px', maxWidth: 480 },
-  emptyHeading: { fontFamily: "'Bebas Neue', sans-serif", fontSize: 28, letterSpacing: '0.04em', color: '#F5F3EE', marginBottom: 12 },
-  emptyBody:    { fontSize: 14, color: '#555', lineHeight: 1.7 },
-  grid:         { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 1, background: 'rgba(200,200,200,0.08)' },
-  card:         { background: '#0d0d0d', border: '1px solid rgba(200,200,200,0.12)', textDecoration: 'none', display: 'block', position: 'relative', overflow: 'hidden', transition: 'border-color 0.2s', cursor: 'pointer' },
-  badge:        { position: 'absolute', top: 14, right: 14, background: '#C0392B', color: '#fff', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 9, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', padding: '3px 7px', zIndex: 2 },
-  cardAccent:   { height: 3, width: '100%' },
-  cardInner:    { padding: '28px 24px 24px' },
-  logo:         { height: 44, objectFit: 'contain', marginBottom: 16 },
-  logoPlaceholder: { width: 44, height: 44, background: '#1a1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Bebas Neue', sans-serif", fontSize: 20, marginBottom: 16 },
-  cardName:     { fontFamily: "'Bebas Neue', sans-serif", fontSize: 24, letterSpacing: '0.04em', color: '#F5F3EE', marginBottom: 16, lineHeight: 1 },
-  cardCta:      { fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#787878' },
-  toast:        { position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: '#1a1a1a', border: '1px solid rgba(200,200,200,0.15)', color: '#CDCDC8', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, letterSpacing: '0.06em', padding: '12px 20px', zIndex: 100, whiteSpace: 'nowrap' },
-};

@@ -57,20 +57,103 @@ const SPLIT_LABELS = {
 };
 const SESSION_LABELS = { '45': '45 min', '60': '60 min', '90': '90 min', '120': '2 hours' };
 
+// ─── DESIGN TOKENS ───────────────────────────────────────────────────────────
+
+const C = {
+  surface:    '#131119',
+  surface2:   '#0C0A0F',
+  bone:       '#F3F1ED',
+  ash:        '#ABA9B0',
+  ashDim:     '#7A7880',
+  pinkGlow:   'rgba(255,79,196,0.5)',
+  pinkLine:   'rgba(255,79,196,0.25)',
+  green:      '#4A9968',
+  greenGlow:  'rgba(74,153,104,0.4)',
+  greenLine:  'rgba(74,153,104,0.35)',
+  red:        '#C0392B',
+  redGlow:    'rgba(192,57,43,0.3)',
+  redLine:    'rgba(192,57,43,0.4)',
+};
+
 // ─── SHARED STYLE TOKENS ─────────────────────────────────────────────────────
 
-const cardStyle   = { background: '#0d0d0d', border: '1px solid rgba(200,200,200,0.12)', marginBottom: 20 };
-const eyebrowStyle = { fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.28em', textTransform: 'uppercase', color: '#555' };
-const rowStyle    = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #1a1a1a', fontSize: 13 };
+const cardStyle = {
+  background: `linear-gradient(160deg, ${C.surface} 0%, ${C.surface2} 100%)`,
+  border: '1px solid rgba(255,255,255,0.06)',
+  borderRadius: 16,
+  boxShadow: '0 12px 30px -16px rgba(0,0,0,0.55)',
+  marginBottom: 22,
+};
+
+const fieldEyebrow = {
+  fontFamily: "'Inter', sans-serif",
+  fontSize: 11,
+  letterSpacing: '1.3px',
+  color: C.ashDim,
+  textTransform: 'uppercase',
+};
+
+const planRowStyle = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  padding: '13px 0',
+  borderTop: '1px solid rgba(255,255,255,0.05)',
+  fontSize: 14,
+};
 
 function inp(extra = {}) {
-  return { padding: '10px 12px', background: '#1a1a1a', border: '1px solid #2a2a2a', color: '#F5F3EE', fontFamily: "'Barlow', sans-serif", fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box', ...extra };
+  return {
+    padding: '13px 15px',
+    background: C.surface2,
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: 10,
+    color: C.bone,
+    fontFamily: "'Inter', sans-serif",
+    fontSize: 14,
+    outline: 'none',
+    width: '100%',
+    boxSizing: 'border-box',
+    transition: 'border-color 0.25s, box-shadow 0.25s',
+    ...extra,
+  };
 }
+
 function primaryBtn(disabled = false, extra = {}) {
-  return { background: disabled ? '#444' : '#C0392B', border: 'none', color: '#fff', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', padding: '13px 24px', cursor: disabled ? 'default' : 'pointer', minHeight: 44, opacity: disabled ? 0.6 : 1, ...extra };
+  return {
+    background: disabled ? C.surface2 : 'linear-gradient(160deg, #18151F, #100E15)',
+    border: disabled ? '1px solid rgba(255,255,255,0.08)' : `1px solid ${C.pinkLine}`,
+    color: disabled ? C.ashDim : C.bone,
+    borderRadius: 10,
+    fontFamily: "'Oswald', sans-serif",
+    fontSize: 12.5,
+    fontWeight: 600,
+    letterSpacing: '1.2px',
+    textTransform: 'uppercase',
+    padding: '14px 26px',
+    cursor: disabled ? 'default' : 'pointer',
+    minHeight: 44,
+    opacity: disabled ? 0.6 : 1,
+    boxShadow: disabled ? 'none' : `0 10px 26px -8px ${C.pinkGlow}`,
+    ...extra,
+  };
 }
+
 function ghostBtn(extra = {}) {
-  return { background: 'none', border: '1px solid rgba(200,200,200,0.2)', color: '#787878', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', padding: '13px 20px', cursor: 'pointer', minHeight: 44, ...extra };
+  return {
+    background: 'transparent',
+    border: '1px solid rgba(255,255,255,0.1)',
+    color: C.ash,
+    borderRadius: 10,
+    fontFamily: "'Oswald', sans-serif",
+    fontSize: 12.5,
+    fontWeight: 600,
+    letterSpacing: '1.2px',
+    textTransform: 'uppercase',
+    padding: '13px 20px',
+    cursor: 'pointer',
+    minHeight: 44,
+    ...extra,
+  };
 }
 
 // ─── SMALL ATOMS ─────────────────────────────────────────────────────────────
@@ -78,17 +161,32 @@ function ghostBtn(extra = {}) {
 function SectionCard({ title, children }) {
   return (
     <div style={cardStyle}>
-      <div style={{ padding: '20px 20px 0', borderBottom: '1px solid rgba(200,200,200,0.08)', marginBottom: 0 }}>
-        <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 18, letterSpacing: '0.1em', color: '#F5F3EE', paddingBottom: 14 }}>{title}</div>
+      <div style={{ padding: '22px 26px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 700, fontSize: 18, textTransform: 'uppercase', color: C.bone }}>
+          {title}
+        </div>
       </div>
-      <div style={{ padding: '20px' }}>{children}</div>
+      <div style={{ padding: '22px 26px' }}>{children}</div>
     </div>
   );
 }
 
 function LabelPill({ children }) {
   return (
-    <span style={{ display: 'inline-block', border: '1px solid rgba(192,57,43,0.5)', padding: '4px 12px', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#C0392B' }}>
+    <span style={{
+      display: 'inline-block',
+      background: C.surface2,
+      border: `1px solid ${C.pinkLine}`,
+      borderRadius: 8,
+      padding: '9px 16px',
+      fontFamily: "'Oswald', sans-serif",
+      fontSize: 11.5,
+      fontWeight: 600,
+      letterSpacing: '0.8px',
+      textTransform: 'uppercase',
+      color: C.bone,
+      boxShadow: `0 0 12px -6px ${C.pinkGlow}`,
+    }}>
       {children}
     </span>
   );
@@ -96,41 +194,68 @@ function LabelPill({ children }) {
 
 function FieldLabel({ label, children }) {
   return (
-    <label style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
-      <span style={{ ...eyebrowStyle, fontSize: 10 }}>{label}</span>
+    <label style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 18 }}>
+      <span style={{ ...fieldEyebrow }}>{label}</span>
       {children}
     </label>
   );
 }
 
 function SkeletonLine({ width = '60%', height = 14 }) {
-  return <div style={{ width, height, background: '#1a1a1a', borderRadius: 2, marginBottom: 8 }} />;
+  return <div style={{ width, height, background: 'rgba(255,255,255,0.05)', borderRadius: 4, marginBottom: 8 }} />;
 }
+
+// ─── TOGGLE SWITCH ────────────────────────────────────────────────────────────
 
 function Toggle({ label, checked, onChange, saved }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 0', borderBottom: '1px solid #1a1a1a', minHeight: 44 }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0', borderTop: '1px solid rgba(255,255,255,0.05)', minHeight: 44 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, color: '#CDCDC8', letterSpacing: '0.04em' }}>{label}</span>
-        {saved && <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, color: '#4CAF50', letterSpacing: '0.08em' }}>✓ Saved</span>}
+        <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 14.5, color: C.bone }}>{label}</span>
+        {saved && (
+          <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 11, color: C.green }}>✓ Saved</span>
+        )}
       </div>
       <button
         type="button"
         onClick={() => onChange(!checked)}
         aria-checked={checked}
         role="switch"
-        style={{ width: 44, height: 24, borderRadius: 12, background: checked ? '#C0392B' : '#2a2a2a', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}
+        style={{
+          width: 44, height: 25, borderRadius: 13,
+          background: C.surface2,
+          border: checked ? `1px solid ${C.pinkLine}` : '1px solid rgba(255,255,255,0.1)',
+          boxShadow: checked ? `0 0 12px -2px ${C.pinkGlow}` : 'none',
+          cursor: 'pointer', position: 'relative', flexShrink: 0,
+          transition: 'border-color 0.25s, box-shadow 0.25s',
+        }}
       >
-        <span style={{ position: 'absolute', top: 2, left: checked ? 22 : 2, width: 20, height: 20, borderRadius: '50%', background: '#F5F3EE', transition: 'left 0.2s', display: 'block' }} />
+        <span style={{
+          position: 'absolute', top: 2,
+          left: checked ? 22 : 2,
+          width: 19, height: 19, borderRadius: '50%',
+          background: checked ? 'rgba(255,79,196,0.9)' : C.ashDim,
+          boxShadow: checked ? '0 0 6px rgba(255,79,196,0.7)' : 'none',
+          transition: 'left 0.25s, background 0.25s, box-shadow 0.25s',
+          display: 'block',
+        }} />
       </button>
     </div>
   );
 }
 
+// ─── PROGRESS BAR ────────────────────────────────────────────────────────────
+
 function ProgressBar({ progress }) {
   return (
-    <div style={{ width: '100%', height: 6, background: '#1a1a1a', borderRadius: 3, overflow: 'hidden', margin: '10px 0 4px' }}>
-      <div style={{ width: `${Math.min(100, Math.max(0, progress * 100))}%`, height: '100%', background: '#C0392B', borderRadius: 3, transition: 'width 0.6s ease' }} />
+    <div style={{ width: '100%', height: 4, background: C.surface2, borderRadius: 3, overflow: 'hidden', marginBottom: 22 }}>
+      <div style={{
+        width: `${Math.min(100, Math.max(0, progress * 100))}%`, height: '100%',
+        background: 'linear-gradient(90deg, #E8389E, #FF4FC4)',
+        borderRadius: 3,
+        boxShadow: `0 0 8px ${C.pinkGlow}`,
+        transition: 'width 0.6s ease',
+      }} />
     </div>
   );
 }
@@ -140,16 +265,36 @@ function ProgressBar({ progress }) {
 function DeleteModal({ onClose, onConfirm, deleting }) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 16px' }}>
-      <div style={{ background: '#111', border: '1px solid rgba(200,200,200,0.12)', padding: '32px 28px', maxWidth: 400, width: '100%' }}>
-        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.28em', textTransform: 'uppercase', color: '#C0392B', marginBottom: 16 }}>
+      <div style={{
+        background: `linear-gradient(160deg, #1A0F0E, #120A09)`,
+        border: `1px solid ${C.redLine}`,
+        borderRadius: 16,
+        padding: '32px 28px',
+        maxWidth: 400, width: '100%',
+        boxShadow: `0 0 24px -12px ${C.redGlow}`,
+      }}>
+        <div style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: '1.5px', textTransform: 'uppercase', color: '#E05A4A', marginBottom: 16 }}>
           Delete Account
         </div>
-        <p style={{ fontFamily: "'Barlow', sans-serif", fontSize: 13, color: '#CDCDC8', lineHeight: 1.7, margin: '0 0 24px', fontWeight: 300 }}>
+        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, color: C.ash, lineHeight: 1.7, margin: '0 0 24px' }}>
           This will permanently delete your account and all associated data including your plan, progress logs and logbook entries. This cannot be undone.
         </p>
         <div style={{ display: 'flex', gap: 10 }}>
           <button onClick={onClose} disabled={deleting} style={ghostBtn({ flex: 1 })}>Cancel</button>
-          <button onClick={onConfirm} disabled={deleting} style={{ ...primaryBtn(deleting, { flex: 1 }), background: deleting ? '#444' : '#6B0F0A' }}>
+          <button
+            onClick={onConfirm}
+            disabled={deleting}
+            style={{
+              flex: 1, background: `linear-gradient(160deg, #6B1F18, #4A140F)`,
+              border: `1px solid ${C.redLine}`,
+              color: '#F0D5D0', borderRadius: 10,
+              fontFamily: "'Oswald', sans-serif", fontWeight: 700, fontSize: 12.5,
+              letterSpacing: '1.2px', textTransform: 'uppercase',
+              padding: '14px 24px', cursor: deleting ? 'default' : 'pointer', minHeight: 44,
+              opacity: deleting ? 0.6 : 1,
+              boxShadow: `0 8px 20px -8px ${C.redGlow}`,
+            }}
+          >
             {deleting ? '…' : 'Delete Permanently'}
           </button>
         </div>
@@ -168,7 +313,12 @@ function PrivacySelect({ value, onChange }) {
     <select
       value={value || 'friends'}
       onChange={e => onChange(e.target.value)}
-      style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', color: '#555', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '3px 6px', cursor: 'pointer' }}
+      style={{
+        background: C.surface2, border: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: 7, padding: '6px 10px', fontSize: 10.5,
+        color: C.ash, textTransform: 'uppercase', letterSpacing: '0.5px',
+        cursor: 'pointer', outline: 'none',
+      }}
     >
       <option value="public">Public</option>
       <option value="friends">Friends Only</option>
@@ -179,14 +329,18 @@ function PrivacySelect({ value, onChange }) {
 
 function PrivacyFieldLabel({ label, privacyKey, privacy, onPrivacyChange, children }) {
   return (
-    <div style={{ marginBottom: 14 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-        <span style={{ ...eyebrowStyle, fontSize: 10 }}>{label}</span>
+    <div style={{ marginBottom: 18 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+        <span style={{ ...fieldEyebrow }}>{label}</span>
         <PrivacySelect value={privacy[privacyKey]} onChange={v => onPrivacyChange(privacyKey, v)} />
       </div>
       {children}
     </div>
   );
+}
+
+function inpWithFocus(extra = {}) {
+  return inp({ ...extra });
 }
 
 function ProfileSection({ user, intake, intakeLoading }) {
@@ -244,7 +398,6 @@ function ProfileSection({ user, intake, intakeLoading }) {
 
     setSaving(true); setErr(''); setSaved(false);
 
-    // Upload avatar if a new file was selected
     let newAvatarUrl = avatarUrl;
     if (avatarFile) {
       const ext  = avatarFile.type === 'image/png' ? 'png' : 'jpg';
@@ -258,11 +411,9 @@ function ProfileSection({ user, intake, intakeLoading }) {
       setAvatarFile(null);
     }
 
-    // Update auth display name
     const { error: authErr } = await supabase.auth.updateUser({ data: { display_name: displayName } });
     if (authErr) { setSaving(false); setErr(authErr.message); return; }
 
-    // Update profiles row
     const { error: profileErr } = await supabase.from('profiles').update({
       username:         trimmedUsername || null,
       bio:              bio.trim()      || null,
@@ -283,31 +434,41 @@ function ProfileSection({ user, intake, intakeLoading }) {
   const avatarSrc = avatarPreview || avatarUrl;
 
   return (
-    <SectionCard title="PROFILE">
+    <SectionCard title="Profile">
+      <style>{`
+        .acct-inp { width: 100%; background: #0C0A0F; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 13px 15px; color: #F3F1ED; font-size: 14px; font-family: 'Inter', sans-serif; transition: border-color 0.25s, box-shadow 0.25s; outline: none; box-sizing: border-box; }
+        .acct-inp:focus { border-color: rgba(255,79,196,0.25); box-shadow: 0 0 18px -8px rgba(255,79,196,0.5); }
+        .acct-inp[readonly], .acct-inp[disabled] { color: #7A7880; cursor: default; }
+        textarea.acct-inp { resize: vertical; min-height: 80px; line-height: 1.5; }
+        select.acct-inp { appearance: none; cursor: pointer; }
+      `}</style>
+
       {/* Avatar + name header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 18, marginBottom: 22 }}>
         {avatarSrc ? (
-          <img src={avatarSrc} alt="Avatar" style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+          <img src={avatarSrc} alt="Avatar" style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: `2px solid ${C.pinkLine}` }} />
         ) : (
-          <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#6B0F0A', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 24, color: '#F5F3EE', letterSpacing: '0.04em' }}>{initials}</span>
+          <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'linear-gradient(160deg, #2A2010, #1A1408)', border: `2px solid ${C.pinkLine}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <span style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 700, fontSize: 20, color: C.bone }}>{initials}</span>
           </div>
         )}
         <div>
-          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 22, color: '#F5F3EE', letterSpacing: '0.04em', lineHeight: 1.1 }}>{fullName}</div>
-          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, color: '#787878', marginTop: 4 }}>{user?.email}</div>
+          <div style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 700, fontSize: 19, textTransform: 'uppercase', color: C.bone, marginBottom: 4, lineHeight: 1.1 }}>
+            {fullName}
+          </div>
+          <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 13.5, color: C.ashDim }}>{user?.email}</div>
         </div>
       </div>
 
       {/* Intake pills */}
       {intakeLoading ? (
-        <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-          <SkeletonLine width={80} height={24} />
-          <SkeletonLine width={100} height={24} />
-          <SkeletonLine width={90} height={24} />
+        <div style={{ display: 'flex', gap: 8, marginBottom: 22 }}>
+          <SkeletonLine width={80} height={34} />
+          <SkeletonLine width={100} height={34} />
+          <SkeletonLine width={90} height={34} />
         </div>
       ) : intake && (
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 22 }}>
           {intake.goal       && <LabelPill>{GOAL_LABELS[intake.goal]        || intake.goal}</LabelPill>}
           {intake.experience && <LabelPill>{EXP_LABELS[intake.experience]   || intake.experience}</LabelPill>}
           {intake.equipment  && <LabelPill>{EQUIP_LABELS[intake.equipment]  || intake.equipment}</LabelPill>}
@@ -316,67 +477,70 @@ function ProfileSection({ user, intake, intakeLoading }) {
 
       {/* Profile photo */}
       <PrivacyFieldLabel label="Profile Photo" privacyKey="avatar" privacy={privacy} onPrivacyChange={setPrivacyField}>
-        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 10, cursor: 'pointer', marginBottom: 4 }}>
           <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarSelect} />
-          <span style={{ ...ghostBtn({ fontSize: 11, padding: '7px 14px' }), display: 'inline-block' }}>
+          <span style={{
+            background: 'transparent', border: '1px dashed rgba(255,255,255,0.15)', borderRadius: 10,
+            padding: '12px 20px', color: C.ashDim,
+            fontFamily: "'Oswald', sans-serif", fontWeight: 600, fontSize: 12, letterSpacing: '1px', textTransform: 'uppercase',
+            cursor: 'pointer', display: 'inline-block',
+          }}>
             {avatarSrc ? 'Change photo' : 'Upload photo'}
           </span>
-          {avatarFile && <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, color: '#555', letterSpacing: '0.06em' }}>{avatarFile.name}</span>}
+          {avatarFile && (
+            <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 11, color: C.ashDim }}>{avatarFile.name}</span>
+          )}
         </label>
       </PrivacyFieldLabel>
 
       {/* Display name */}
       <FieldLabel label="Display Name">
-        <input type="text" value={displayName} onChange={e => setDisplayName(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && handleSave()} style={inp()} />
+        <input className="acct-inp" type="text" value={displayName} onChange={e => setDisplayName(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && handleSave()} />
       </FieldLabel>
 
       {/* Username */}
       <FieldLabel label="Username — optional">
-        <input type="text" value={username} onChange={e => setUsername(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && handleSave()} placeholder="e.g. cam_lifts" style={inp()} />
+        <input className="acct-inp" type="text" value={username} onChange={e => setUsername(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && handleSave()} placeholder="e.g. cam_lifts" />
       </FieldLabel>
 
       {/* Bio */}
       <PrivacyFieldLabel label={`Bio — optional (${bio.length}/${BIO_MAX})`} privacyKey="bio" privacy={privacy} onPrivacyChange={setPrivacyField}>
-        <textarea
-          value={bio}
-          onChange={e => setBio(e.target.value)}
-          maxLength={BIO_MAX}
-          rows={3}
-          placeholder="A short description about you and your training..."
-          style={{ ...inp(), resize: 'vertical', lineHeight: 1.5 }}
-        />
+        <textarea className="acct-inp"
+          value={bio} onChange={e => setBio(e.target.value)}
+          maxLength={BIO_MAX} rows={3}
+          placeholder="A short description about you and your training..." />
       </PrivacyFieldLabel>
 
       {/* Walkout song */}
       <FieldLabel label="Walkout Song — optional">
-        <input type="text" value={walkoutSong} onChange={e => setWalkoutSong(e.target.value)}
-          placeholder="e.g. Lose Yourself — Eminem" style={inp()} />
+        <input className="acct-inp" type="text" value={walkoutSong} onChange={e => setWalkoutSong(e.target.value)}
+          placeholder="e.g. Lose Yourself — Eminem" />
       </FieldLabel>
 
       {/* Email (read-only) */}
       <FieldLabel label="Email">
-        <input type="email" value={user?.email || ''} readOnly style={inp({ color: '#555', cursor: 'default' })} />
+        <input className="acct-inp" type="email" value={user?.email || ''} readOnly />
       </FieldLabel>
 
-      {/* Future data privacy (1RM and weight — seeds the preference now) */}
-      <div style={{ borderTop: '1px solid #1a1a1a', marginTop: 8, paddingTop: 16, marginBottom: 14 }}>
-        <div style={{ ...eyebrowStyle, fontSize: 10, marginBottom: 14 }}>Data Privacy</div>
+      {/* Data Privacy */}
+      <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: 8, paddingTop: 18, marginBottom: 18 }}>
+        <div style={{ ...fieldEyebrow, fontSize: 10, marginBottom: 14 }}>Data Privacy</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {[
             { key: 'one_rep_max', label: '1RM records' },
             { key: 'weight',      label: 'Weight logs'  },
           ].map(({ key, label }) => (
             <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, color: '#CDCDC8', letterSpacing: '0.04em' }}>{label}</span>
+              <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, color: C.bone }}>{label}</span>
               <PrivacySelect value={privacy[key]} onChange={v => setPrivacyField(key, v)} />
             </div>
           ))}
         </div>
       </div>
 
-      {err && <p style={{ color: '#ef4444', fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", marginBottom: 10 }}>{err}</p>}
+      {err && <p style={{ color: '#fca5a5', fontSize: 12, fontFamily: "'Inter', sans-serif", marginBottom: 12 }}>{err}</p>}
 
       <button onClick={handleSave} disabled={saving} style={primaryBtn(saving)}>
         {saving ? '…' : saved ? '✓ Saved' : 'Save Changes'}
@@ -441,7 +605,7 @@ function NutritionPreferencesSection({ intake, intakeLoading }) {
 
   if (intakeLoading) {
     return (
-      <SectionCard title="NUTRITION PREFERENCES">
+      <SectionCard title="Nutrition Preferences">
         <SkeletonLine width="50%" />
         <SkeletonLine width="60%" />
         <SkeletonLine width="40%" />
@@ -451,8 +615,8 @@ function NutritionPreferencesSection({ intake, intakeLoading }) {
 
   if (!intake) {
     return (
-      <SectionCard title="NUTRITION PREFERENCES">
-        <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, color: '#555', letterSpacing: '0.06em' }}>
+      <SectionCard title="Nutrition Preferences">
+        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, color: C.ash }}>
           Complete the intake form to set your nutrition preferences.
         </p>
       </SectionCard>
@@ -460,57 +624,53 @@ function NutritionPreferencesSection({ intake, intakeLoading }) {
   }
 
   return (
-    <SectionCard title="NUTRITION PREFERENCES">
+    <SectionCard title="Nutrition Preferences">
       <FieldLabel label="Dietary preference">
-        <select value={dietary} onChange={e => setDietary(e.target.value)} style={{ ...inp(), appearance: 'none' }}>
+        <select className="acct-inp" value={dietary} onChange={e => setDietary(e.target.value)}>
           <option value="">Select…</option>
           {DIETARY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
       </FieldLabel>
 
       <FieldLabel label="Meal plan type">
-        <select value={mealPlanType} onChange={e => setMealPlanType(e.target.value)} style={{ ...inp(), appearance: 'none' }}>
+        <select className="acct-inp" value={mealPlanType} onChange={e => setMealPlanType(e.target.value)}>
           <option value="">Select…</option>
           {MEAL_PLAN_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
       </FieldLabel>
 
       <FieldLabel label="Meals per day">
-        <select value={mealsPerDay} onChange={e => setMealsPerDay(e.target.value)} style={{ ...inp(), appearance: 'none' }}>
+        <select className="acct-inp" value={mealsPerDay} onChange={e => setMealsPerDay(e.target.value)}>
           <option value="">Select…</option>
           {['3', '4', '5', '6'].map(n => <option key={n} value={n}>{n}</option>)}
         </select>
       </FieldLabel>
 
       <FieldLabel label="Foods you will not eat">
-        <textarea
-          value={foodsNotEat}
-          onChange={e => setFoodsNotEat(e.target.value)}
-          rows={3}
-          placeholder="e.g. mushrooms, shellfish, nuts"
-          style={{ ...inp(), resize: 'vertical', lineHeight: 1.5 }}
-        />
+        <textarea className="acct-inp"
+          value={foodsNotEat} onChange={e => setFoodsNotEat(e.target.value)}
+          rows={3} placeholder="e.g. mushrooms, shellfish, nuts" />
       </FieldLabel>
 
       <FieldLabel label="Supplement preference">
-        <select value={supplements} onChange={e => setSupplements(e.target.value)} style={{ ...inp(), appearance: 'none' }}>
+        <select className="acct-inp" value={supplements} onChange={e => setSupplements(e.target.value)}>
           <option value="">Select…</option>
           {SUPPLEMENTS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
       </FieldLabel>
 
       {saved && (
-        <div style={{ background: '#0d1a0d', border: '1px solid rgba(76,175,80,0.3)', padding: '12px 16px', marginBottom: 14 }}>
-          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', color: '#4CAF50', marginBottom: 4 }}>
+        <div style={{ background: 'rgba(74,153,104,0.08)', border: '1px solid rgba(74,153,104,0.25)', borderRadius: 10, padding: '12px 16px', marginBottom: 14 }}>
+          <div style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: '0.8px', textTransform: 'uppercase', color: C.green, marginBottom: 4 }}>
             ✓ Preferences saved
           </div>
-          <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, color: '#787878', letterSpacing: '0.04em', margin: 0, lineHeight: 1.5 }}>
+          <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 12, color: C.ash, margin: 0, lineHeight: 1.5 }}>
             Your new preferences will apply to your next plan generation or renewal.
           </p>
         </div>
       )}
 
-      {err && <p style={{ color: '#ef4444', fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", marginBottom: 10 }}>{err}</p>}
+      {err && <p style={{ color: '#fca5a5', fontSize: 12, fontFamily: "'Inter', sans-serif", marginBottom: 12 }}>{err}</p>}
 
       <button onClick={handleSave} disabled={saving} style={primaryBtn(saving)}>
         {saving ? '…' : saved ? '✓ Saved' : 'Save Preferences'}
@@ -528,14 +688,14 @@ const RENEWAL_GOALS = [
 ];
 
 function MyPlanSection({ plan, intake, intakeLoading, planGeneratedAt, onPlanSwitch }) {
-  const [step,      setStep]      = useState('idle'); // idle | picking | new_direction | submitting | queued | error
+  const [step,      setStep]      = useState('idle');
   const [err,       setErr]       = useState('');
   const [newGoal,   setNewGoal]   = useState('fat_loss');
   const [newTarget, setNewTarget] = useState('');
 
   if (intakeLoading || !intake) {
     return (
-      <SectionCard title="MY PLAN">
+      <SectionCard title="My Plan">
         <SkeletonLine width="50%" />
         <SkeletonLine width="40%" />
         <SkeletonLine width="30%" />
@@ -551,8 +711,6 @@ function MyPlanSection({ plan, intake, intakeLoading, planGeneratedAt, onPlanSwi
   const daysElapsed   = startDate ? Math.max(0, Math.floor((today - startDate) / 86400000)) : 0;
   const weeksComplete = Math.min(12, Math.floor(daysElapsed / 7));
   const weeksRemaining = Math.max(0, 12 - weeksComplete);
-  // Use planGeneratedAt (how long *this specific plan* has run) so renewal resets the clock.
-  // Falls back to the intake-startDate calculation if planGeneratedAt isn't loaded yet.
   const planComplete  = planGeneratedAt
     ? Math.floor((Date.now() - new Date(planGeneratedAt)) / 86400000) >= 84
     : weeksComplete >= 12;
@@ -581,24 +739,28 @@ function MyPlanSection({ plan, intake, intakeLoading, planGeneratedAt, onPlanSwi
   }
 
   const optionCardStyle = {
-    background: '#111', border: '1px solid rgba(200,200,200,0.12)', padding: '20px',
+    background: `linear-gradient(160deg, ${C.surface} 0%, ${C.surface2} 100%)`,
+    border: '1px solid rgba(255,255,255,0.06)',
+    borderRadius: 12, padding: 20,
     cursor: 'pointer', transition: 'border-color 0.15s', marginBottom: 8,
   };
 
   return (
-    <SectionCard title="MY PLAN">
+    <SectionCard title="My Plan">
       {startDate ? (
         <>
           {/* Progress bar */}
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-              <span style={{ ...eyebrowStyle, fontSize: 10 }}>Progress — Week {weeksComplete} of 12</span>
-              <span style={{ ...eyebrowStyle, fontSize: 10, color: '#C0392B' }}>{weeksRemaining > 0 ? `${weeksRemaining} weeks remaining` : 'Complete'}</span>
+          <div style={{ marginBottom: 6 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+              <span style={{ ...fieldEyebrow, fontSize: 10 }}>Progress — Week {weeksComplete} of 12</span>
+              <span style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 600, fontSize: 12, letterSpacing: '0.8px', textTransform: 'uppercase', color: C.bone }}>
+                {weeksRemaining > 0 ? `${weeksRemaining} Weeks Remaining` : 'Complete'}
+              </span>
             </div>
             <ProgressBar progress={weeksComplete / 12} />
           </div>
 
-          <div style={{ marginBottom: 20 }}>
+          <div style={{ marginBottom: 22 }}>
             {[
               ['Started',        fmt(startDate)],
               ['Ends',           fmt(endDate)],
@@ -606,26 +768,25 @@ function MyPlanSection({ plan, intake, intakeLoading, planGeneratedAt, onPlanSwi
               ['Split',          splitLabel],
               ['Session Length', sessionLen],
             ].map(([k, v]) => (
-              <div key={k} style={rowStyle}>
-                <span style={{ color: '#787878', fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.06em' }}>{k}</span>
-                <span style={{ color: '#F5F3EE', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, letterSpacing: '0.04em' }}>{v}</span>
+              <div key={k} style={planRowStyle}>
+                <span style={{ color: C.ash, fontFamily: "'Inter', sans-serif" }}>{k}</span>
+                <span style={{ color: C.bone, fontFamily: "'Inter', sans-serif", fontWeight: 600, textAlign: 'right', maxWidth: '60%' }}>{v}</span>
               </div>
             ))}
           </div>
 
-          {/* Renewal flow */}
           {step === 'idle' && (
             <>
               <button
                 disabled={!planComplete}
                 title={!planComplete ? 'Available after Week 12' : 'Generate a new 12-week plan'}
-                style={primaryBtn(!planComplete)}
+                style={ghostBtn({ opacity: planComplete ? 1 : 0.5, cursor: planComplete ? 'pointer' : 'default' })}
                 onClick={() => planComplete && setStep('picking')}
               >
                 Generate New Plan
               </button>
               {!planComplete && (
-                <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, color: '#555', marginTop: 8, letterSpacing: '0.08em' }}>
+                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 11, color: C.ashDim, marginTop: 8, fontStyle: 'italic' }}>
                   Available after Week 12
                 </p>
               )}
@@ -634,20 +795,20 @@ function MyPlanSection({ plan, intake, intakeLoading, planGeneratedAt, onPlanSwi
 
           {step === 'picking' && (
             <div style={{ marginTop: 4 }}>
-              <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, color: '#787878', letterSpacing: '0.08em', marginBottom: 16 }}>
+              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 12, color: C.ash, marginBottom: 16 }}>
                 Choose how you want your next plan built:
               </p>
 
               <div
                 style={optionCardStyle}
                 onClick={() => submitRenewal(1)}
-                onMouseEnter={e => e.currentTarget.style.borderColor = '#C0392B'}
-                onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(200,200,200,0.12)'}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = C.pinkLine; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; }}
               >
-                <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 18, letterSpacing: '0.06em', color: '#F5F3EE', marginBottom: 6 }}>
+                <div style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 700, fontSize: 18, color: C.bone, marginBottom: 6 }}>
                   Continue &amp; Evolve
                 </div>
-                <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, color: '#787878', letterSpacing: '0.04em', margin: 0, lineHeight: 1.5 }}>
+                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, color: C.ash, margin: 0, lineHeight: 1.5 }}>
                   Same goal, new structure. Exercises, split, and loading based on your 12 weeks of documented progress.
                 </p>
               </div>
@@ -655,18 +816,18 @@ function MyPlanSection({ plan, intake, intakeLoading, planGeneratedAt, onPlanSwi
               <div
                 style={optionCardStyle}
                 onClick={() => setStep('new_direction')}
-                onMouseEnter={e => e.currentTarget.style.borderColor = '#C0392B'}
-                onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(200,200,200,0.12)'}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = C.pinkLine; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; }}
               >
-                <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 18, letterSpacing: '0.06em', color: '#F5F3EE', marginBottom: 6 }}>
+                <div style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 700, fontSize: 18, color: C.bone, marginBottom: 6 }}>
                   New Direction
                 </div>
-                <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, color: '#787878', letterSpacing: '0.04em', margin: 0, lineHeight: 1.5 }}>
+                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, color: C.ash, margin: 0, lineHeight: 1.5 }}>
                   Change your goal. Set a new target and get a plan built around where you want to go next.
                 </p>
               </div>
 
-              <button onClick={() => setStep('idle')} style={{ ...ghostBtn(), marginTop: 4, fontSize: 11 }}>
+              <button onClick={() => setStep('idle')} style={{ ...ghostBtn({ fontSize: 11, padding: '10px 18px' }), marginTop: 4 }}>
                 Cancel
               </button>
             </div>
@@ -674,65 +835,51 @@ function MyPlanSection({ plan, intake, intakeLoading, planGeneratedAt, onPlanSwi
 
           {step === 'new_direction' && (
             <div style={{ marginTop: 4 }}>
-              <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, color: '#787878', letterSpacing: '0.08em', marginBottom: 16 }}>
+              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 12, color: C.ash, marginBottom: 16 }}>
                 Set your new goal:
               </p>
 
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
-                <span style={{ ...eyebrowStyle, fontSize: 10 }}>New Goal</span>
-                <select
-                  value={newGoal}
-                  onChange={e => setNewGoal(e.target.value)}
-                  style={{ ...inp(), appearance: 'none' }}
-                >
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+                <span style={{ ...fieldEyebrow, fontSize: 10 }}>New Goal</span>
+                <select className="acct-inp" value={newGoal} onChange={e => setNewGoal(e.target.value)}>
                   {RENEWAL_GOALS.map(g => (
                     <option key={g.value} value={g.value}>{g.label}</option>
                   ))}
                 </select>
               </label>
 
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
-                <span style={{ ...eyebrowStyle, fontSize: 10 }}>Target Weight (kg) — optional</span>
-                <input
-                  type="number"
-                  min="30" max="250" step="0.5"
-                  value={newTarget}
-                  onChange={e => setNewTarget(e.target.value)}
-                  placeholder="e.g. 85"
-                  style={inp()}
-                />
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
+                <span style={{ ...fieldEyebrow, fontSize: 10 }}>Target Weight (kg) — optional</span>
+                <input className="acct-inp" type="number" min="30" max="250" step="0.5"
+                  value={newTarget} onChange={e => setNewTarget(e.target.value)} placeholder="e.g. 85" />
               </label>
 
-              {err && <p style={{ color: '#ef4444', fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", marginBottom: 10 }}>{err}</p>}
+              {err && <p style={{ color: '#fca5a5', fontSize: 12, fontFamily: "'Inter', sans-serif", marginBottom: 12 }}>{err}</p>}
 
               <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={() => submitRenewal(2)} style={primaryBtn(false)}>
-                  Generate Plan
-                </button>
-                <button onClick={() => setStep('picking')} style={ghostBtn()}>
-                  Back
-                </button>
+                <button onClick={() => submitRenewal(2)} style={primaryBtn(false)}>Generate Plan</button>
+                <button onClick={() => setStep('picking')} style={ghostBtn()}>Back</button>
               </div>
             </div>
           )}
 
           {step === 'submitting' && (
-            <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, color: '#787878', letterSpacing: '0.08em', marginTop: 4 }}>
+            <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, color: C.ash, marginTop: 4 }}>
               Starting generation…
             </p>
           )}
 
           {step === 'queued' && (
-            <div style={{ background: '#0d1a0d', border: '1px solid rgba(76,175,80,0.3)', padding: '16px 20px', marginTop: 4 }}>
-              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, letterSpacing: '0.1em', color: '#4CAF50', marginBottom: 6 }}>
+            <div style={{ background: 'rgba(74,153,104,0.08)', border: '1px solid rgba(74,153,104,0.25)', borderRadius: 10, padding: '16px 20px', marginTop: 4 }}>
+              <div style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: '0.8px', textTransform: 'uppercase', color: C.green, marginBottom: 6 }}>
                 ✓ Your new plan is being built
               </div>
-              <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, color: '#787878', letterSpacing: '0.04em', margin: '0 0 12px', lineHeight: 1.5 }}>
+              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, color: C.ash, margin: '0 0 12px', lineHeight: 1.5 }}>
                 This takes 60–90 seconds. Come back to the Plan tab in a moment — it'll be there.
               </p>
               <button
                 onClick={() => { onPlanSwitch?.(); setStep('idle'); }}
-                style={{ background: 'none', border: '1px solid rgba(76,175,80,0.4)', color: '#4CAF50', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', padding: '8px 16px', cursor: 'pointer' }}
+                style={{ background: 'none', border: '1px solid rgba(74,153,104,0.4)', color: C.green, fontFamily: "'Oswald', sans-serif", fontWeight: 600, fontSize: 11, letterSpacing: '1px', textTransform: 'uppercase', padding: '8px 16px', cursor: 'pointer', borderRadius: 8 }}
               >
                 Check for my plan →
               </button>
@@ -740,11 +887,11 @@ function MyPlanSection({ plan, intake, intakeLoading, planGeneratedAt, onPlanSwi
           )}
 
           {step === 'error' && (
-            <p style={{ color: '#ef4444', fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", marginTop: 4 }}>{err}</p>
+            <p style={{ color: '#fca5a5', fontSize: 12, fontFamily: "'Inter', sans-serif", marginTop: 4 }}>{err}</p>
           )}
         </>
       ) : (
-        <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, color: '#555', letterSpacing: '0.06em' }}>
+        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, color: C.ash }}>
           No start date set. Complete your intake form to begin.
         </p>
       )}
@@ -759,8 +906,8 @@ const fmtDate = d => new Date(d).toLocaleDateString('en-GB', { day: 'numeric', m
 const planEndDate = d => new Date(new Date(d).getTime() + 84 * 86400000);
 
 function MyPlansSection({ isUnlocked, onPlanSwitch }) {
-  const [plans,      setPlans]      = useState(null); // null = loading
-  const [activating, setActivating] = useState(null); // id being switched
+  const [plans,      setPlans]      = useState(null);
+  const [activating, setActivating] = useState(null);
   const [plansErr,   setPlansErr]   = useState('');
 
   useEffect(() => {
@@ -794,59 +941,58 @@ function MyPlansSection({ isUnlocked, onPlanSwitch }) {
   if (!isUnlocked) return null;
 
   return (
-    <SectionCard title="MY PLANS">
+    <SectionCard title="My Plans">
       {plans === null && !plansErr ? (
         <>
           <SkeletonLine width="60%" />
           <SkeletonLine width="50%" />
         </>
       ) : plansErr ? (
-        <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, color: '#ef4444', letterSpacing: '0.06em' }}>{plansErr}</p>
+        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, color: '#fca5a5' }}>{plansErr}</p>
       ) : plans.length === 0 ? (
-        <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, color: '#555', letterSpacing: '0.06em' }}>No plans yet.</p>
+        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, color: C.ash }}>No plans yet.</p>
       ) : (
         <>
           {[...plans].reverse().map(p => (
-            <div key={p.id} style={{ borderBottom: '1px solid #1a1a1a', padding: '16px 0' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+            <div key={p.id} style={{ padding: '18px 0', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
                 <div>
-                  <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 18, letterSpacing: '0.06em', color: '#F5F3EE', lineHeight: 1, marginBottom: 4 }}>
+                  <div style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 700, fontSize: 15, textTransform: 'uppercase', color: C.bone, lineHeight: 1, marginBottom: 4 }}>
                     Plan {p.plan_number}
                   </div>
-                  <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, color: '#555', letterSpacing: '0.06em' }}>
+                  <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 12, color: C.ashDim, marginBottom: 10 }}>
                     {fmtDate(p.generated_at)} – {fmtDate(planEndDate(p.generated_at))}
                   </div>
                 </div>
                 {p.is_active && (
-                  <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: '#C0392B', border: '1px solid rgba(192,57,43,0.5)', padding: '3px 8px', flexShrink: 0 }}>
+                  <span style={{
+                    background: C.surface2, border: `1px solid ${C.pinkLine}`, borderRadius: 7,
+                    padding: '5px 11px', fontFamily: "'Oswald', sans-serif", fontSize: 10, fontWeight: 700,
+                    letterSpacing: '1px', textTransform: 'uppercase', color: C.bone,
+                    boxShadow: `0 0 12px -4px ${C.pinkGlow}`, flexShrink: 0,
+                  }}>
                     Active
                   </span>
                 )}
               </div>
 
-              <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', marginBottom: p.is_active ? 0 : 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, fontSize: 13, marginBottom: p.is_active ? 0 : 12 }}>
                 {p.goal && (
                   <div>
-                    <div style={{ ...eyebrowStyle, fontSize: 9, marginBottom: 2 }}>Goal</div>
-                    <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, color: '#CDCDC8', letterSpacing: '0.04em' }}>
-                      {PLAN_GOAL_LABELS[p.goal] || p.goal}
-                    </div>
+                    <div style={{ ...fieldEyebrow, fontSize: 9, marginBottom: 3 }}>Goal</div>
+                    <div style={{ fontFamily: "'Inter', sans-serif", color: C.ash }}>{PLAN_GOAL_LABELS[p.goal] || p.goal}</div>
                   </div>
                 )}
                 {p.split && (
                   <div>
-                    <div style={{ ...eyebrowStyle, fontSize: 9, marginBottom: 2 }}>Split</div>
-                    <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, color: '#CDCDC8', letterSpacing: '0.04em' }}>
-                      {p.split}
-                    </div>
+                    <div style={{ ...fieldEyebrow, fontSize: 9, marginBottom: 3 }}>Split</div>
+                    <div style={{ fontFamily: "'Inter', sans-serif", color: C.ash }}>{p.split}</div>
                   </div>
                 )}
                 {p.training_days && (
                   <div>
-                    <div style={{ ...eyebrowStyle, fontSize: 9, marginBottom: 2 }}>Days / Week</div>
-                    <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, color: '#CDCDC8', letterSpacing: '0.04em' }}>
-                      {p.training_days}
-                    </div>
+                    <div style={{ ...fieldEyebrow, fontSize: 9, marginBottom: 3 }}>Days / Week</div>
+                    <div style={{ fontFamily: "'Inter', sans-serif", color: C.ash }}>{p.training_days}</div>
                   </div>
                 )}
               </div>
@@ -855,7 +1001,7 @@ function MyPlansSection({ isUnlocked, onPlanSwitch }) {
                 <button
                   onClick={() => handleActivate(p.id)}
                   disabled={!!activating}
-                  style={{ ...ghostBtn({ fontSize: 11, padding: '8px 16px' }), opacity: activating === p.id ? 0.55 : 1 }}
+                  style={{ ...ghostBtn({ fontSize: 11, padding: '10px 18px' }), opacity: activating === p.id ? 0.55 : 1 }}
                 >
                   {activating === p.id ? '…' : 'Make Active'}
                 </button>
@@ -863,9 +1009,9 @@ function MyPlansSection({ isUnlocked, onPlanSwitch }) {
             </div>
           ))}
           {plansErr && (
-            <p style={{ color: '#ef4444', fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", marginTop: 10 }}>{plansErr}</p>
+            <p style={{ color: '#fca5a5', fontSize: 12, fontFamily: "'Inter', sans-serif", marginTop: 10 }}>{plansErr}</p>
           )}
-          <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, color: '#444', letterSpacing: '0.06em', marginTop: 12 }}>
+          <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 11, color: C.ashDim, marginTop: 12, fontStyle: 'italic' }}>
             Switching takes effect immediately across Today, Plan, and Nutrition tabs.
           </p>
         </>
@@ -897,47 +1043,58 @@ function SubscriptionSection({ isUnlocked, subRow, user, onUnlock }) {
   }
 
   return (
-    <SectionCard title="SUBSCRIPTION &amp; BILLING">
+    <SectionCard title="Subscription &amp; Billing">
       {/* Status row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-        <div>
-          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 20, color: '#F5F3EE', letterSpacing: '0.06em', lineHeight: 1 }}>
-            {isUnlocked ? 'Monthly Subscriber' : 'Free'}
-          </div>
-          <div style={{ marginTop: 6 }}>
-            <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: isUnlocked ? '#4CAF50' : '#555', border: `1px solid ${isUnlocked ? '#4CAF50' : '#333'}`, padding: '3px 8px' }}>
-              {isUnlocked ? 'ACTIVE' : 'INACTIVE'}
-            </span>
-          </div>
+      <div style={{ marginBottom: 18 }}>
+        <div style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 700, fontSize: 17, textTransform: 'uppercase', color: C.bone, marginBottom: 10, lineHeight: 1 }}>
+          {isUnlocked ? 'Monthly Subscriber' : 'Free'}
         </div>
+        {/* Green badge for active — intentional, matches 'positive status' meaning */}
+        <span style={{
+          display: 'inline-block', borderRadius: 7,
+          padding: '6px 14px',
+          fontFamily: "'Oswald', sans-serif", fontSize: 11, fontWeight: 700,
+          letterSpacing: '1px', textTransform: 'uppercase',
+          background: isUnlocked ? 'rgba(74,153,104,0.1)' : 'rgba(255,255,255,0.05)',
+          border: isUnlocked ? `1px solid ${C.greenLine}` : '1px solid rgba(255,255,255,0.08)',
+          color: isUnlocked ? C.green : C.ashDim,
+          boxShadow: isUnlocked ? `0 0 14px -6px ${C.greenGlow}` : 'none',
+        }}>
+          {isUnlocked ? 'ACTIVE' : 'INACTIVE'}
+        </span>
       </div>
 
       {isUnlocked ? (
         <>
           {billingDate && (
-            <div style={{ ...rowStyle, marginBottom: 16 }}>
-              <span style={{ color: '#787878', fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.06em' }}>Next billing date</span>
-              <span style={{ color: '#F5F3EE', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700 }}>{billingDate}</span>
+            <div style={{ ...planRowStyle, marginBottom: 16 }}>
+              <span style={{ color: C.ash, fontFamily: "'Inter', sans-serif" }}>Next billing date</span>
+              <span style={{ color: C.bone, fontFamily: "'Inter', sans-serif", fontWeight: 600 }}>{billingDate}</span>
             </div>
           )}
 
-          {portalErr && <p style={{ color: '#ef4444', fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", marginBottom: 10 }}>{portalErr}</p>}
+          {portalErr && <p style={{ color: '#fca5a5', fontSize: 12, fontFamily: "'Inter', sans-serif", marginBottom: 12 }}>{portalErr}</p>}
 
           <button onClick={handlePortal} disabled={portalLoading} style={ghostBtn()}>
             {portalLoading ? '…' : 'Manage Billing →'}
           </button>
 
-          <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, color: '#555', marginTop: 14, letterSpacing: '0.06em', lineHeight: 1.6 }}>
+          <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 11, color: C.ashDim, marginTop: 14, lineHeight: 1.6 }}>
             To cancel your subscription, use the Manage Billing link above.
           </p>
         </>
       ) : (
-        <div style={{ background: '#111', border: '1px solid rgba(192,57,43,0.25)', padding: '20px' }}>
-          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, color: '#CDCDC8', letterSpacing: '0.06em', marginBottom: 8 }}>
+        <div style={{
+          background: `linear-gradient(160deg, ${C.surface} 0%, ${C.surface2} 100%)`,
+          border: `1px solid ${C.pinkLine}`,
+          borderRadius: 12, padding: 20,
+          boxShadow: `0 0 18px -12px ${C.pinkGlow}`,
+        }}>
+          <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 600, color: C.ash, marginBottom: 8 }}>
             Unlock Progress Tracking, Achievements, Logbook and more
           </div>
-          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 32, color: '#F5F3EE', letterSpacing: '0.04em', lineHeight: 1, marginBottom: 16 }}>
-            £9.99<span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, fontWeight: 600, color: '#787878', letterSpacing: '0.1em' }}>/month</span>
+          <div style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 700, fontSize: 32, color: C.bone, lineHeight: 1, marginBottom: 16 }}>
+            £9.99<span style={{ fontFamily: "'Inter', sans-serif", fontSize: 14, fontWeight: 500, color: C.ash }}>/month</span>
           </div>
           <button onClick={onUnlock} style={primaryBtn()}>Upgrade Now</button>
         </div>
@@ -949,12 +1106,11 @@ function SubscriptionSection({ isUnlocked, subRow, user, onUnlock }) {
 // ─── EMAIL TESTING CARD ───────────────────────────────────────────────────────
 
 function EmailTestingCard() {
-  const [status, setStatus] = useState(null); // null | 'sending' | 'ok' | 'error'
+  const [status, setStatus] = useState(null);
   const [msg, setMsg]       = useState('');
 
   async function handleSend() {
-    setStatus('sending');
-    setMsg('');
+    setStatus('sending'); setMsg('');
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const result = await sendTestWeeklyEmail(session.access_token);
@@ -967,24 +1123,19 @@ function EmailTestingCard() {
   }
 
   return (
-    <div style={{ background: '#0d0d0d', border: '1px solid #2a2a2a', padding: '20px', marginBottom: 20 }}>
-      <div style={{ ...eyebrowStyle, marginBottom: 14 }}>Email Testing</div>
-      <button
-        onClick={handleSend}
-        disabled={status === 'sending'}
-        style={{ ...ghostBtn(), opacity: status === 'sending' ? 0.55 : 1 }}
-      >
+    <div style={{ ...cardStyle, padding: '20px 26px' }}>
+      <div style={{ ...fieldEyebrow, marginBottom: 14 }}>Email Testing</div>
+      <button onClick={handleSend} disabled={status === 'sending'}
+        style={{ ...ghostBtn({ opacity: status === 'sending' ? 0.55 : 1 }) }}>
         {status === 'sending' ? 'Sending…' : 'Send Test Weekly Email'}
       </button>
       {status === 'ok' && (
-        <p style={{ margin: '12px 0 0', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, letterSpacing: '0.06em', color: '#4CAF50' }}>
+        <p style={{ margin: '12px 0 0', fontFamily: "'Inter', sans-serif", fontSize: 12, color: C.green }}>
           ✓ Test email sent — check your inbox ({msg})
         </p>
       )}
       {status === 'error' && (
-        <p style={{ margin: '12px 0 0', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, letterSpacing: '0.06em', color: '#ef4444' }}>
-          {msg}
-        </p>
+        <p style={{ margin: '12px 0 0', fontFamily: "'Inter', sans-serif", fontSize: 12, color: '#fca5a5' }}>{msg}</p>
       )}
     </div>
   );
@@ -996,13 +1147,12 @@ function SettingsSection({ user }) {
   const [reminders,     setReminders]     = useState(true);
   const [weighIn,       setWeighIn]       = useState(true);
   const [weeklySummary, setWeeklySummary] = useState(true);
-  const [checkinDay,    setCheckinDay]    = useState(0); // 0 = Sunday default
+  const [checkinDay,    setCheckinDay]    = useState(0);
   const [units,         setUnits]         = useState('kg');
   const [savedKey,      setSavedKey]      = useState(null);
   const [showDelete,    setShowDelete]    = useState(false);
   const [deleting,      setDeleting]      = useState(false);
 
-  // Load email preferences from API on mount
   useEffect(() => {
     async function loadPrefs() {
       try {
@@ -1015,7 +1165,6 @@ function SettingsSection({ user }) {
         if (prefs.checkinDay != null) setCheckinDay(prefs.checkinDay);
       } catch { /* use defaults */ }
     }
-    // Also load units from user_metadata
     const meta = user?.user_metadata || {};
     const storedPrefs = meta.preferences || {};
     setUnits(storedPrefs.units || 'kg');
@@ -1071,12 +1220,26 @@ function SettingsSection({ user }) {
     }
   }
 
+  // Active state for day pills and unit toggle — pink lift+glow
+  const activeOptStyle = {
+    background: 'linear-gradient(160deg, #1A1722, #100E15)',
+    color: C.bone,
+    border: `1px solid ${C.pinkLine}`,
+    boxShadow: `0 0 14px -4px ${C.pinkGlow}`,
+  };
+  const inactiveOptStyle = {
+    background: C.surface2,
+    color: C.ash,
+    border: '1px solid rgba(255,255,255,0.08)',
+    boxShadow: 'none',
+  };
+
   return (
     <>
-      <SectionCard title="SETTINGS">
+      <SectionCard title="Settings">
         {/* Notification toggles */}
-        <div style={{ marginBottom: 20 }}>
-          <div style={{ ...eyebrowStyle, marginBottom: 4 }}>Notifications</div>
+        <div style={{ marginBottom: 22 }}>
+          <div style={{ ...fieldEyebrow, marginBottom: 0 }}>Notifications</div>
           <Toggle label="Session reminders"             checked={reminders}     onChange={v => handleToggle('session_reminders', setReminders,     v)} saved={savedKey === 'session_reminders'} />
           <Toggle label="Daily weigh-in reminder"       checked={weighIn}       onChange={v => handleToggle('daily_weigh_in',    setWeighIn,       v)} saved={savedKey === 'daily_weigh_in'} />
           <Toggle label="Weekly progress summary email" checked={weeklySummary} onChange={v => handleToggle('weekly_summary',    setWeeklySummary, v)} saved={savedKey === 'weekly_summary'} />
@@ -1084,90 +1247,109 @@ function SettingsSection({ user }) {
 
         {/* Check-in day picker */}
         <div style={{ marginBottom: 24 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-            <div style={eyebrowStyle}>Weekly Check-In Day</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 0 }}>
+            <div style={{ ...fieldEyebrow }}>Weekly Check-In Day</div>
             {savedKey === 'checkin_day' && (
-              <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, color: '#4CAF50', letterSpacing: '0.08em' }}>✓ Saved</span>
+              <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 11, color: C.green }}>✓ Saved</span>
             )}
           </div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
             {CHECKIN_DAYS.map(({ label, value }) => (
               <button
                 key={value}
                 onClick={() => handleCheckinDayChange(value)}
                 style={{
-                  padding: '8px 12px',
-                  minHeight: 36,
-                  fontFamily: "'Barlow Condensed', sans-serif",
-                  fontSize: 12, fontWeight: 700,
-                  letterSpacing: '0.12em', textTransform: 'uppercase',
-                  cursor: 'pointer',
-                  border: checkinDay === value ? 'none' : '1px solid rgba(200,200,200,0.15)',
-                  background: checkinDay === value ? '#C0392B' : 'transparent',
-                  color: checkinDay === value ? '#fff' : '#555',
-                  transition: 'background 0.15s',
+                  padding: '11px 16px', borderRadius: 8,
+                  fontFamily: "'Oswald', sans-serif", fontWeight: 600,
+                  fontSize: 12, letterSpacing: '0.8px', textTransform: 'uppercase',
+                  cursor: 'pointer', minHeight: 36, transition: 'all 0.2s',
+                  ...(checkinDay === value ? activeOptStyle : inactiveOptStyle),
                 }}
               >
                 {label}
               </button>
             ))}
           </div>
-          <p style={{ fontFamily: "'Barlow', sans-serif", fontSize: 11, color: '#444', fontStyle: 'italic', margin: '10px 0 0', lineHeight: 1.5 }}>
+          <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 12.5, color: C.ashDim, fontStyle: 'italic', margin: '12px 0 0', lineHeight: 1.5 }}>
             This is the day your AI coaching check-in and weekly progress summary will appear. You can change this any time.
           </p>
         </div>
 
         {/* Unit preference */}
         <div style={{ marginBottom: 24 }}>
-          <div style={{ ...eyebrowStyle, marginBottom: 10 }}>Weight units</div>
+          <div style={{ ...fieldEyebrow, marginBottom: 14 }}>Weight Units</div>
           <div style={{ display: 'flex', gap: 8 }}>
             {['kg', 'lbs'].map(u => (
               <button
                 key={u}
                 onClick={() => handleUnits(u)}
-                style={{ padding: '10px 24px', minHeight: 44, fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', cursor: 'pointer', border: 'none', background: units === u ? '#C0392B' : '#1a1a1a', color: units === u ? '#fff' : '#787878', transition: 'background 0.15s' }}
+                style={{
+                  flex: 1, textAlign: 'center', padding: 13, borderRadius: 9,
+                  fontFamily: "'Oswald', sans-serif", fontWeight: 700, fontSize: 13,
+                  textTransform: 'uppercase', letterSpacing: '0.8px', cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  ...(units === u ? activeOptStyle : inactiveOptStyle),
+                }}
               >
-                {u}
+                {u.toUpperCase()}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Support & legal */}
-        <div style={{ marginBottom: 8 }}>
-          <div style={{ ...eyebrowStyle, marginBottom: 10 }}>Support & Legal</div>
+        {/* Support & legal links */}
+        <div>
+          <div style={{ ...fieldEyebrow, marginBottom: 0 }}>Support &amp; Legal</div>
           {[
-            { label: 'Privacy Policy',    href: '/privacy' },
-            { label: 'Terms of Service',  href: '/terms' },
-            { label: 'Contact Support',   href: 'mailto:support@plus4performance.com' },
+            { label: 'Privacy Policy',   href: '/privacy' },
+            { label: 'Terms of Service', href: '/terms' },
+            { label: 'Contact Support',  href: 'mailto:support@plus4performance.com' },
           ].map(({ label, href }) => (
-            <div key={label} style={{ ...rowStyle }}>
-              <a href={href} style={{ color: '#CDCDC8', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, letterSpacing: '0.04em', textDecoration: 'none' }}
-                onMouseEnter={e => { e.currentTarget.style.color = '#F5F3EE'; }}
-                onMouseLeave={e => { e.currentTarget.style.color = '#CDCDC8'; }}
+            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 0', borderTop: '1px solid rgba(255,255,255,0.05)', fontSize: 14.5, cursor: 'pointer' }}>
+              <a
+                href={href}
+                style={{ color: C.ash, fontFamily: "'Inter', sans-serif", textDecoration: 'none' }}
+                onMouseEnter={e => { e.currentTarget.style.color = C.bone; }}
+                onMouseLeave={e => { e.currentTarget.style.color = C.ash; }}
               >
                 {label}
               </a>
-              <span style={{ color: '#444', fontSize: 12 }}>→</span>
+              <span style={{ color: C.ashDim, fontSize: 12 }}>→</span>
             </div>
           ))}
         </div>
       </SectionCard>
 
-      {/* Email testing — only in dev or when ?debug=true */}
+      {/* Email testing — dev / ?debug=true only */}
       {(import.meta.env.DEV || new URLSearchParams(window.location.search).get('debug') === 'true') && (
         <EmailTestingCard />
       )}
 
-      {/* Danger zone */}
-      <div style={{ background: '#0d0d0d', border: '1px solid rgba(192,57,43,0.3)', padding: '20px', marginBottom: 20 }}>
-        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.28em', textTransform: 'uppercase', color: '#C0392B', marginBottom: 10 }}>
+      {/* Danger Zone — intentional red exception, reserved for destructive action */}
+      <div style={{
+        background: 'linear-gradient(160deg, #1A0F0E, #120A09)',
+        border: `1px solid ${C.redLine}`,
+        borderRadius: 16, padding: 24, marginBottom: 22,
+        boxShadow: `0 0 24px -12px ${C.redGlow}`,
+      }}>
+        <div style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: '1.5px', textTransform: 'uppercase', color: '#E05A4A', marginBottom: 10 }}>
           Danger Zone
         </div>
-        <p style={{ fontFamily: "'Barlow', sans-serif", fontSize: 13, color: '#787878', lineHeight: 1.6, margin: '0 0 16px', fontWeight: 300 }}>
+        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 13.5, color: C.ash, lineHeight: 1.5, margin: '0 0 18px' }}>
           Permanently delete your account and all associated data. This cannot be undone.
         </p>
-        <button onClick={() => setShowDelete(true)} style={{ ...primaryBtn(), background: '#6B0F0A' }}>
+        <button
+          onClick={() => setShowDelete(true)}
+          style={{
+            background: 'linear-gradient(160deg, #6B1F18, #4A140F)',
+            border: `1px solid ${C.redLine}`,
+            color: '#F0D5D0', borderRadius: 10,
+            fontFamily: "'Oswald', sans-serif", fontWeight: 700, fontSize: 12.5,
+            letterSpacing: '1.2px', textTransform: 'uppercase',
+            padding: '14px 24px', cursor: 'pointer', minHeight: 44,
+            boxShadow: `0 8px 20px -8px ${C.redGlow}`,
+          }}
+        >
           Delete Account
         </button>
       </div>
@@ -1197,30 +1379,35 @@ function HelpSection() {
   }
 
   return (
-    <SectionCard title="HELP & FAQ">
+    <SectionCard title="Help &amp; FAQ">
       {FAQ_SECTIONS.map((section, si) => (
         <div key={si} style={{ marginBottom: si < FAQ_SECTIONS.length - 1 ? 24 : 0 }}>
-          <div style={{ ...eyebrowStyle, marginBottom: 10 }}>{section.heading}</div>
+          {/* Category label — grey */}
+          <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 11, letterSpacing: '1.5px', color: C.ashDim, textTransform: 'uppercase', margin: si === 0 ? '0 0 8px' : '22px 0 8px' }}>
+            {section.heading}
+          </div>
           {section.items.map((item, qi) => {
             const key    = `${si}:${qi}`;
             const isOpen = openKeys.has(key);
             return (
-              <div key={qi} style={{ borderBottom: '1px solid #1a1a1a' }}>
+              <div key={qi} style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
                 <button
                   type="button"
                   onClick={() => toggle(key)}
                   aria-expanded={isOpen}
-                  style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, background: 'none', border: 'none', cursor: 'pointer', padding: '12px 0', textAlign: 'left', minHeight: 44 }}
+                  style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, background: 'none', border: 'none', cursor: 'pointer', padding: '15px 0', textAlign: 'left', minHeight: 44 }}
                 >
-                  <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, color: '#CDCDC8', letterSpacing: '0.04em', flex: 1, lineHeight: 1.4 }}>
+                  {/* Question text — white/bone */}
+                  <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 14.5, color: C.bone, flex: 1, lineHeight: 1.4 }}>
                     {item.q}
                   </span>
-                  <span style={{ color: isOpen ? '#C0392B' : '#555', fontSize: 20, lineHeight: 1, flexShrink: 0, fontWeight: 300, marginTop: 1 }}>
+                  {/* Plus/minus icon — grey */}
+                  <span style={{ color: C.ashDim, fontSize: 20, lineHeight: 1, flexShrink: 0, fontWeight: 300, marginTop: 1, transition: 'transform 0.25s' }}>
                     {isOpen ? '−' : '+'}
                   </span>
                 </button>
                 {isOpen && (
-                  <div style={{ fontFamily: "'Barlow', sans-serif", fontSize: 13, color: '#787878', lineHeight: 1.7, paddingBottom: 14, paddingRight: 24, fontWeight: 300 }}>
+                  <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, color: C.ash, lineHeight: 1.7, paddingBottom: 14, paddingRight: 24 }}>
                     {item.a}
                   </div>
                 )}
@@ -1229,10 +1416,10 @@ function HelpSection() {
           })}
         </div>
       ))}
-      <div style={{ borderTop: '1px solid #1a1a1a', paddingTop: 16, marginTop: 20 }}>
-        <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, color: '#555', letterSpacing: '0.04em', margin: 0 }}>
+      <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 16, marginTop: 20, textAlign: 'center' }}>
+        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, color: C.ashDim, margin: 0 }}>
           Still have a question?{' '}
-          <a href="mailto:hello@plus4performance.com" style={{ color: '#787878', textDecoration: 'none' }}>
+          <a href="mailto:hello@plus4performance.com" style={{ color: C.bone, textDecoration: 'none' }}>
             hello@plus4performance.com
           </a>
         </p>
