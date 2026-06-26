@@ -32,6 +32,33 @@ const EXERCISE_LIST = [
   'Tricep Pushdown Rope',
 ];
 
+// ─── DESIGN TOKENS ───────────────────────────────────────────────────────────
+
+const C = {
+  surface:    '#131119',
+  surface2:   '#0C0A0F',
+  bone:       '#F3F1ED',
+  ash:        '#ABA9B0',
+  ashDim:     '#7A7880',
+  pinkGlow:   'rgba(255,79,196,0.5)',
+  pinkLine:   'rgba(255,79,196,0.25)',
+  pinkBorder: 'rgba(255,79,196,0.1)',
+};
+
+const ctaBtn = {
+  background: 'linear-gradient(160deg, #18151F, #100E15)',
+  border: `1px solid rgba(255,79,196,0.25)`,
+  color: '#F3F1ED',
+  borderRadius: 10,
+  fontFamily: "'Oswald', sans-serif",
+  fontWeight: 600,
+  fontSize: 13,
+  letterSpacing: '1.4px',
+  textTransform: 'uppercase',
+  cursor: 'pointer',
+  boxShadow: `0 8px 22px -8px rgba(255,79,196,0.5)`,
+};
+
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 
 function groupHistory(rows) {
@@ -60,6 +87,20 @@ function computePRs(rows) {
     if (prev === undefined || row.weight_kg > prev) runningMax[row.exercise_name] = row.weight_kg;
   }
   return prs;
+}
+
+function inp(extra = {}) {
+  return {
+    padding: '10px 12px',
+    background: C.surface2,
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: 8,
+    color: C.bone,
+    fontFamily: "'Inter', sans-serif",
+    fontSize: 13,
+    outline: 'none',
+    ...extra,
+  };
 }
 
 // ─── AUTOCOMPLETE INPUT ───────────────────────────────────────────────────────
@@ -93,8 +134,12 @@ function AutocompleteInput({ value, onChange, extraOptions, inputStyle }) {
       {showSugg && suggestions.length > 0 && (
         <div style={{
           position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 200,
-          background: '#1a1a1a', border: '1px solid #2a2a2a',
-          boxShadow: '0 6px 16px rgba(0,0,0,0.5)', marginTop: 2,
+          background: C.surface,
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: 8,
+          boxShadow: '0 8px 22px -8px rgba(0,0,0,0.7)',
+          marginTop: 2,
+          overflow: 'hidden',
         }}>
           {suggestions.map(s => (
             <button
@@ -103,12 +148,12 @@ function AutocompleteInput({ value, onChange, extraOptions, inputStyle }) {
               onMouseDown={e => { e.preventDefault(); onChange(s); setShowSugg(false); }}
               style={{
                 display: 'block', width: '100%', textAlign: 'left', background: 'none',
-                border: 'none', borderBottom: '1px solid #222',
-                padding: '9px 12px', color: '#CDCDC8',
-                fontFamily: "'Barlow', sans-serif", fontSize: 13, cursor: 'pointer',
+                border: 'none', borderBottom: '1px solid rgba(255,255,255,0.05)',
+                padding: '10px 12px', color: C.ash,
+                fontFamily: "'Inter', sans-serif", fontSize: 13, cursor: 'pointer',
               }}
-              onMouseEnter={e => { e.currentTarget.style.color = '#C0392B'; e.currentTarget.style.background = '#111'; }}
-              onMouseLeave={e => { e.currentTarget.style.color = '#CDCDC8'; e.currentTarget.style.background = 'none'; }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.color = C.bone; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = C.ash; }}
             >
               {s}
             </button>
@@ -123,11 +168,15 @@ function AutocompleteInput({ value, onChange, extraOptions, inputStyle }) {
 
 function ExerciseCard({ ex, idx, lastKg, onChange, dragHandleProps, planExerciseNames }) {
   return (
-    <div style={{ background: '#111', border: '1px solid #1e1e1e', padding: '16px', marginBottom: 10 }}>
+    <div style={{
+      background: `linear-gradient(160deg, ${C.surface} 0%, ${C.surface2} 100%)`,
+      border: '1px solid rgba(255,255,255,0.06)',
+      borderRadius: 12, padding: 16, marginBottom: 10,
+    }}>
       {/* Row 1: drag handle + autocomplete name */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
         <span
-          style={{ color: '#444', cursor: 'grab', flexShrink: 0, display: 'flex', alignItems: 'center', touchAction: 'none' }}
+          style={{ color: C.ashDim, cursor: 'grab', flexShrink: 0, display: 'flex', alignItems: 'center', touchAction: 'none' }}
           {...dragHandleProps}
         >
           <GripVertical size={18} strokeWidth={1.5} />
@@ -171,7 +220,7 @@ function ExerciseCard({ ex, idx, lastKg, onChange, dragHandleProps, planExercise
             style={inp({ width: '100%', boxSizing: 'border-box' })}
           />
           {lastKg != null && (
-            <span style={{ fontSize: 10, color: '#444', fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.08em', fontStyle: 'italic' }}>
+            <span style={{ fontSize: 10, color: C.ashDim, fontFamily: "'Inter', sans-serif", fontStyle: 'italic' }}>
               Last: {lastKg} kg
             </span>
           )}
@@ -183,7 +232,7 @@ function ExerciseCard({ ex, idx, lastKg, onChange, dragHandleProps, planExercise
         type="text"
         value={ex.notes}
         onChange={e => onChange(idx, 'notes', e.target.value)}
-        placeholder="Notes..."
+        placeholder="Notes…"
         style={{ ...inp({ width: '100%', marginTop: 10, boxSizing: 'border-box' }), fontStyle: ex.notes ? 'normal' : 'italic' }}
       />
     </div>
@@ -195,12 +244,8 @@ function ExerciseCard({ ex, idx, lastKg, onChange, dragHandleProps, planExercise
 function SortableExerciseCard(props) {
   const { ex } = props;
   const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
+    attributes, listeners, setNodeRef,
+    transform, transition, isDragging,
   } = useSortable({ id: ex.id });
 
   return (
@@ -238,33 +283,44 @@ function SessionDropdown({ phases, selectedSession, onSelect }) {
         type="button"
         onClick={() => setOpen(o => !o)}
         style={{
-          width: '100%', padding: '12px 14px',
-          background: '#111', border: '1px solid rgba(200,200,200,0.15)',
-          color: selectedSession ? '#F5F3EE' : '#555',
-          fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, letterSpacing: '0.06em',
+          width: '100%', padding: '16px 18px',
+          background: C.surface,
+          border: open ? `1px solid ${C.pinkLine}` : '1px solid rgba(255,255,255,0.08)',
+          borderRadius: 10,
+          color: selectedSession ? C.bone : C.ashDim,
+          fontFamily: "'Inter', sans-serif", fontSize: 14,
           textAlign: 'left', cursor: 'pointer',
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           minHeight: 44,
+          transition: 'border-color 0.25s, box-shadow 0.25s',
+          boxShadow: open ? `0 0 20px -8px ${C.pinkGlow}` : 'none',
+          outline: 'none',
         }}
       >
         <span>{selectedSession?.name || 'Select a session…'}</span>
-        <span style={{ color: '#444', fontSize: 11, marginLeft: 8, flexShrink: 0 }}>{open ? '▲' : '▼'}</span>
+        <span style={{
+          color: C.ashDim, fontSize: 11, marginLeft: 8, flexShrink: 0,
+          display: 'inline-block', transition: 'transform 0.25s',
+          transform: open ? 'rotate(180deg)' : 'none',
+        }}>▾</span>
       </button>
 
       {open && (
         <div style={{
           position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 300,
-          background: '#111', border: '1px solid rgba(200,200,200,0.15)', borderTop: 'none',
+          background: C.surface,
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: 10,
+          marginTop: 8,
           maxHeight: 300, overflowY: 'auto',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.7)',
+          boxShadow: '0 14px 34px -16px rgba(0,0,0,0.6)',
         }}>
           {(phases || []).map(phase => (
             <React.Fragment key={phase.phase}>
               <div style={{
-                padding: '8px 14px 6px',
-                fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700,
-                letterSpacing: '0.22em', textTransform: 'uppercase', color: '#444',
-                background: '#0d0d0d', borderBottom: '1px solid #1a1a1a',
+                padding: '12px 18px 6px',
+                fontFamily: "'Oswald', sans-serif", fontSize: 10, fontWeight: 600,
+                letterSpacing: '1.3px', textTransform: 'uppercase', color: C.ashDim,
                 userSelect: 'none',
               }}>
                 Phase {phase.phase} — {phase.label || ''}
@@ -278,19 +334,15 @@ function SessionDropdown({ phases, selectedSession, onSelect }) {
                     onMouseDown={e => { e.preventDefault(); onSelect(s); setOpen(false); }}
                     style={{
                       display: 'block', width: '100%', textAlign: 'left', minHeight: 44,
-                      background: isActive ? '#1e1e1e' : 'none',
-                      border: 'none', borderBottom: '1px solid #1a1a1a',
-                      padding: '10px 14px 10px 22px',
-                      color: isActive ? '#C0392B' : '#CDCDC8',
-                      fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14,
-                      letterSpacing: '0.06em', cursor: 'pointer',
+                      background: isActive ? 'rgba(255,255,255,0.03)' : 'none',
+                      border: 'none', borderBottom: '1px solid rgba(255,255,255,0.05)',
+                      padding: '13px 18px',
+                      color: isActive ? C.bone : C.ash,
+                      fontFamily: "'Inter', sans-serif", fontSize: 14,
+                      cursor: 'pointer', outline: 'none',
                     }}
-                    onMouseEnter={e => {
-                      if (!isActive) { e.currentTarget.style.color = '#C0392B'; e.currentTarget.style.background = '#1a1a1a'; }
-                    }}
-                    onMouseLeave={e => {
-                      if (!isActive) { e.currentTarget.style.color = '#CDCDC8'; e.currentTarget.style.background = 'none'; }
-                    }}
+                    onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
+                    onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'none'; }}
                   >
                     {s.name}
                   </button>
@@ -308,33 +360,56 @@ function SessionDropdown({ phases, selectedSession, onSelect }) {
 
 function HistoryEntry({ group, expanded, onToggle, prSet }) {
   return (
-    <div style={{ background: '#0d0d0d', border: '1px solid rgba(200,200,200,0.08)', marginBottom: 8 }}>
+    <div style={{
+      background: `linear-gradient(160deg, ${C.surface} 0%, ${C.surface2} 100%)`,
+      border: `1px solid ${C.pinkBorder}`,
+      borderRadius: 16,
+      marginBottom: 14,
+      overflow: 'hidden',
+      boxShadow: `0 12px 30px -16px rgba(0,0,0,0.55), 0 0 22px -14px ${C.pinkGlow}, 0 1px 0 rgba(255,255,255,0.03) inset`,
+    }}>
       <button
         type="button"
         onClick={onToggle}
-        style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: '14px 20px', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+        style={{
+          width: '100%', background: 'none', border: 'none', cursor: 'pointer',
+          padding: '20px 22px', textAlign: 'left',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          minHeight: 44,
+        }}
       >
         <div>
-          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, letterSpacing: '0.1em', color: '#F5F3EE', marginBottom: 2 }}>
+          <div style={{ fontFamily: "'Oswald', sans-serif", fontSize: 16, fontWeight: 700, textTransform: 'uppercase', color: C.bone, marginBottom: 4 }}>
             {group.sessionName}
           </div>
-          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, color: '#555', letterSpacing: '0.08em' }}>
+          <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 12.5, color: C.ashDim }}>
             {group.date} · {group.exercises.length} exercise{group.exercises.length !== 1 ? 's' : ''}
           </div>
         </div>
-        <span style={{ color: '#555', fontSize: 18 }}>{expanded ? '−' : '+'}</span>
+        <span style={{ color: C.ashDim, fontSize: 18, fontWeight: 300, minWidth: 20, textAlign: 'center', lineHeight: 1 }}>
+          {expanded ? '−' : '+'}
+        </span>
       </button>
+
       {expanded && (
-        <div style={{ padding: '0 20px 16px' }}>
+        <div style={{ padding: '0 22px 18px' }}>
           {group.exercises.map(ex => (
-            <div key={ex.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '1px solid #1a1a1a', fontSize: 13, color: '#CDCDC8' }}>
-              <span>{ex.exercise_name}</span>
+            <div key={ex.id} style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '13px 0', borderTop: '1px solid rgba(255,255,255,0.05)',
+            }}>
+              <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 14, color: C.bone }}>{ex.exercise_name}</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ color: '#787878' }}>{ex.weight_kg} kg</span>
+                <span style={{ fontFamily: "'Roboto Mono', monospace", fontSize: 13.5, color: C.bone }}>{ex.weight_kg} kg</span>
                 {prSet.has(ex.id) && (
-                  <span style={{ background: '#C0392B', color: '#fff', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 9, fontWeight: 700, letterSpacing: '0.14em', padding: '2px 5px' }}>
-                    PR
-                  </span>
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    padding: '3px 8px', borderRadius: 6,
+                    background: C.surface2,
+                    border: `1px solid ${C.pinkLine}`,
+                    boxShadow: `0 0 10px -2px ${C.pinkGlow}`,
+                    fontFamily: "'Oswald', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.5px', color: C.bone,
+                  }}>PR</span>
                 )}
               </div>
             </div>
@@ -365,9 +440,9 @@ export default function Logbook({ userId, plan, preselectedSession }) {
     useSensor(TouchSensor,   { activationConstraint: { delay: 200, tolerance: 5 } }),
   );
 
-  const library          = plan?.exercise_library || {};
+  const library           = plan?.exercise_library || {};
   const planExerciseNames = Object.values(library).map(e => e.name).filter(Boolean);
-  const allSessions      = (plan?.phases || []).flatMap(p =>
+  const allSessions       = (plan?.phases || []).flatMap(p =>
     (p.sessions || []).map(s => ({ ...s, phaseNum: p.phase, phaseLabel: p.label }))
   );
 
@@ -459,9 +534,7 @@ export default function Logbook({ userId, plan, preselectedSession }) {
 
   // ── DnD handlers ─────────────────────────────────────────────────────────
 
-  function handleDragStart(event) {
-    setActiveId(event.active.id);
-  }
+  function handleDragStart(event) { setActiveId(event.active.id); }
 
   function handleDragEnd(event) {
     const { active, over } = event;
@@ -545,7 +618,7 @@ export default function Logbook({ userId, plan, preselectedSession }) {
       <div style={{ marginBottom: 28 }}>
         <div style={eyebrow}>Session</div>
         {allSessions.length === 0 ? (
-          <p style={{ color: '#555', fontSize: 13, fontFamily: "'Barlow Condensed', sans-serif" }}>
+          <p style={{ color: C.ash, fontSize: 13, fontFamily: "'Inter', sans-serif" }}>
             Unlock your plan to access session data.
           </p>
         ) : (
@@ -587,13 +660,15 @@ export default function Logbook({ userId, plan, preselectedSession }) {
             <DragOverlay>
               {activeEx ? (
                 <div style={{
-                  background: '#111', border: '1px solid #C0392B',
-                  padding: '16px', boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
+                  background: `linear-gradient(160deg, ${C.surface} 0%, ${C.surface2} 100%)`,
+                  border: `1px solid ${C.pinkLine}`,
+                  borderRadius: 12, padding: 16,
+                  boxShadow: `0 8px 24px rgba(0,0,0,0.6), 0 0 22px -8px ${C.pinkGlow}`,
                   opacity: 0.92,
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <GripVertical size={18} strokeWidth={1.5} color="#444" />
-                    <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, fontWeight: 700, color: '#F5F3EE', letterSpacing: '0.08em' }}>
+                    <GripVertical size={18} strokeWidth={1.5} color={C.ashDim} />
+                    <span style={{ fontFamily: "'Inter', sans-serif", fontWeight: 600, fontSize: 14, color: C.bone }}>
                       {activeEx.name}
                     </span>
                   </div>
@@ -603,7 +678,7 @@ export default function Logbook({ userId, plan, preselectedSession }) {
           </DndContext>
 
           {saveErr && (
-            <p style={{ color: '#ef4444', fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.06em', marginBottom: 12 }}>
+            <p style={{ color: '#fca5a5', fontSize: 12, fontFamily: "'Inter', sans-serif", marginBottom: 12 }}>
               {saveErr}
             </p>
           )}
@@ -613,12 +688,22 @@ export default function Logbook({ userId, plan, preselectedSession }) {
               onClick={handleSave}
               disabled={saving}
               className="logbook-save-btn"
-              style={{ width: '100%', background: '#C0392B', border: 'none', color: '#fff', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', cursor: saving ? 'default' : 'pointer', opacity: saving ? 0.7 : 1, marginTop: 4 }}
+              style={{
+                ...ctaBtn,
+                width: '100%', marginTop: 4,
+                opacity: saving ? 0.6 : 1,
+                boxShadow: saving ? 'none' : ctaBtn.boxShadow,
+              }}
             >
               {saving ? '…' : 'Save Session Log'}
             </button>
           ) : (
-            <div style={{ textAlign: 'center', padding: '18px 0', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, fontWeight: 700, letterSpacing: '0.14em', color: '#4CAF50', background: '#0d0d0d', border: '1px solid #1a1a1a' }}>
+            <div style={{
+              textAlign: 'center', padding: '18px 0',
+              fontFamily: "'Inter', sans-serif", fontSize: 13, color: '#4A9968',
+              background: `linear-gradient(160deg, ${C.surface} 0%, ${C.surface2} 100%)`,
+              border: '1px solid rgba(74,153,104,0.25)', borderRadius: 10,
+            }}>
               ✓ Logbook saved.
             </div>
           )}
@@ -629,7 +714,7 @@ export default function Logbook({ userId, plan, preselectedSession }) {
       <div>
         <div style={sectionHead}>Previous Sessions</div>
         {history.length === 0 ? (
-          <p style={{ color: '#555', fontSize: 13, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.06em' }}>
+          <p style={{ color: C.ash, fontSize: 13, fontFamily: "'Inter', sans-serif" }}>
             No sessions logged yet.
           </p>
         ) : (
@@ -651,45 +736,34 @@ export default function Logbook({ userId, plan, preselectedSession }) {
 // ─── STYLE TOKENS ────────────────────────────────────────────────────────────
 
 const sectionHead = {
-  fontFamily: "'Bebas Neue', sans-serif",
-  fontSize: 22,
-  letterSpacing: '0.06em',
-  color: '#F5F3EE',
+  fontFamily: "'Oswald', sans-serif",
+  fontWeight: 700,
+  fontSize: 18,
+  letterSpacing: '0.5px',
+  textTransform: 'uppercase',
+  color: '#F3F1ED',
   marginBottom: 16,
   marginTop: 4,
 };
 
 const eyebrow = {
-  fontFamily: "'Barlow Condensed', sans-serif",
+  fontFamily: "'Oswald', sans-serif",
   fontSize: 11,
-  fontWeight: 700,
-  letterSpacing: '0.28em',
+  fontWeight: 600,
+  letterSpacing: '2px',
   textTransform: 'uppercase',
-  color: '#555',
-  marginBottom: 10,
+  color: '#7A7880',
+  marginBottom: 12,
 };
 
 const fieldLabel = {
-  fontFamily: "'Barlow Condensed', sans-serif",
-  fontSize: 11,
-  fontWeight: 700,
-  letterSpacing: '0.18em',
+  fontFamily: "'Oswald', sans-serif",
+  fontSize: 10,
+  fontWeight: 600,
+  letterSpacing: '1.4px',
   textTransform: 'uppercase',
-  color: '#555',
+  color: '#7A7880',
   display: 'flex',
   flexDirection: 'column',
   gap: 6,
 };
-
-function inp(extra = {}) {
-  return {
-    padding: '9px 10px',
-    background: '#1a1a1a',
-    border: '1px solid #2a2a2a',
-    color: '#F5F3EE',
-    fontFamily: "'Barlow', sans-serif",
-    fontSize: 13,
-    outline: 'none',
-    ...extra,
-  };
-}
