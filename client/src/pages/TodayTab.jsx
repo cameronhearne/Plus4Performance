@@ -847,7 +847,7 @@ function RenewalBanner({ planGeneratedAt, onGoToAccount }) {
 
 // ─── MAIN EXPORT ─────────────────────────────────────────────────────────────
 
-export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenLogbook, planGeneratedAt, onGoToAccount }) {
+export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenLogbook, planGeneratedAt, onGoToAccount, isCoachingClient, onGeneratePlan }) {
   const [currentWeight, setCurrentWeight]   = useState(null);
   const [startingWeight, setStartingWeight] = useState(null);
   const [targetWeight, setTargetWeight]     = useState(null);
@@ -1142,6 +1142,26 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
                 onOpenLogbook={onOpenLogbook}
                 videoMap={videoMap}
               />
+            ) : isCoachingClient ? (
+              <div style={{ ...cardStyle, padding: '32px 24px', textAlign: 'center', marginBottom: 12 }}>
+                <div style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 700, fontSize: 20, textTransform: 'uppercase', color: C.bone, marginBottom: 10, letterSpacing: '0.04em' }}>
+                  {snapshot ? 'Ready to build your plan' : 'Complete your profile first'}
+                </div>
+                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 14, color: C.ash, marginBottom: 20, lineHeight: 1.6, maxWidth: 340, margin: '0 auto 20px' }}>
+                  {snapshot
+                    ? 'Your intake is done. Generate your personalised 12-week programme now — takes 60–90 seconds.'
+                    : 'Fill in your intake form so we can build your personalised training and nutrition plan.'}
+                </p>
+                {snapshot ? (
+                  <button style={btnPrimary} onClick={onGeneratePlan}>
+                    Generate My Plan →
+                  </button>
+                ) : (
+                  <a href="/intake" style={{ ...btnPrimary, textDecoration: 'none', display: 'inline-block' }}>
+                    Start Intake →
+                  </a>
+                )}
+              </div>
             ) : null}
           </>
         ) : (
@@ -1261,6 +1281,12 @@ export default function TodayTab({ snapshot, plan, isUnlocked, onUnlock, onOpenL
               <span style={{ fontWeight: 600, color: C.bone, fontFamily: "'Inter', sans-serif" }}>{v}</span>
             </div>
           ))}
+        </div>
+      ) : isCoachingClient ? (
+        <div style={{ ...cardStyle, padding: '20px 24px', marginBottom: 24, textAlign: 'center' }}>
+          <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, color: C.ashDim, margin: 0, lineHeight: 1.6 }}>
+            Nutrition targets will appear here once your plan is generated.
+          </p>
         </div>
       ) : (
         <div style={{ position: 'relative', marginBottom: 24 }}>

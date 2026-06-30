@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { createCheckoutSession, getExerciseSubstitutions, swapExercise } from '../lib/api';
+import { createCheckoutSession, getExerciseSubstitutions, swapExercise, coachingGeneratePlan } from '../lib/api';
 import AchievementsTab from './AchievementsTab';
 import ProgressTab from './ProgressTab';
 import TodayTab from './TodayTab';
@@ -498,6 +498,7 @@ export default function Dashboard() {
   const [planGenError,   setPlanGenError]   = useState(false);
   const [logbookSession, setLogbookSession] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isCoachingClient, setIsCoachingClient] = useState(false);
 
   function handleOpenLogbook(sessionName) {
     setLogbookSession(sessionName);
@@ -531,7 +532,8 @@ export default function Dashboard() {
       console.log('[Dashboard] coaching profile:', { data: coachingProfile, error: coachingProfileErr });
       if (coachingProfileErr) console.error('[Dashboard] profile error:', coachingProfileErr);
       if (adminProfile?.is_admin) setIsAdmin(true);
-      const isCoachingClient = !!coachingProfile?.coach_id;
+      const coaching = !!coachingProfile?.coach_id;
+      setIsCoachingClient(coaching);
 
       if (snapErr) console.error('[Dashboard] snapshots error:', snapErr);
       if (snap) setSnapshot(snap);
@@ -546,7 +548,7 @@ export default function Dashboard() {
       if (subErr) console.error('[Dashboard] subscriptions error:', subErr);
 
       const subscribed = sub && (!sub.current_period_end || new Date(sub.current_period_end) > new Date());
-      const unlocked = !!subscribed || isCoachingClient;
+      const unlocked = !!subscribed || coaching;
       setIsUnlocked(unlocked);
       if (sub) setSubRow(sub);
 
@@ -622,6 +624,37 @@ export default function Dashboard() {
     }
   }
 
+  async function handleCoachingGeneratePlan() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    try {
+      await coachingGeneratePlan(session.access_token);
+    } catch (e) {
+      console.error('[coaching] generate-plan:', e);
+      return;
+    }
+    setPlanGenerating(true);
+    let attempts = 0;
+    const MAX = 50;
+    const poll = setInterval(async () => {
+      try {
+        const { data: { user: u } } = await supabase.auth.getUser();
+        if (!u) return;
+        const { data: planRow } = await supabase
+          .from('plans').select('plan_data, generated_at')
+          .eq('user_id', u.id).eq('is_active', true).maybeSingle();
+        if (planRow) {
+          setPlan(planRow.plan_data);
+          setPlanGeneratedAt(planRow.generated_at);
+          setPlanGenerating(false);
+          clearInterval(poll);
+          return;
+        }
+      } catch (e) { console.error('[plan poll]', e); }
+      if (++attempts >= MAX) { clearInterval(poll); setPlanGenError(true); }
+    }, 3000);
+  }
+
   async function handleSignOut() {
     await supabase.auth.signOut();
     navigate('/login');
@@ -687,7 +720,7 @@ export default function Dashboard() {
 
         {/* Tab content */}
         <div style={styles.content}>
-          {activeTab === 'today' && <TodayTab snapshot={snapshot} plan={plan} isUnlocked={isUnlocked} onUnlock={handleUnlock} onOpenLogbook={handleOpenLogbook} planGeneratedAt={planGeneratedAt} onGoToAccount={() => setActiveTab('account')} />}
+          {activeTab === 'today' && <TodayTab snapshot={snapshot} plan={plan} isUnlocked={isUnlocked} onUnlock={handleUnlock} onOpenLogbook={handleOpenLogbook} planGeneratedAt={planGeneratedAt} onGoToAccount={() => setActiveTab('account')} isCoachingClient={isCoachingClient} onGeneratePlan={handleCoachingGeneratePlan} />}
           {activeTab === 'plan' && <TabPlan plan={plan} isUnlocked={isUnlocked} onUnlock={handleUnlock} />}
           {activeTab === 'nutrition' && <NutritionTab plan={plan} isUnlocked={isUnlocked} onUnlock={handleUnlock} />}
           {activeTab === 'progress' && <ProgressTab userId={user?.id} plan={plan} onSwitchTab={handleSwitchTab} />}

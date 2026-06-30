@@ -152,6 +152,8 @@ export async function adminCancelSub(token, userId, mode)    { return authedPost
 export async function adminRefund(token, userId, chargeId, amount) { return authedPost(`/api/admin/users/${userId}/refund`, { chargeId, amount }, token); }
 export async function adminRegeneratePlan(token, userId)     { return authedPost(`/api/admin/users/${userId}/regenerate-plan`, {}, token); }
 
+export async function coachingGeneratePlan(token) { return authedPost('/api/coaching/generate-plan', {}, token); }
+
 export async function adminGetCoaches(token)                     { return authedGet('/api/admin/coaching/coaches', token); }
 export async function adminGetCoachingClients(token)             { return authedGet('/api/admin/coaching/clients', token); }
 export async function adminSetCoach(token, body)                 { return authedPost('/api/admin/coaching/set-coach', body, token); }

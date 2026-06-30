@@ -3660,6 +3660,36 @@ async function handleFriendList(req, res) {
 
 // ─── COACHING ────────────────────────────────────────────────────────────────
 
+// POST /api/coaching/generate-plan — coaching client self-serves plan generation
+// Same logic the Stripe webhook uses; gated by hasAccess() so subscribers can also use it.
+async function handleCoachingGeneratePlan(req, res) {
+  const userId = await getUserIdFromToken(req.headers['authorization']);
+  if (!userId) return json(res, 401, { error: 'Unauthorized' });
+  const access = await hasAccess(userId);
+  if (!access) return json(res, 403, { error: 'Forbidden: no active subscription or coaching assignment' });
+
+  const { data: intakeRows, error: intakeErr } = await supabaseAdmin
+    .from('intake_submissions').select('data')
+    .eq('user_id', userId).order('created_at', { ascending: false }).limit(1);
+  if (intakeErr) return json(res, 500, { error: 'Failed to fetch intake data' });
+  if (!intakeRows?.length) return json(res, 400, { error: 'No intake found. Please complete your profile first.' });
+
+  // Debounce: block if a plan was generated in the last 5 minutes
+  const { count: recentCount } = await supabaseAdmin
+    .from('plans').select('*', { count: 'exact', head: true })
+    .eq('user_id', userId).gte('generated_at', new Date(Date.now() - 300000).toISOString());
+  if (recentCount > 0) return json(res, 409, { error: 'Plan generation already in progress. Please wait a few minutes.' });
+
+  json(res, 202, { ok: true });
+  setImmediate(async () => {
+    try {
+      await handleGeneratePlan(userId, intakeRows[0].data);
+    } catch (err) {
+      console.error('[coaching/generate-plan]', err.message);
+    }
+  });
+}
+
 // GET /api/coaching/clients — coach reads their client list
 async function handleCoachingClients(req, res) {
   const userId = await getUserIdFromToken(req.headers['authorization']);
@@ -3896,6 +3926,7 @@ const server = http.createServer(async (req, res) => {
       return json(res, 404, { error: 'Not found' });
     }
 
+    if (req.method === 'POST' && url === '/api/coaching/generate-plan') return await handleCoachingGeneratePlan(req, res);
     if (req.method === 'GET'  && url === '/api/coaching/clients')  return await handleCoachingClients(req, res);
     if (req.method === 'GET'  && url === '/api/coaching/checkins') return await handleCoachGetCheckins(req, res);
     if (req.method === 'POST' && url === '/api/coaching/checkins') return await handleSubmitCheckin(req, res);
