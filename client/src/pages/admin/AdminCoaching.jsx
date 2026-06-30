@@ -265,7 +265,10 @@ export default function AdminCoaching() {
 
   return (
     <div>
-      <style>{`.cadmin-inp:focus { border-color: ${C.pinkBorder} !important; box-shadow: 0 0 18px -8px ${C.pinkGlow} !important; outline: none; }`}</style>
+      <style>{`
+        .cadmin-inp:focus { border-color: ${C.pinkBorder} !important; box-shadow: 0 0 18px -8px ${C.pinkGlow} !important; outline: none; }
+        .cadmin-btn:active { transform: scale(0.97); }
+      `}</style>
 
       {/* ── COACHES ── */}
       <div style={sectionHeading}>Coaches</div>
@@ -294,11 +297,11 @@ export default function AdminCoaching() {
                     {confirmRemove === ('coach-' + c.id) ? (
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ color: C.ash, fontSize: 13, fontFamily: "'Inter', sans-serif" }}>Remove coach?</span>
-                        <button onClick={() => handleRemoveCoach(c)} style={btnDanger}>Yes</button>
+                        <button onClick={() => handleRemoveCoach(c)} className="cadmin-btn" style={btnPrimary}>Yes</button>
                         <button onClick={() => setConfirmRemove(null)} style={btnGhost}>Cancel</button>
                       </span>
                     ) : (
-                      <button onClick={() => setConfirmRemove('coach-' + c.id)} style={btnDanger}>Remove Coach</button>
+                      <button onClick={() => setConfirmRemove('coach-' + c.id)} className="cadmin-btn" style={btnPrimary}>Remove Coach</button>
                     )}
                     {removeMsg[c.id] && (
                       <div style={{ marginTop: 6, fontSize: 12, color: C.red, fontFamily: "'Inter', sans-serif", maxWidth: 300, textAlign: 'right' }}>
@@ -378,11 +381,11 @@ export default function AdminCoaching() {
                     {confirmRemove === cl.id ? (
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ color: C.ash, fontSize: 13, fontFamily: "'Inter', sans-serif" }}>Remove — revokes dashboard access</span>
-                        <button onClick={() => handleRemoveClient(cl.id)} style={btnDanger}>Yes, remove</button>
+                        <button onClick={() => handleRemoveClient(cl.id)} className="cadmin-btn" style={btnPrimary}>Yes, remove</button>
                         <button onClick={() => setConfirmRemove(null)} style={btnGhost}>Cancel</button>
                       </span>
                     ) : (
-                      <button onClick={() => setConfirmRemove(cl.id)} style={btnDanger}>Remove</button>
+                      <button onClick={() => setConfirmRemove(cl.id)} className="cadmin-btn" style={btnPrimary}>Remove</button>
                     )}
                   </td>
                 </tr>
