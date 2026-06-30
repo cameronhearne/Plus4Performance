@@ -2740,6 +2740,121 @@ async function handleAdminRegeneratePlan(req, res, targetUserId) {
   });
 }
 
+// ─── ADMIN COACHING ───────────────────────────────────────────────
+
+// GET /api/admin/coaching/coaches
+async function handleAdminGetCoaches(req, res) {
+  const adminId = await requireAdmin(req, res);
+  if (!adminId) return;
+  try {
+    const [{ data: { users: authUsers } }, { data: profiles }] = await Promise.all([
+      supabaseAdmin.auth.admin.listUsers({ perPage: 1000 }),
+      supabaseAdmin.from('profiles').select('id, first_name, last_name, is_coach, coach_id'),
+    ]);
+    const profileMap   = Object.fromEntries((profiles || []).map(p => [p.id, p]));
+    const coachIds     = new Set((profiles || []).filter(p => p.is_coach).map(p => p.id));
+    const clientCounts = {};
+    for (const p of (profiles || [])) {
+      if (p.coach_id) clientCounts[p.coach_id] = (clientCounts[p.coach_id] || 0) + 1;
+    }
+    const coaches = (authUsers || [])
+      .filter(u => coachIds.has(u.id))
+      .map(u => {
+        const p = profileMap[u.id] || {};
+        return {
+          id:          u.id,
+          email:       u.email || '',
+          firstName:   p.first_name || u.user_metadata?.first_name || '',
+          lastName:    p.last_name  || u.user_metadata?.last_name  || '',
+          clientCount: clientCounts[u.id] || 0,
+        };
+      });
+    return json(res, 200, { coaches });
+  } catch (err) {
+    console.error('[admin/coaching/coaches]', err);
+    return json(res, 500, { error: 'Failed to fetch coaches' });
+  }
+}
+
+// GET /api/admin/coaching/clients
+async function handleAdminGetClients(req, res) {
+  const adminId = await requireAdmin(req, res);
+  if (!adminId) return;
+  try {
+    const [{ data: { users: authUsers } }, { data: profiles }] = await Promise.all([
+      supabaseAdmin.auth.admin.listUsers({ perPage: 1000 }),
+      supabaseAdmin.from('profiles').select('id, first_name, last_name, coach_id, checkin_template'),
+    ]);
+    const authMap    = Object.fromEntries((authUsers || []).map(u => [u.id, u]));
+    const profileMap = Object.fromEntries((profiles || []).map(p => [p.id, p]));
+    const clients = (profiles || [])
+      .filter(p => p.coach_id)
+      .map(p => {
+        const u  = authMap[p.id]         || {};
+        const cp = profileMap[p.coach_id] || {};
+        const cu = authMap[p.coach_id]   || {};
+        return {
+          id:              p.id,
+          email:           u.email || '',
+          firstName:       p.first_name || u.user_metadata?.first_name || '',
+          lastName:        p.last_name  || u.user_metadata?.last_name  || '',
+          coach_id:        p.coach_id,
+          coachFirstName:  cp.first_name || cu.user_metadata?.first_name || '',
+          coachLastName:   cp.last_name  || cu.user_metadata?.last_name  || '',
+          coachEmail:      cu.email || '',
+          checkinTemplate: p.checkin_template || 'standard',
+        };
+      });
+    return json(res, 200, { clients });
+  } catch (err) {
+    console.error('[admin/coaching/clients]', err);
+    return json(res, 500, { error: 'Failed to fetch clients' });
+  }
+}
+
+// POST /api/admin/coaching/set-coach { user_id, is_coach }
+async function handleAdminSetCoach(req, res) {
+  const adminId = await requireAdmin(req, res);
+  if (!adminId) return;
+  let body;
+  try { body = JSON.parse(await readBody(req)); } catch { return json(res, 400, { error: 'Invalid JSON' }); }
+  const { user_id, is_coach } = body;
+  if (!user_id || typeof is_coach !== 'boolean') return json(res, 400, { error: 'user_id and is_coach (boolean) required' });
+
+  if (!is_coach) {
+    const { count } = await supabaseAdmin
+      .from('profiles').select('*', { count: 'exact', head: true }).eq('coach_id', user_id);
+    if (count > 0)
+      return json(res, 409, { error: 'Cannot remove coach status: ' + count + ' client' + (count > 1 ? 's are' : ' is') + ' still assigned. Reassign them first.' });
+  }
+
+  const { error } = await supabaseAdmin.from('profiles').update({ is_coach }).eq('id', user_id);
+  if (error) { console.error('[admin/coaching/set-coach]', error.message); return json(res, 500, { error: 'Failed to update' }); }
+  await logAdminAction(adminId, user_id, is_coach ? 'set_coach' : 'remove_coach', {});
+  return json(res, 200, { ok: true });
+}
+
+// POST /api/admin/coaching/assign-client { user_id, coach_id } (null = unassign)
+async function handleAdminAssignClient(req, res) {
+  const adminId = await requireAdmin(req, res);
+  if (!adminId) return;
+  let body;
+  try { body = JSON.parse(await readBody(req)); } catch { return json(res, 400, { error: 'Invalid JSON' }); }
+  const { user_id, coach_id } = body;
+  if (!user_id) return json(res, 400, { error: 'user_id required' });
+
+  const newCoachId = coach_id || null;
+  if (newCoachId) {
+    const { data: cp } = await supabaseAdmin.from('profiles').select('is_coach').eq('id', newCoachId).maybeSingle();
+    if (!cp?.is_coach) return json(res, 400, { error: 'Selected user is not a coach' });
+  }
+
+  const { error } = await supabaseAdmin.from('profiles').update({ coach_id: newCoachId }).eq('id', user_id);
+  if (error) { console.error('[admin/coaching/assign-client]', error.message); return json(res, 500, { error: 'Failed to assign' }); }
+  await logAdminAction(adminId, user_id, newCoachId ? 'assign_coach_client' : 'remove_coach_client', { coach_id: newCoachId });
+  return json(res, 200, { ok: true });
+}
+
 // ─── ADMIN ROUTE DISPATCHER ───────────────────────────────────────────────────
 
 function routeAdmin(req, res, url) {
@@ -2769,6 +2884,11 @@ function routeAdmin(req, res, url) {
     if (action === 'approve') return handleAdminApprove1rm(req, res, id);
     if (action === 'reject')  return handleAdminReject1rm(req, res, id);
   }
+
+  if (req.method === 'GET'  && url === '/api/admin/coaching/coaches')       return handleAdminGetCoaches(req, res);
+  if (req.method === 'GET'  && url === '/api/admin/coaching/clients')       return handleAdminGetClients(req, res);
+  if (req.method === 'POST' && url === '/api/admin/coaching/set-coach')     return handleAdminSetCoach(req, res);
+  if (req.method === 'POST' && url === '/api/admin/coaching/assign-client') return handleAdminAssignClient(req, res);
 
   return json(res, 404, { error: 'Not found' });
 }
