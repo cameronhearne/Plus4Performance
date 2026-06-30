@@ -42,6 +42,11 @@
 # React SPA routes — rewrite to app.html (the React entry) so client-side routing works.
 # Marketing pages (/, /faq.html etc.) are served as static files and NOT rewritten.
 [[redirects]]
+  from = "/coaching/checkin"
+  to = "/app.html"
+  status = 200
+
+[[redirects]]
   from = "/signup"
   to = "/app.html"
   status = 200

@@ -14,6 +14,7 @@ import AffiliateLogin from './pages/AffiliateLogin';
 import AffiliateDashboard from './pages/AffiliateDashboard';
 import PublicMarketplace from './pages/PublicMarketplace';
 import FAQ from './pages/FAQ';
+import CoachingCheckin from './pages/CoachingCheckin';
 
 function RequireAuth({ children }) {
   const [session, setSession] = useState(undefined);
@@ -82,6 +83,9 @@ export default function App() {
       } />
       <Route path="/admin/*" element={
         <RequireAdmin><AdminDashboard /></RequireAdmin>
+      } />
+      <Route path="/coaching/checkin" element={
+        <RequireAuth><CoachingCheckin /></RequireAuth>
       } />
       <Route path="/affiliate/login"     element={<AffiliateLogin />} />
       <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
