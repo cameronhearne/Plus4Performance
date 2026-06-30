@@ -518,13 +518,20 @@ export default function Dashboard() {
       if (!user) { navigate('/login'); return; }
       setUser(user);
 
-      const [{ data: profileData }, { data: snap, error: snapErr }] = await Promise.all([
-        supabase.from('profiles').select('is_admin, coach_id').eq('id', user.id).maybeSingle(),
+      const [
+        { data: coachingProfile, error: coachingProfileErr },
+        { data: adminProfile },
+        { data: snap, error: snapErr },
+      ] = await Promise.all([
+        supabase.from('profiles').select('coach_id').eq('id', user.id).maybeSingle(),
+        supabase.from('profiles').select('is_admin').eq('id', user.id).maybeSingle(),
         supabase.from('snapshots').select('*').eq('user_id', user.id)
           .order('created_at', { ascending: false }).limit(1).maybeSingle(),
       ]);
-      if (profileData?.is_admin) setIsAdmin(true);
-      const isCoachingClient = !!profileData?.coach_id;
+      console.log('[Dashboard] coaching profile:', { data: coachingProfile, error: coachingProfileErr });
+      if (coachingProfileErr) console.error('[Dashboard] profile error:', coachingProfileErr);
+      if (adminProfile?.is_admin) setIsAdmin(true);
+      const isCoachingClient = !!coachingProfile?.coach_id;
 
       if (snapErr) console.error('[Dashboard] snapshots error:', snapErr);
       if (snap) setSnapshot(snap);
