@@ -508,6 +508,18 @@ async function logAdminAction(adminUserId, targetUserId, actionType, details = {
   }).catch(err => console.error('[admin_actions] log error:', err.message));
 }
 
+// Returns true if user has an active subscription OR is a coaching client.
+// This is the server-side mirror of the client-side isUnlocked state.
+async function hasAccess(userId) {
+  const [{ data: sub }, { data: profile }] = await Promise.all([
+    supabaseAdmin.from('subscriptions').select('status, current_period_end')
+      .eq('user_id', userId).eq('status', 'active').maybeSingle(),
+    supabaseAdmin.from('profiles').select('coach_id').eq('id', userId).maybeSingle(),
+  ]);
+  const activeSub = sub && (!sub.current_period_end || new Date(sub.current_period_end) > new Date());
+  return activeSub || !!profile?.coach_id;
+}
+
 async function sendWelcomeEmail(email, firstName) {
   try {
     await fetch('https://api.resend.com/emails', {
@@ -1138,10 +1150,8 @@ async function handleRenewalPlan(req, res) {
   const userId = await getUserIdFromToken(req.headers['authorization']);
   if (!userId) return json(res, 401, { error: 'Unauthorized' });
 
-  const { data: sub } = await supabaseAdmin
-    .from('subscriptions').select('status').eq('user_id', userId).maybeSingle();
-  if (!sub || sub.status !== 'active')
-    return json(res, 403, { error: 'Active subscription required to generate a renewal plan.' });
+  if (!await hasAccess(userId))
+    return json(res, 403, { error: 'Active subscription or coaching client status required.' });
 
   const rawBody = await readBody(req);
   let parsed;
@@ -1492,7 +1502,7 @@ async function handleDeleteAccount(req, res) {
   } catch { /* body absent or not JSON — that is fine, proceed with token userId */ }
 
   try {
-    for (const table of ['weight_logs', 'lift_logs', 'session_completions', 'intake_submissions', 'snapshots', 'plans', 'subscriptions', 'monthly_checkins']) {
+    for (const table of ['weight_logs', 'lift_logs', 'session_completions', 'intake_submissions', 'snapshots', 'plans', 'subscriptions', 'monthly_checkins', 'coaching_checkins']) {
       await supabaseAdmin.from(table).delete().eq('user_id', userId);
     }
     const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
@@ -3524,6 +3534,102 @@ async function handleFriendList(req, res) {
   return json(res, 200, { friends, received, sent });
 }
 
+// ─── COACHING ────────────────────────────────────────────────────────────────
+
+// GET /api/coaching/clients — coach reads their client list
+async function handleCoachingClients(req, res) {
+  const userId = await getUserIdFromToken(req.headers['authorization']);
+  if (!userId) return json(res, 401, { error: 'Unauthorized' });
+
+  const { data: profile } = await supabaseAdmin
+    .from('profiles').select('is_coach').eq('id', userId).maybeSingle();
+  if (!profile?.is_coach) return json(res, 403, { error: 'Not a coach' });
+
+  const { data: clients } = await supabaseAdmin
+    .from('profiles')
+    .select('id, first_name, last_name, email, avatar_url, created_at')
+    .eq('coach_id', userId);
+
+  return json(res, 200, { clients: clients || [] });
+}
+
+// POST /api/coaching/checkins — member submits a weekly check-in
+async function handleSubmitCheckin(req, res) {
+  const userId = await getUserIdFromToken(req.headers['authorization']);
+  if (!userId) return json(res, 401, { error: 'Unauthorized' });
+
+  const { data: profile } = await supabaseAdmin
+    .from('profiles').select('coach_id').eq('id', userId).maybeSingle();
+  if (!profile?.coach_id) return json(res, 403, { error: 'Not assigned to a coach' });
+
+  let body;
+  try { body = JSON.parse(await readBody(req)); } catch { return json(res, 400, { error: 'Invalid JSON' }); }
+
+  const { period_label, responses, photos_included } = body;
+  if (!period_label?.trim()) return json(res, 400, { error: 'period_label is required' });
+
+  const { data, error } = await supabaseAdmin.from('coaching_checkins').insert({
+    user_id:        userId,
+    coach_id:       profile.coach_id,
+    period_label:   period_label.trim(),
+    responses:      responses   || {},
+    photos_included: !!photos_included,
+  }).select().single();
+
+  if (error) {
+    console.error('[coaching/checkins POST]', error.message);
+    return json(res, 500, { error: 'Failed to submit check-in' });
+  }
+  return json(res, 201, { checkin: data });
+}
+
+// GET /api/coaching/checkins — coach reads their clients' check-ins
+async function handleCoachGetCheckins(req, res) {
+  const userId = await getUserIdFromToken(req.headers['authorization']);
+  if (!userId) return json(res, 401, { error: 'Unauthorized' });
+
+  const { data: profile } = await supabaseAdmin
+    .from('profiles').select('is_coach').eq('id', userId).maybeSingle();
+  if (!profile?.is_coach) return json(res, 403, { error: 'Not a coach' });
+
+  const { data: checkins } = await supabaseAdmin
+    .from('coaching_checkins')
+    .select('*')
+    .eq('coach_id', userId)
+    .order('submitted_at', { ascending: false });
+
+  return json(res, 200, { checkins: checkins || [] });
+}
+
+// PATCH /api/coaching/checkins/:id/respond — coach writes response to a check-in
+async function handleCoachRespond(req, res, checkinId) {
+  const userId = await getUserIdFromToken(req.headers['authorization']);
+  if (!userId) return json(res, 401, { error: 'Unauthorized' });
+
+  const { data: checkin } = await supabaseAdmin
+    .from('coaching_checkins').select('coach_id').eq('id', checkinId).maybeSingle();
+  if (!checkin)               return json(res, 404, { error: 'Check-in not found' });
+  if (checkin.coach_id !== userId) return json(res, 403, { error: 'Forbidden' });
+
+  let body;
+  try { body = JSON.parse(await readBody(req)); } catch { return json(res, 400, { error: 'Invalid JSON' }); }
+
+  const { coach_response } = body;
+  if (!coach_response?.trim()) return json(res, 400, { error: 'coach_response is required' });
+
+  const { data, error } = await supabaseAdmin.from('coaching_checkins').update({
+    coach_response:     coach_response.trim(),
+    coach_responded_at: new Date().toISOString(),
+    responded_by:       userId,
+  }).eq('id', checkinId).select().single();
+
+  if (error) {
+    console.error('[coaching/checkins PATCH]', error.message);
+    return json(res, 500, { error: 'Failed to save response' });
+  }
+  return json(res, 200, { checkin: data });
+}
+
 // ─── HTTP SERVER ──────────────────────────────────────────────────────────────
 
 const server = http.createServer(async (req, res) => {
@@ -3665,6 +3771,12 @@ const server = http.createServer(async (req, res) => {
       if (friendIdM && req.method === 'DELETE') return await handleFriendRemove(req, res, friendIdM[1]);
       return json(res, 404, { error: 'Not found' });
     }
+
+    if (req.method === 'GET'  && url === '/api/coaching/clients')  return await handleCoachingClients(req, res);
+    if (req.method === 'GET'  && url === '/api/coaching/checkins') return await handleCoachGetCheckins(req, res);
+    if (req.method === 'POST' && url === '/api/coaching/checkins') return await handleSubmitCheckin(req, res);
+    const checkinRespondM = url.match(/^\/api\/coaching\/checkins\/([0-9a-f-]{36})\/respond$/);
+    if (checkinRespondM && req.method === 'PATCH') return await handleCoachRespond(req, res, checkinRespondM[1]);
 
     if (req.method === 'POST' && url === '/api/coaching-apply') return await handleCoachingApply(req, res);
 

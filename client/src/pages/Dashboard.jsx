@@ -518,16 +518,14 @@ export default function Dashboard() {
       if (!user) { navigate('/login'); return; }
       setUser(user);
 
-      supabase.from('profiles').select('is_admin').eq('id', user.id).maybeSingle()
-        .then(({ data }) => { if (data?.is_admin) setIsAdmin(true); });
+      const [{ data: profileData }, { data: snap, error: snapErr }] = await Promise.all([
+        supabase.from('profiles').select('is_admin, coach_id').eq('id', user.id).maybeSingle(),
+        supabase.from('snapshots').select('*').eq('user_id', user.id)
+          .order('created_at', { ascending: false }).limit(1).maybeSingle(),
+      ]);
+      if (profileData?.is_admin) setIsAdmin(true);
+      const isCoachingClient = !!profileData?.coach_id;
 
-      const { data: snap, error: snapErr } = await supabase
-        .from('snapshots')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
       if (snapErr) console.error('[Dashboard] snapshots error:', snapErr);
       if (snap) setSnapshot(snap);
 
@@ -541,10 +539,11 @@ export default function Dashboard() {
       if (subErr) console.error('[Dashboard] subscriptions error:', subErr);
 
       const subscribed = sub && (!sub.current_period_end || new Date(sub.current_period_end) > new Date());
-      setIsUnlocked(!!subscribed);
+      const unlocked = !!subscribed || isCoachingClient;
+      setIsUnlocked(unlocked);
       if (sub) setSubRow(sub);
 
-      if (subscribed) {
+      if (unlocked) {
         const { data: planRow, error: planErr } = await supabase
           .from('plans')
           .select('plan_data, generated_at')

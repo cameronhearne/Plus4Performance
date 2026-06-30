@@ -309,3 +309,76 @@ alter table public.one_rep_maxes add column if not exists flagged_for_review boo
 alter table public.one_rep_maxes add column if not exists flagged_reason text;
 -- null = pending review, 'approved' = cleared for leaderboard, 'rejected' = permanent personal-only
 alter table public.one_rep_maxes add column if not exists reviewer_action text;
+
+-- ─── COACHING — Phase 1: data layer ──────────────────────────────────────────
+
+-- 1. Coach role + client assignment on profiles
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS is_coach BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS coach_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL;
+
+-- Prevent authenticated users from setting their own is_coach or coach_id.
+-- service_role bypasses RLS and retains full column access for server-side admin ops.
+REVOKE UPDATE (is_coach, coach_id) ON public.profiles FROM authenticated;
+
+-- 2. has_dashboard_access() — extends is_subscribed() to also grant access to coaching clients.
+-- A user passes the gate when they have an active Stripe subscription OR a non-null coach_id.
+CREATE OR REPLACE FUNCTION public.has_dashboard_access(user_uuid UUID)
+RETURNS BOOLEAN LANGUAGE SQL SECURITY DEFINER AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.subscriptions
+    WHERE user_id = user_uuid
+      AND status = 'active'
+      AND (current_period_end IS NULL OR current_period_end > NOW())
+  )
+  OR EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = user_uuid
+      AND coach_id IS NOT NULL
+  );
+$$;
+
+-- 3. coaching_checkins table
+CREATE TABLE public.coaching_checkins (
+  id                 UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id            UUID        NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  coach_id           UUID        NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  submitted_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  period_label       TEXT        NOT NULL,   -- e.g. "Week of 2026-06-30"
+  responses          JSONB       NOT NULL DEFAULT '{}',
+  photos_included    BOOLEAN     NOT NULL DEFAULT FALSE,
+  coach_response     TEXT,
+  coach_responded_at TIMESTAMPTZ,
+  responded_by       UUID        REFERENCES public.profiles(id) ON DELETE SET NULL
+);
+
+ALTER TABLE public.coaching_checkins ENABLE ROW LEVEL SECURITY;
+
+-- Members: read and submit their own check-ins
+CREATE POLICY "Members read own checkins"
+  ON public.coaching_checkins FOR SELECT TO authenticated
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Members submit checkins"
+  ON public.coaching_checkins FOR INSERT TO authenticated
+  WITH CHECK (auth.uid() = user_id);
+
+-- Coaches: read check-ins assigned to them; update only the response columns
+CREATE POLICY "Coaches read client checkins"
+  ON public.coaching_checkins FOR SELECT TO authenticated
+  USING (auth.uid() = coach_id);
+
+CREATE POLICY "Coaches respond to checkins"
+  ON public.coaching_checkins FOR UPDATE TO authenticated
+  USING (auth.uid() = coach_id);
+
+-- Column-level: restrict which columns authenticated users may UPDATE.
+-- Members cannot UPDATE at all (INSERT-only for their own rows).
+-- Coaches may only update the three response fields — user_id, responses, etc. are immutable.
+REVOKE UPDATE ON public.coaching_checkins FROM authenticated;
+GRANT  UPDATE (coach_response, coach_responded_at, responded_by)
+  ON public.coaching_checkins TO authenticated;
+
+-- Critical: server-side admin queries run as service_role and must not be blocked by RLS/grants.
+GRANT ALL ON public.coaching_checkins TO service_role;
+
+-- ─────────────────────────────────────────────────────────────────────────────
