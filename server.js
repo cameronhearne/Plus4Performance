@@ -499,13 +499,17 @@ async function requireAdmin(req, res) {
 }
 
 async function logAdminAction(adminUserId, targetUserId, actionType, details = {}) {
-  await supabaseAdmin.from('admin_actions').insert({
-    admin_user_id:  adminUserId,
-    target_user_id: targetUserId,
-    action_type:    actionType,
-    details,
-    created_at:     new Date().toISOString(),
-  }).catch(err => console.error('[admin_actions] log error:', err.message));
+  try {
+    await supabaseAdmin.from('admin_actions').insert({
+      admin_user_id:  adminUserId,
+      target_user_id: targetUserId,
+      action_type:    actionType,
+      details,
+      created_at:     new Date().toISOString(),
+    });
+  } catch (err) {
+    console.error('[admin_actions] log error:', err.message);
+  }
 }
 
 // Returns true if user has an active subscription OR is a coaching client.
