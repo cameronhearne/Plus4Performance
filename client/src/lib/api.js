@@ -181,6 +181,7 @@ export async function adminGetCoaches(token)                     { return authed
 export async function adminGetCoachingClients(token)             { return authedGet('/api/admin/coaching/clients', token); }
 export async function adminSetCoach(token, body)                 { return authedPost('/api/admin/coaching/set-coach', body, token); }
 export async function adminAssignClient(token, body)             { return authedPost('/api/admin/coaching/assign-client', body, token); }
+export async function adminSetCheckinTemplate(token, body)       { return authedPost('/api/admin/coaching/set-template', body, token); }
 
 export async function deleteAccount(token) {
   const res = await fetch((import.meta.env.VITE_API_URL || '') + '/delete-account', {

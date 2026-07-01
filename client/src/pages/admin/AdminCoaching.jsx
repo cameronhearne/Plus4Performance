@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase';
 import {
   adminGetCoaches, adminGetCoachingClients,
   adminSetCoach, adminAssignClient, adminListUsers,
+  adminSetCheckinTemplate,
 } from '../../lib/api';
 
 // ─── DESIGN TOKENS (match all other admin tabs exactly) ──────────────────────
@@ -177,6 +178,10 @@ export default function AdminCoaching() {
   // Remove-client confirm
   const [confirmRemove, setConfirmRemove] = useState(null);
 
+  // Template change per-row
+  const [templateWorking, setTemplateWorking] = useState({});
+  const [templateMsg,     setTemplateMsg]     = useState({});
+
   const loadAll = useCallback(async (tok) => {
     const t = tok || token;
     if (!t) return;
@@ -242,6 +247,20 @@ export default function AdminCoaching() {
       setClientMsg({ type: 'err', text: e.message });
     }
     setClientWorking(false);
+  }
+
+  async function handleSetTemplate(clientId, template) {
+    setTemplateWorking(s => ({ ...s, [clientId]: true }));
+    setTemplateMsg(s => ({ ...s, [clientId]: '' }));
+    try {
+      await adminSetCheckinTemplate(token, { user_id: clientId, template });
+      setClients(cs => cs.map(c => c.id === clientId ? { ...c, checkinTemplate: template } : c));
+      setTemplateMsg(s => ({ ...s, [clientId]: 'Saved' }));
+      setTimeout(() => setTemplateMsg(s => ({ ...s, [clientId]: '' })), 2000);
+    } catch (e) {
+      setTemplateMsg(s => ({ ...s, [clientId]: e.message || 'Failed' }));
+    }
+    setTemplateWorking(s => ({ ...s, [clientId]: false }));
   }
 
   async function handleRemoveClient(clientId) {
@@ -375,7 +394,21 @@ export default function AdminCoaching() {
                   <td style={{ ...tdStyle, color: C.ashDim }}>{cl.email}</td>
                   <td style={tdStyle}>{[cl.coachFirstName, cl.coachLastName].filter(Boolean).join(' ') || cl.coachEmail || '—'}</td>
                   <td style={tdStyle}>
-                    <span style={{ fontFamily: "'Roboto Mono', monospace", fontSize: 12, color: C.ashDim }}>{cl.checkinTemplate}</span>
+                    <select
+                      className="cadmin-inp"
+                      value={cl.checkinTemplate}
+                      onChange={e => handleSetTemplate(cl.id, e.target.value)}
+                      disabled={templateWorking[cl.id]}
+                      style={{ ...selectStyle, fontSize: 12, padding: '7px 10px', width: 'auto', minWidth: 112, fontFamily: "'Roboto Mono', monospace", opacity: templateWorking[cl.id] ? 0.5 : 1 }}
+                    >
+                      <option value="standard">standard</option>
+                      <option value="enhanced">enhanced</option>
+                    </select>
+                    {templateMsg[cl.id] && (
+                      <span style={{ marginLeft: 8, fontSize: 12, color: templateMsg[cl.id] === 'Saved' ? C.green : C.red, fontFamily: "'Inter', sans-serif" }}>
+                        {templateMsg[cl.id]}
+                      </span>
+                    )}
                   </td>
                   <td style={{ ...tdStyle, textAlign: 'right' }}>
                     {confirmRemove === cl.id ? (

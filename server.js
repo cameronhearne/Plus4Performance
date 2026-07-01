@@ -2899,6 +2899,22 @@ async function handleAdminResetPlanLimit(req, res) {
   return json(res, 200, { ok: true });
 }
 
+// POST /api/admin/coaching/set-template { user_id, template }
+async function handleAdminSetCheckinTemplate(req, res) {
+  const adminId = await requireAdmin(req, res);
+  if (!adminId) return;
+  let body;
+  try { body = JSON.parse(await readBody(req)); } catch { return json(res, 400, { error: 'Invalid JSON' }); }
+  const { user_id, template } = body;
+  if (!user_id || !['standard', 'enhanced'].includes(template))
+    return json(res, 400, { error: 'user_id and template ("standard" or "enhanced") required' });
+
+  const { error } = await supabaseAdmin.from('profiles').update({ checkin_template: template }).eq('id', user_id);
+  if (error) { console.error('[admin/coaching/set-template]', error.message); return json(res, 500, { error: 'Failed to update template' }); }
+  await logAdminAction(adminId, user_id, 'set_checkin_template', { template });
+  return json(res, 200, { ok: true });
+}
+
 // ─── ADMIN ROUTE DISPATCHER ───────────────────────────────────────────────────
 
 function routeAdmin(req, res, url) {
@@ -2934,6 +2950,7 @@ function routeAdmin(req, res, url) {
   if (req.method === 'POST' && url === '/api/admin/coaching/set-coach')       return handleAdminSetCoach(req, res);
   if (req.method === 'POST' && url === '/api/admin/coaching/assign-client')   return handleAdminAssignClient(req, res);
   if (req.method === 'POST' && url === '/api/admin/coaching/reset-plan-limit') return handleAdminResetPlanLimit(req, res);
+  if (req.method === 'POST' && url === '/api/admin/coaching/set-template')    return handleAdminSetCheckinTemplate(req, res);
 
   return json(res, 404, { error: 'Not found' });
 }

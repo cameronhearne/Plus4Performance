@@ -165,6 +165,8 @@ export default function CoachingCheckin() {
   const [done,        setDone]        = useState(false);
   const [submitting,  setSubmitting]  = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [stepValidErr, setStepValidErr] = useState('');
+  const [isEnhanced,   setIsEnhanced]   = useState(false);
 
   const [form, setForm] = useState({
     weight: '',
@@ -177,6 +179,7 @@ export default function CoachingCheckin() {
     sleepScore: null, energyScore: null,
     supplements: '', waistCm: '', chestCm: '', hipsCm: '', armCm: '', thighCm: '', longTermGoal: '', coachFeedback: '',
     biggestWin: '', upcomingEvents: '', questionsForCoach: '',
+    compounds: '', doseFrequency: '', weeksIntoCycle: '', lastBloodPressure: '', lastBloodWork: '',
   });
   const upd = (key, val) => setForm(f => ({ ...f, [key]: val }));
 
@@ -200,8 +203,7 @@ export default function CoachingCheckin() {
       const c = count ?? 0;
       setIsMonthly(c === 0 || c % 4 === 0);
 
-      // TODO: enhanced template branch for PED/bloods variant
-      // if (profile.checkin_template === 'enhanced') { ... }
+      setIsEnhanced(profile.checkin_template === 'enhanced');
 
       setLoading(false);
     }
@@ -213,6 +215,7 @@ export default function CoachingCheckin() {
     { key: 'training',  label: 'Weekly Check-in' },
     { key: 'nutrition', label: 'Weekly Check-in' },
     { key: 'recovery',  label: 'Weekly Check-in' },
+    ...(isEnhanced ? [{ key: 'health', label: 'Weekly Check-in' }] : []),
     { key: 'photos',    label: 'Weekly Check-in' },
     ...(isMonthly ? [{ key: 'monthly', label: 'Monthly Review' }] : []),
     { key: 'coach',     label: 'Weekly Check-in' },
@@ -227,9 +230,21 @@ export default function CoachingCheckin() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
   function retreat() {
+    setStepValidErr('');
     setStepIdx(i => i - 1);
     setAnimKey(k => k + 1);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function handleAdvance() {
+    if (currentStep?.key === 'health') {
+      if (!form.lastBloodPressure.trim() || !form.lastBloodWork.trim()) {
+        setStepValidErr('Blood pressure reading and blood work are both required to continue.');
+        return;
+      }
+    }
+    setStepValidErr('');
+    advance();
   }
 
   async function handleSubmit() {
@@ -319,6 +334,13 @@ export default function CoachingCheckin() {
       biggestWin:         form.biggestWin         || null,
       upcomingEvents:     form.upcomingEvents     || null,
       questionsForCoach:  form.questionsForCoach  || null,
+      ...(isEnhanced ? {
+        compounds:         form.compounds         || null,
+        doseFrequency:     form.doseFrequency     || null,
+        weeksIntoCycle:    form.weeksIntoCycle ? parseInt(form.weeksIntoCycle, 10) : null,
+        lastBloodPressure: form.lastBloodPressure || null,
+        lastBloodWork:     form.lastBloodWork     || null,
+      } : {}),
     };
 
     try {
@@ -481,6 +503,50 @@ export default function CoachingCheckin() {
     );
   }
 
+  function renderHealthDisclosure() {
+    return (
+      <>
+        <h2 style={h2Style}>Health Disclosure</h2>
+        <p style={subStyle}>
+          This information is confidential — shared with your coach only, and used solely to inform safer programming. Not medical advice.
+        </p>
+        <div style={{ background: C.surface2, border: `1px solid ${C.glowLine}`, borderRadius: 10, padding: '14px 16px', marginBottom: 26 }}>
+          <p style={{ fontSize: 13, color: C.ash, margin: 0, lineHeight: 1.6 }}>
+            Blood pressure and blood work are <strong style={{ color: C.bone }}>required</strong> fields. Monitoring these is the responsible minimum for safe enhanced coaching.
+          </p>
+        </div>
+        <Q label="Compounds / cycle split">
+          <textarea className="coaching-inp" style={taStyle}
+            placeholder="e.g. Test E 500mg / Deca 300mg / Var 50mg"
+            value={form.compounds} onChange={e => upd('compounds', e.target.value)} />
+        </Q>
+        <Q label="Doses & frequency">
+          <textarea className="coaching-inp" style={taStyle}
+            placeholder="e.g. Test E 2×/week Mon & Thu; Anavar 50mg daily"
+            value={form.doseFrequency} onChange={e => upd('doseFrequency', e.target.value)} />
+        </Q>
+        <Q label="Weeks into cycle">
+          <input className="coaching-inp" type="number" inputMode="numeric" placeholder="0"
+            value={form.weeksIntoCycle} onChange={e => upd('weeksIntoCycle', e.target.value)}
+            style={inputStyle} />
+        </Q>
+        <Q label="Last blood pressure reading" hint="Required — e.g. 128/78 mmHg">
+          <input className="coaching-inp" type="text" placeholder="e.g. 128/78"
+            value={form.lastBloodPressure}
+            onChange={e => { setStepValidErr(''); upd('lastBloodPressure', e.target.value); }}
+            style={{ ...inputStyle, borderColor: stepValidErr && !form.lastBloodPressure.trim() ? 'rgba(232,80,58,0.7)' : undefined }} />
+        </Q>
+        <Q label="Last blood work" hint="Required — date and summary result">
+          <textarea className="coaching-inp"
+            style={{ ...taStyle, borderColor: stepValidErr && !form.lastBloodWork.trim() ? 'rgba(232,80,58,0.7)' : undefined }}
+            placeholder="e.g. 12 Jun 2026 — RBC, haematocrit, liver enzymes all within range"
+            value={form.lastBloodWork}
+            onChange={e => { setStepValidErr(''); upd('lastBloodWork', e.target.value); }} />
+        </Q>
+      </>
+    );
+  }
+
   function renderPhotos() {
     return (
       <>
@@ -624,6 +690,7 @@ export default function CoachingCheckin() {
     if (k === 'training')  return renderTraining();
     if (k === 'nutrition') return renderNutrition();
     if (k === 'recovery')  return renderRecovery();
+    if (k === 'health')    return renderHealthDisclosure();
     if (k === 'photos')    return renderPhotos();
     if (k === 'monthly')   return renderMonthly();
     if (k === 'coach')     return renderCoach();
@@ -692,6 +759,11 @@ export default function CoachingCheckin() {
                 {submitError}
               </p>
             )}
+            {stepValidErr && (
+              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, color: '#E8503A', marginBottom: 14, lineHeight: 1.5 }}>
+                {stepValidErr}
+              </p>
+            )}
 
             {/* ── Nav ── */}
             <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
@@ -705,7 +777,7 @@ export default function CoachingCheckin() {
                 </button>
               )}
               <button
-                onClick={isLastStep ? handleSubmit : advance}
+                onClick={isLastStep ? handleSubmit : handleAdvance}
                 disabled={submitting}
                 onMouseDown={e => { if (!submitting) e.currentTarget.style.transform = 'scale(0.97)'; }}
                 onMouseUp={e => e.currentTarget.style.transform = ''}

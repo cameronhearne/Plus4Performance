@@ -230,6 +230,20 @@ export default function CoachClientDetail() {
               {r.digestionNote && <QA q="Digestion note" a={r.digestionNote} />}
               {r.alcoholDetail && <QA q="Alcohol"        a={r.alcoholDetail} />}
 
+              {/* Health disclosure — only appears when enhanced template data is present */}
+              {(r.lastBloodPressure || r.lastBloodWork || r.compounds) && (
+                <div style={{ marginTop: 20, paddingTop: 18, borderTop: `1px solid ${C.glowLine}` }}>
+                  <div style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 600, letterSpacing: '0.12em', fontSize: 11, textTransform: 'uppercase', color: C.ashDim, marginBottom: 14 }}>
+                    Health Disclosure
+                  </div>
+                  <QA q="Blood pressure"    a={r.lastBloodPressure || null} />
+                  <QA q="Blood work"        a={r.lastBloodWork     || null} />
+                  <QA q="Compounds / cycle" a={r.compounds         || null} />
+                  <QA q="Doses & frequency" a={r.doseFrequency     || null} />
+                  {r.weeksIntoCycle != null && <QA q="Weeks into cycle" a={String(r.weeksIntoCycle)} />}
+                </div>
+              )}
+
               {/* Progress photos */}
               <div style={{ marginBottom: 0 }}>
                 <div style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 600, letterSpacing: '0.08em', fontSize: 11, textTransform: 'uppercase', color: C.ashDim, marginBottom: 5 }}>
