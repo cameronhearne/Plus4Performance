@@ -399,6 +399,10 @@ setInterval(() => {
   for (const [k, v] of _rlStore) if (now > v.resetAt) _rlStore.delete(k);
 }, 10 * 60 * 1000).unref();
 
+// In-memory plan generation status (keyed by userId); lost on restart but survives across requests
+// within the same server instance. Values: { status: 'generating'|'done'|'error', error?: string }
+const planGenStatus = new Map();
+
 function getClientIp(req) {
   const fwd = req.headers['x-forwarded-for'];
   return fwd ? fwd.split(',')[0].trim() : (req.socket?.remoteAddress || 'unknown');
@@ -3674,20 +3678,40 @@ async function handleCoachingGeneratePlan(req, res) {
   if (intakeErr) return json(res, 500, { error: 'Failed to fetch intake data' });
   if (!intakeRows?.length) return json(res, 400, { error: 'No intake found. Please complete your profile first.' });
 
+  // Pre-flight the 24h rate limit that handleGeneratePlan enforces internally.
+  // Without this, the endpoint returns 202 and then silently fails in the background.
+  const { count: dayCount } = await supabaseAdmin
+    .from('plans').select('*', { count: 'exact', head: true })
+    .eq('user_id', userId).gte('generated_at', new Date(Date.now() - 86400000).toISOString());
+  if (dayCount >= 2) return json(res, 429, { error: 'Plan generation limit reached (2 per day). Please try again tomorrow.' });
+
   // Debounce: block if a plan was generated in the last 5 minutes
   const { count: recentCount } = await supabaseAdmin
     .from('plans').select('*', { count: 'exact', head: true })
     .eq('user_id', userId).gte('generated_at', new Date(Date.now() - 300000).toISOString());
   if (recentCount > 0) return json(res, 409, { error: 'Plan generation already in progress. Please wait a few minutes.' });
 
+  planGenStatus.set(userId, { status: 'generating' });
   json(res, 202, { ok: true });
+
   setImmediate(async () => {
     try {
       await handleGeneratePlan(userId, intakeRows[0].data);
+      planGenStatus.set(userId, { status: 'done' });
+      console.log('[coaching/generate-plan] complete for user', userId);
     } catch (err) {
-      console.error('[coaching/generate-plan]', err.message);
+      console.error('[coaching/generate-plan] failed for user', userId, ':', err.message);
+      planGenStatus.set(userId, { status: 'error', error: err.message });
     }
   });
+}
+
+// GET /api/coaching/plan-gen-status — poll to check background generation outcome
+async function handleCoachingPlanGenStatus(req, res) {
+  const userId = await getUserIdFromToken(req.headers['authorization']);
+  if (!userId) return json(res, 401, { error: 'Unauthorized' });
+  const status = planGenStatus.get(userId) || { status: 'idle' };
+  return json(res, 200, status);
 }
 
 // GET /api/coaching/clients — coach reads their client list
@@ -3926,8 +3950,9 @@ const server = http.createServer(async (req, res) => {
       return json(res, 404, { error: 'Not found' });
     }
 
-    if (req.method === 'POST' && url === '/api/coaching/generate-plan') return await handleCoachingGeneratePlan(req, res);
-    if (req.method === 'GET'  && url === '/api/coaching/clients')  return await handleCoachingClients(req, res);
+    if (req.method === 'POST' && url === '/api/coaching/generate-plan')    return await handleCoachingGeneratePlan(req, res);
+    if (req.method === 'GET'  && url === '/api/coaching/plan-gen-status') return await handleCoachingPlanGenStatus(req, res);
+    if (req.method === 'GET'  && url === '/api/coaching/clients')          return await handleCoachingClients(req, res);
     if (req.method === 'GET'  && url === '/api/coaching/checkins') return await handleCoachGetCheckins(req, res);
     if (req.method === 'POST' && url === '/api/coaching/checkins') return await handleSubmitCheckin(req, res);
     const checkinRespondM = url.match(/^\/api\/coaching\/checkins\/([0-9a-f-]{36})\/respond$/);

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { createCheckoutSession, getExerciseSubstitutions, swapExercise, coachingGeneratePlan } from '../lib/api';
+import { createCheckoutSession, getExerciseSubstitutions, swapExercise, coachingGeneratePlan, coachingPlanGenStatus } from '../lib/api';
 import AchievementsTab from './AchievementsTab';
 import ProgressTab from './ProgressTab';
 import TodayTab from './TodayTab';
@@ -627,19 +627,34 @@ export default function Dashboard() {
   async function handleCoachingGeneratePlan() {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
+    const token = session.access_token;
     try {
-      await coachingGeneratePlan(session.access_token);
+      await coachingGeneratePlan(token);
     } catch (e) {
       console.error('[coaching] generate-plan:', e);
+      setPlanGenError(true);
       return;
     }
     setPlanGenerating(true);
     let attempts = 0;
-    const MAX = 50;
+    const MAX = 60;
     const poll = setInterval(async () => {
       try {
         const { data: { user: u } } = await supabase.auth.getUser();
         if (!u) return;
+
+        // Check background job outcome first — stops the poll as soon as the server knows
+        try {
+          const genStatus = await coachingPlanGenStatus(token);
+          if (genStatus.status === 'error') {
+            console.error('[coaching] plan gen failed:', genStatus.error);
+            clearInterval(poll);
+            setPlanGenerating(false);
+            setPlanGenError(true);
+            return;
+          }
+        } catch (_) {}
+
         const { data: planRow } = await supabase
           .from('plans').select('plan_data, generated_at')
           .eq('user_id', u.id).eq('is_active', true).maybeSingle();
@@ -651,7 +666,7 @@ export default function Dashboard() {
           return;
         }
       } catch (e) { console.error('[plan poll]', e); }
-      if (++attempts >= MAX) { clearInterval(poll); setPlanGenError(true); }
+      if (++attempts >= MAX) { clearInterval(poll); setPlanGenerating(false); setPlanGenError(true); }
     }, 3000);
   }
 
