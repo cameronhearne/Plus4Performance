@@ -665,7 +665,7 @@ function NutritionPreferencesSection({ intake, intakeLoading }) {
             ✓ Preferences saved
           </div>
           <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 12, color: C.ash, margin: 0, lineHeight: 1.5 }}>
-            Your new preferences will apply to your next plan generation or renewal.
+            Your updated preferences will apply to your next 12-week plan — your current meal plan is unchanged.
           </p>
         </div>
       )}

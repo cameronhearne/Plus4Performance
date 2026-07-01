@@ -1689,11 +1689,11 @@ async function handleUpdateNutritionPreferences(req, res) {
   if (!intakeRow) return json(res, 400, { error: 'No intake data found. Complete the intake form first.' });
 
   const updatedData = { ...intakeRow.data };
-  if (dietary      !== undefined) updatedData.dietary      = dietary;
-  if (foodsNotEat  !== undefined) updatedData.foodsNotEat  = sanitiseInput(String(foodsNotEat), 500);
-  if (mealsPerDay  !== undefined) updatedData.mealsPerDay  = String(mealsPerDay);
-  if (mealPlanType !== undefined) updatedData.mealPlanType = mealPlanType;
-  if (supplements  !== undefined) updatedData.supplements  = supplements;
+  if (dietary      !== undefined && dietary      !== '') updatedData.dietary      = dietary;
+  if (foodsNotEat  !== undefined && String(foodsNotEat).trim() !== '') updatedData.foodsNotEat  = sanitiseInput(String(foodsNotEat), 500);
+  if (mealsPerDay  !== undefined && String(mealsPerDay) !== '') updatedData.mealsPerDay  = String(mealsPerDay);
+  if (mealPlanType !== undefined && mealPlanType !== '') updatedData.mealPlanType = mealPlanType;
+  if (supplements  !== undefined && supplements  !== '') updatedData.supplements  = supplements;
 
   const { error: updateErr } = await supabaseAdmin
     .from('intake_submissions').update({ data: updatedData }).eq('id', intakeRow.id);
