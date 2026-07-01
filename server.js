@@ -990,22 +990,13 @@ async function handleSnapshot(req, res) {
 async function handleGeneratePlan(userId, intakeData, renewalCtx = null) {
   console.log('Generating full plan for user:', userId);
 
-  // Per-user Anthropic spend protection: max 2 plan generations per 24 hours
-  const dayAgo = new Date(Date.now() - 86400000).toISOString();
-  const { count: recentCount } = await supabaseAdmin
-    .from('plans')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', userId)
-    .gte('generated_at', dayAgo);
-  if (recentCount >= 2) {
-    throw new Error('You have reached the plan generation limit for today. Please try again tomorrow.');
-  }
-
-  // Resolve creator-specific coaching bible (null = use default for all main-site users)
+  // Resolve profile: creator bible + admin flag (single query, used in two places below)
   let creatorBible = null;
+  let isAdminUser  = false;
   try {
     const { data: profile } = await supabaseAdmin
-      .from('profiles').select('creator_id').eq('id', userId).maybeSingle();
+      .from('profiles').select('creator_id, is_admin').eq('id', userId).maybeSingle();
+    isAdminUser = !!profile?.is_admin;
     if (profile?.creator_id) {
       const { data: creator } = await supabaseAdmin
         .from('creators').select('system_prompt').eq('id', profile.creator_id).maybeSingle();
@@ -1015,7 +1006,21 @@ async function handleGeneratePlan(userId, intakeData, renewalCtx = null) {
       }
     }
   } catch (err) {
-    console.warn('[plan-gen] creator lookup failed, falling back to default bible:', err.message);
+    console.warn('[plan-gen] profile lookup failed, falling back to defaults:', err.message);
+  }
+
+  // Per-user Anthropic spend protection: max 2 plan generations per 24 hours.
+  // Admins are exempt so test/coaching accounts are never blocked during debugging.
+  if (!isAdminUser) {
+    const dayAgo = new Date(Date.now() - 86400000).toISOString();
+    const { count: recentCount } = await supabaseAdmin
+      .from('plans')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .gte('generated_at', dayAgo);
+    if (recentCount >= 2) {
+      throw new Error('You have reached the plan generation limit for today. Please try again tomorrow.');
+    }
   }
 
   let planData;
@@ -2863,6 +2868,37 @@ async function handleAdminAssignClient(req, res) {
   return json(res, 200, { ok: true });
 }
 
+// POST /api/admin/coaching/reset-plan-limit { user_id }
+// Back-dates the user's plans from the last 24h to 25h ago, pushing them out of the
+// rate-limit window so the user can generate again immediately. Preserves plan data.
+async function handleAdminResetPlanLimit(req, res) {
+  const adminId = await requireAdmin(req, res);
+  if (!adminId) return;
+
+  let body;
+  try { body = JSON.parse(await readBody(req)); } catch { return json(res, 400, { error: 'Invalid JSON' }); }
+  const { user_id } = body;
+  if (!user_id) return json(res, 400, { error: 'user_id required' });
+
+  const dayAgo    = new Date(Date.now() - 86400000).toISOString();
+  const backdateTo = new Date(Date.now() - 90000000).toISOString(); // 25h ago, safely outside the window
+
+  const { error } = await supabaseAdmin
+    .from('plans')
+    .update({ generated_at: backdateTo })
+    .eq('user_id', user_id)
+    .gte('generated_at', dayAgo);
+
+  if (error) {
+    console.error('[admin/coaching/reset-plan-limit]', error.message);
+    return json(res, 500, { error: 'Failed to reset plan limit' });
+  }
+
+  await logAdminAction(adminId, user_id, 'reset_plan_limit', {});
+  console.log(`[admin/coaching/reset-plan-limit] cleared 24h window for user ${user_id}`);
+  return json(res, 200, { ok: true });
+}
+
 // ─── ADMIN ROUTE DISPATCHER ───────────────────────────────────────────────────
 
 function routeAdmin(req, res, url) {
@@ -2893,10 +2929,11 @@ function routeAdmin(req, res, url) {
     if (action === 'reject')  return handleAdminReject1rm(req, res, id);
   }
 
-  if (req.method === 'GET'  && url === '/api/admin/coaching/coaches')       return handleAdminGetCoaches(req, res);
-  if (req.method === 'GET'  && url === '/api/admin/coaching/clients')       return handleAdminGetClients(req, res);
-  if (req.method === 'POST' && url === '/api/admin/coaching/set-coach')     return handleAdminSetCoach(req, res);
-  if (req.method === 'POST' && url === '/api/admin/coaching/assign-client') return handleAdminAssignClient(req, res);
+  if (req.method === 'GET'  && url === '/api/admin/coaching/coaches')         return handleAdminGetCoaches(req, res);
+  if (req.method === 'GET'  && url === '/api/admin/coaching/clients')         return handleAdminGetClients(req, res);
+  if (req.method === 'POST' && url === '/api/admin/coaching/set-coach')       return handleAdminSetCoach(req, res);
+  if (req.method === 'POST' && url === '/api/admin/coaching/assign-client')   return handleAdminAssignClient(req, res);
+  if (req.method === 'POST' && url === '/api/admin/coaching/reset-plan-limit') return handleAdminResetPlanLimit(req, res);
 
   return json(res, 404, { error: 'Not found' });
 }
