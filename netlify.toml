@@ -115,3 +115,13 @@
   from = "/affiliate/dashboard"
   to = "/app.html"
   status = 200
+
+[[redirects]]
+  from = "/coach"
+  to = "/app.html"
+  status = 200
+
+[[redirects]]
+  from = "/coach/*"
+  to = "/app.html"
+  status = 200
