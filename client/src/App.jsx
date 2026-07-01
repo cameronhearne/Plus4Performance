@@ -15,6 +15,8 @@ import AffiliateDashboard from './pages/AffiliateDashboard';
 import PublicMarketplace from './pages/PublicMarketplace';
 import FAQ from './pages/FAQ';
 import CoachingCheckin from './pages/CoachingCheckin';
+import CoachPortal from './pages/CoachPortal';
+import CoachClientDetail from './pages/CoachClientDetail';
 
 function RequireAuth({ children }) {
   const [session, setSession] = useState(undefined);
@@ -45,6 +47,25 @@ function RequireAdmin({ children }) {
         .from('profiles').select('is_admin').eq('id', session.user.id).maybeSingle();
       console.log('[RequireAdmin] user:', session.user.id, '| is_admin raw value:', profile?.is_admin, '| error:', error?.message ?? null);
       setStatus(profile?.is_admin === true ? 'ok' : 'denied');
+    }
+    check();
+  }, []);
+
+  if (status === 'loading') return null;
+  if (status === 'denied')  return <Navigate to="/dashboard" replace />;
+  return children;
+}
+
+function RequireCoach({ children }) {
+  const [status, setStatus] = useState('loading');
+
+  useEffect(() => {
+    async function check() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { setStatus('denied'); return; }
+      const { data: profile } = await supabase
+        .from('profiles').select('is_coach').eq('id', session.user.id).maybeSingle();
+      setStatus(profile?.is_coach === true ? 'ok' : 'denied');
     }
     check();
   }, []);
@@ -86,6 +107,12 @@ export default function App() {
       } />
       <Route path="/coaching/checkin" element={
         <RequireAuth><CoachingCheckin /></RequireAuth>
+      } />
+      <Route path="/coach" element={
+        <RequireCoach><CoachPortal /></RequireCoach>
+      } />
+      <Route path="/coach/client/:userId" element={
+        <RequireCoach><CoachClientDetail /></RequireCoach>
       } />
       <Route path="/affiliate/login"     element={<AffiliateLogin />} />
       <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />

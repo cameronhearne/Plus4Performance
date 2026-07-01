@@ -165,6 +165,18 @@ export async function updateCheckinDay(day, token) {
   return res.json();
 }
 
+export async function coachGetClients(token)             { return authedGet('/api/coach/clients', token); }
+export async function coachGetClientCheckins(token, uid) { return authedGet(`/api/coach/client/${uid}/checkins`, token); }
+export async function coachRespond(token, checkinId, coach_response) {
+  const res = await fetch((import.meta.env.VITE_API_URL || '') + `/api/coaching/checkins/${checkinId}/respond`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ coach_response }),
+  });
+  if (!res.ok) { const e = await res.json().catch(() => ({ error: res.statusText })); throw new Error(e.error || 'Request failed'); }
+  return res.json();
+}
+
 export async function adminGetCoaches(token)                     { return authedGet('/api/admin/coaching/coaches', token); }
 export async function adminGetCoachingClients(token)             { return authedGet('/api/admin/coaching/clients', token); }
 export async function adminSetCoach(token, body)                 { return authedPost('/api/admin/coaching/set-coach', body, token); }

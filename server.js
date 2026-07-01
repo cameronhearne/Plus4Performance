@@ -3890,6 +3890,92 @@ async function handleCoachRespond(req, res, checkinId) {
   return json(res, 200, { checkin: data });
 }
 
+// GET /api/coach/clients — coach's enriched client list with latest check-in status
+async function handleCoachClients(req, res) {
+  const coachId = await getUserIdFromToken(req.headers['authorization']);
+  if (!coachId) return json(res, 401, { error: 'Unauthorized' });
+
+  const { data: coachProfile } = await supabaseAdmin
+    .from('profiles').select('is_coach').eq('id', coachId).maybeSingle();
+  if (!coachProfile?.is_coach) return json(res, 403, { error: 'Not a coach' });
+
+  const { data: clients } = await supabaseAdmin
+    .from('profiles')
+    .select('id, first_name, last_name, email')
+    .eq('coach_id', coachId);
+
+  if (!clients?.length) return json(res, 200, { clients: [] });
+
+  const { data: checkins } = await supabaseAdmin
+    .from('coaching_checkins')
+    .select('id, user_id, period_label, submitted_at, coach_response, coach_responded_at')
+    .eq('coach_id', coachId)
+    .order('submitted_at', { ascending: false });
+
+  const latestByUser = {};
+  for (const c of checkins || []) {
+    if (!latestByUser[c.user_id]) latestByUser[c.user_id] = c;
+  }
+
+  const enriched = clients.map(c => ({
+    ...c,
+    latestCheckin:  latestByUser[c.id] || null,
+    needsReply:     latestByUser[c.id] ? !latestByUser[c.id].coach_response : false,
+  })).sort((a, b) => (b.needsReply ? 1 : 0) - (a.needsReply ? 1 : 0));
+
+  return json(res, 200, { clients: enriched });
+}
+
+// GET /api/coach/client/:userId/checkins — per-client detail for coach
+async function handleCoachClientCheckins(req, res, clientId) {
+  const coachId = await getUserIdFromToken(req.headers['authorization']);
+  if (!coachId) return json(res, 401, { error: 'Unauthorized' });
+
+  const { data: coachProfile } = await supabaseAdmin
+    .from('profiles').select('is_coach').eq('id', coachId).maybeSingle();
+  if (!coachProfile?.is_coach) return json(res, 403, { error: 'Not a coach' });
+
+  const { data: clientProfile } = await supabaseAdmin
+    .from('profiles').select('id, first_name, last_name, coach_id').eq('id', clientId).maybeSingle();
+  if (!clientProfile)                        return json(res, 404, { error: 'Client not found' });
+  if (clientProfile.coach_id !== coachId)    return json(res, 403, { error: 'This client is not assigned to you' });
+
+  const [{ data: checkins }, { data: weightLogs }, { data: photos }] = await Promise.all([
+    supabaseAdmin.from('coaching_checkins')
+      .select('*').eq('user_id', clientId).eq('coach_id', coachId)
+      .order('submitted_at', { ascending: false }),
+    supabaseAdmin.from('weight_logs')
+      .select('weight_kg, logged_at').eq('user_id', clientId)
+      .order('logged_at', { ascending: true }),
+    supabaseAdmin.from('progress_photos')
+      .select('view, storage_path, taken_at').eq('user_id', clientId)
+      .in('view', ['front', 'side', 'back'])
+      .order('taken_at', { ascending: false }).limit(9),
+  ]);
+
+  // Sign URLs for most recent photo per view
+  let signedPhotos = [];
+  if (photos?.length) {
+    const byView = {};
+    for (const p of photos) { if (!byView[p.view]) byView[p.view] = p; }
+    const toSign = Object.values(byView).filter(p => p.storage_path);
+    if (toSign.length) {
+      const { data: signed } = await supabaseAdmin.storage
+        .from('progress-photos')
+        .createSignedUrls(toSign.map(p => p.storage_path), 3600);
+      const urlMap = Object.fromEntries((signed || []).map(s => [s.path, s.signedUrl]));
+      signedPhotos = toSign.map(p => ({ view: p.view, signedUrl: urlMap[p.storage_path] || null }));
+    }
+  }
+
+  return json(res, 200, {
+    client:     { id: clientProfile.id, first_name: clientProfile.first_name, last_name: clientProfile.last_name },
+    checkins:   checkins   || [],
+    weightLogs: (weightLogs || []).slice(-6),
+    photos:     signedPhotos,
+  });
+}
+
 // ─── HTTP SERVER ──────────────────────────────────────────────────────────────
 
 const server = http.createServer(async (req, res) => {
@@ -4041,6 +4127,10 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST'  && url === '/api/coaching/checkins') return await handleSubmitCheckin(req, res);
     const checkinRespondM = url.match(/^\/api\/coaching\/checkins\/([0-9a-f-]{36})\/respond$/);
     if (checkinRespondM && req.method === 'PATCH') return await handleCoachRespond(req, res, checkinRespondM[1]);
+
+    if (req.method === 'GET'   && url === '/api/coach/clients')  return await handleCoachClients(req, res);
+    const coachClientM = url.match(/^\/api\/coach\/client\/([0-9a-f-]{36})\/checkins$/);
+    if (coachClientM && req.method === 'GET') return await handleCoachClientCheckins(req, res, coachClientM[1]);
 
     if (req.method === 'POST' && url === '/api/coaching-apply') return await handleCoachingApply(req, res);
 

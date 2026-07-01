@@ -500,6 +500,7 @@ export default function Dashboard() {
   const [planGenError,   setPlanGenError]   = useState(false);
   const [logbookSession, setLogbookSession] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isCoach, setIsCoach] = useState(false);
   const [isCoachingClient, setIsCoachingClient] = useState(false);
 
   function handleOpenLogbook(sessionName) {
@@ -527,13 +528,14 @@ export default function Dashboard() {
         { data: snap, error: snapErr },
       ] = await Promise.all([
         supabase.from('profiles').select('coach_id').eq('id', user.id).maybeSingle(),
-        supabase.from('profiles').select('is_admin').eq('id', user.id).maybeSingle(),
+        supabase.from('profiles').select('is_admin, is_coach').eq('id', user.id).maybeSingle(),
         supabase.from('snapshots').select('*').eq('user_id', user.id)
           .order('created_at', { ascending: false }).limit(1).maybeSingle(),
       ]);
       console.log('[Dashboard] coaching profile:', { data: coachingProfile, error: coachingProfileErr });
       if (coachingProfileErr) console.error('[Dashboard] profile error:', coachingProfileErr);
       if (adminProfile?.is_admin) setIsAdmin(true);
+      if (adminProfile?.is_coach) setIsCoach(true);
       const coaching = !!coachingProfile?.coach_id;
       setIsCoachingClient(coaching);
 
@@ -698,6 +700,11 @@ export default function Dashboard() {
           {isAdmin && (
             <a href="/admin" style={{ color: '#555', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase', textDecoration: 'none' }}>
               Admin
+            </a>
+          )}
+          {isCoach && (
+            <a href="/coach" style={{ color: '#555', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase', textDecoration: 'none' }}>
+              Coach
             </a>
           )}
           {!isUnlocked && (
