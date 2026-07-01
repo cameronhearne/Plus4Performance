@@ -3768,6 +3768,51 @@ async function handleCoachingClients(req, res) {
   return json(res, 200, { clients: clients || [] });
 }
 
+// GET /api/coaching/my-checkins — member reads their own checkins + coach name + checkin_day
+async function handleMyCoachingCheckins(req, res) {
+  const userId = await getUserIdFromToken(req.headers['authorization']);
+  if (!userId) return json(res, 401, { error: 'Unauthorized' });
+
+  const { data: profile } = await supabaseAdmin
+    .from('profiles').select('coach_id, checkin_day').eq('id', userId).maybeSingle();
+  if (!profile?.coach_id) return json(res, 403, { error: 'Not a coaching client' });
+
+  const [{ data: coachProfile }, { data: checkins }] = await Promise.all([
+    supabaseAdmin.from('profiles').select('first_name, last_name').eq('id', profile.coach_id).maybeSingle(),
+    supabaseAdmin.from('coaching_checkins')
+      .select('id, period_label, responses, photos_included, submitted_at, coach_response, coach_responded_at')
+      .eq('user_id', userId).order('submitted_at', { ascending: false }),
+  ]);
+
+  const coachName = coachProfile
+    ? [coachProfile.first_name, coachProfile.last_name].filter(Boolean).join(' ')
+    : 'Your Coach';
+
+  return json(res, 200, {
+    checkins:   checkins || [],
+    coachName,
+    coachId:    profile.coach_id,
+    checkinDay: profile.checkin_day || null,
+  });
+}
+
+// PATCH /api/coaching/checkin-day { checkin_day } — member sets their preferred check-in weekday
+async function handleUpdateCheckinDay(req, res) {
+  const userId = await getUserIdFromToken(req.headers['authorization']);
+  if (!userId) return json(res, 401, { error: 'Unauthorized' });
+
+  let body;
+  try { body = JSON.parse(await readBody(req)); } catch { return json(res, 400, { error: 'Invalid JSON' }); }
+
+  const { checkin_day } = body;
+  const valid = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', null];
+  if (!valid.includes(checkin_day)) return json(res, 400, { error: 'Invalid checkin_day' });
+
+  const { error } = await supabaseAdmin.from('profiles').update({ checkin_day }).eq('id', userId);
+  if (error) { console.error('[coaching/checkin-day]', error.message); return json(res, 500, { error: 'Failed to update' }); }
+  return json(res, 200, { ok: true });
+}
+
 // POST /api/coaching/checkins — member submits a weekly check-in
 async function handleSubmitCheckin(req, res) {
   const userId = await getUserIdFromToken(req.headers['authorization']);
@@ -3987,11 +4032,13 @@ const server = http.createServer(async (req, res) => {
       return json(res, 404, { error: 'Not found' });
     }
 
-    if (req.method === 'POST' && url === '/api/coaching/generate-plan')    return await handleCoachingGeneratePlan(req, res);
-    if (req.method === 'GET'  && url === '/api/coaching/plan-gen-status') return await handleCoachingPlanGenStatus(req, res);
-    if (req.method === 'GET'  && url === '/api/coaching/clients')          return await handleCoachingClients(req, res);
-    if (req.method === 'GET'  && url === '/api/coaching/checkins') return await handleCoachGetCheckins(req, res);
-    if (req.method === 'POST' && url === '/api/coaching/checkins') return await handleSubmitCheckin(req, res);
+    if (req.method === 'POST'  && url === '/api/coaching/generate-plan')    return await handleCoachingGeneratePlan(req, res);
+    if (req.method === 'GET'   && url === '/api/coaching/plan-gen-status') return await handleCoachingPlanGenStatus(req, res);
+    if (req.method === 'GET'   && url === '/api/coaching/my-checkins')     return await handleMyCoachingCheckins(req, res);
+    if (req.method === 'PATCH' && url === '/api/coaching/checkin-day')     return await handleUpdateCheckinDay(req, res);
+    if (req.method === 'GET'   && url === '/api/coaching/clients')         return await handleCoachingClients(req, res);
+    if (req.method === 'GET'   && url === '/api/coaching/checkins') return await handleCoachGetCheckins(req, res);
+    if (req.method === 'POST'  && url === '/api/coaching/checkins') return await handleSubmitCheckin(req, res);
     const checkinRespondM = url.match(/^\/api\/coaching\/checkins\/([0-9a-f-]{36})\/respond$/);
     if (checkinRespondM && req.method === 'PATCH') return await handleCoachRespond(req, res, checkinRespondM[1]);
 

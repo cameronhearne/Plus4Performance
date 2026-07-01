@@ -154,6 +154,16 @@ export async function adminRegeneratePlan(token, userId)     { return authedPost
 
 export async function coachingGeneratePlan(token)   { return authedPost('/api/coaching/generate-plan', {}, token); }
 export async function coachingPlanGenStatus(token)  { return authedGet('/api/coaching/plan-gen-status', token); }
+export async function getMyCoachingCheckins(token)  { return authedGet('/api/coaching/my-checkins', token); }
+export async function updateCheckinDay(day, token) {
+  const res = await fetch((import.meta.env.VITE_API_URL || '') + '/api/coaching/checkin-day', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ checkin_day: day }),
+  });
+  if (!res.ok) { const e = await res.json().catch(() => ({ error: res.statusText })); throw new Error(e.error || 'Request failed'); }
+  return res.json();
+}
 
 export async function adminGetCoaches(token)                     { return authedGet('/api/admin/coaching/coaches', token); }
 export async function adminGetCoachingClients(token)             { return authedGet('/api/admin/coaching/clients', token); }

@@ -10,11 +10,13 @@ import AccountTab from './AccountTab';
 import NutritionTab from './NutritionTab';
 import CommunityTab from './CommunityTab';
 import ShopTab from './ShopTab';
+import CoachingTab from './CoachingTab';
 import { useBranding } from '../lib/BrandingContext';
 import { getWeekNum } from '../lib/schedule';
 
 const TABS = [
   { id: 'today',        label: 'Today' },
+  { id: 'coaching',     label: 'Coaching',     coachingOnly: true },
   { id: 'plan',         label: 'Plan' },
   { id: 'nutrition',    label: 'Nutrition' },
   { id: 'progress',     label: 'Progress' },
@@ -724,7 +726,7 @@ export default function Dashboard() {
 
         {/* Tabs — marketplace only shown on main site (branding.slug === null) */}
         <div style={styles.tabBar}>
-          {TABS.filter(t => !t.mainSiteOnly || branding.slug === null).map(tab => (
+          {TABS.filter(t => !t.mainSiteOnly || branding.slug === null).filter(t => !t.coachingOnly || isCoachingClient).map(tab => (
             <button key={tab.id} type="button"
               style={activeTab === tab.id ? styles.tabActive : styles.tab}
               onClick={() => setActiveTab(tab.id)}>
@@ -736,6 +738,7 @@ export default function Dashboard() {
         {/* Tab content */}
         <div style={styles.content}>
           {activeTab === 'today' && <TodayTab snapshot={snapshot} plan={plan} isUnlocked={isUnlocked} onUnlock={handleUnlock} onOpenLogbook={handleOpenLogbook} planGeneratedAt={planGeneratedAt} onGoToAccount={() => setActiveTab('account')} isCoachingClient={isCoachingClient} onGeneratePlan={handleCoachingGeneratePlan} />}
+          {activeTab === 'coaching' && isCoachingClient && <CoachingTab userId={user?.id} />}
           {activeTab === 'plan' && <TabPlan plan={plan} isUnlocked={isUnlocked} onUnlock={handleUnlock} />}
           {activeTab === 'nutrition' && <NutritionTab plan={plan} isUnlocked={isUnlocked} onUnlock={handleUnlock} />}
           {activeTab === 'progress' && <ProgressTab userId={user?.id} plan={plan} onSwitchTab={handleSwitchTab} />}
