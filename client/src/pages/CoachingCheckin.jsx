@@ -40,6 +40,33 @@ function getMondayLabel() {
   return `Week of ${yyyy}-${mm}-${dd}`;
 }
 
+// ─── Done screen ──────────────────────────────────────────────────────────────
+
+function DoneScreen({ navigate }) {
+  useEffect(() => {
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReduced) return;
+    const t = setTimeout(() => navigate('/dashboard', { replace: true }), 5000);
+    return () => clearTimeout(t);
+  }, [navigate]);
+
+  return (
+    <div className="coaching-step" style={{ textAlign: 'center', padding: '60px 0' }}>
+      <div style={{ width: 74, height: 74, borderRadius: 99, margin: '0 auto 22px', border: `2px solid ${C.glowBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30, boxShadow: `0 0 28px -6px ${C.glow}` }}>✓</div>
+      <h2 style={h2Style}>Check-in Sent</h2>
+      <p style={{ ...subStyle, marginBottom: 32 }}>Your coach has it. You&apos;ll get a response in your Coaching tab within 24 hours.</p>
+      <button
+        onClick={() => navigate('/dashboard', { replace: true })}
+        onMouseDown={e => { e.currentTarget.style.transform = 'scale(0.97)'; }}
+        onMouseUp={e => { e.currentTarget.style.transform = ''; }}
+        onMouseLeave={e => { e.currentTarget.style.transform = ''; }}
+        style={{ padding: '17px 32px', borderRadius: 11, background: 'linear-gradient(160deg,#18151F,#100E15)', border: `1px solid ${C.glowBorder}`, color: C.bone, fontFamily: "'Oswald', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: '0.18em', textTransform: 'uppercase', cursor: 'pointer', boxShadow: `0 10px 26px -10px ${C.glow}`, transition: 'transform 0.1s' }}>
+        Back to Dashboard &rarr;
+      </button>
+    </div>
+  );
+}
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function Scale({ value, onChange }) {
@@ -146,15 +173,16 @@ export default function CoachingCheckin() {
     onPlan: null, missedMeals: null, missedMealsDetail: '',
     appetite: null, digestion: null, digestionNote: '',
     alcohol: null, alcoholDetail: '',
-    waterLitres: '', foodChanges: '', offPlanMeal: '',
+    waterLitres: '', foodChanges: '', liquidsWaterSalt: '', offPlanMeal: '',
     sleepScore: null, energyScore: null,
-    supplements: '', waistCm: '', chestCm: '', longTermGoal: '', coachFeedback: '',
+    supplements: '', waistCm: '', chestCm: '', hipsCm: '', armCm: '', thighCm: '', longTermGoal: '', coachFeedback: '',
     biggestWin: '', upcomingEvents: '', questionsForCoach: '',
   });
   const upd = (key, val) => setForm(f => ({ ...f, [key]: val }));
 
-  const [photoFiles,  setPhotoFiles]  = useState({});
-  const [posingFiles, setPosingFiles] = useState([]);
+  const [photoFiles,       setPhotoFiles]       = useState({});
+  const [posingFiles,      setPosingFiles]      = useState([]);
+  const [measurementsOpen, setMeasurementsOpen] = useState(false);
   const posingRef = useRef(null);
 
   useEffect(() => {
@@ -248,11 +276,14 @@ export default function CoachingCheckin() {
       else errors.push(`Posing photo DB: ${dbErr.message}`);
     }
 
-    // 3. Monthly measurements → body_measurements (same logic as ProgressTab)
-    if (isMonthly && (form.waistCm || form.chestCm)) {
+    // 3. Monthly measurements → body_measurements
+    if (isMonthly && (form.waistCm || form.chestCm || form.hipsCm || form.armCm || form.thighCm)) {
       const row = { user_id: session.user.id, logged_at: now };
-      if (form.waistCm) row.waist_cm = parseFloat(form.waistCm);
-      if (form.chestCm) row.chest_cm = parseFloat(form.chestCm);
+      if (form.waistCm)  row.waist_cm      = parseFloat(form.waistCm);
+      if (form.chestCm)  row.chest_cm      = parseFloat(form.chestCm);
+      if (form.hipsCm)   row.hips_cm       = parseFloat(form.hipsCm);
+      if (form.armCm)    row.left_arm_cm   = parseFloat(form.armCm);
+      if (form.thighCm)  row.left_thigh_cm = parseFloat(form.thighCm);
       const { error: e } = await supabase.from('body_measurements').insert(row);
       if (e) errors.push(`Measurements: ${e.message}`);
     }
@@ -276,6 +307,7 @@ export default function CoachingCheckin() {
       alcoholDetail:        form.alcoholDetail        || null,
       waterLitres:          form.waterLitres ? parseFloat(form.waterLitres) : null,
       foodChanges:          form.foodChanges          || null,
+      liquidsWaterSalt:     form.liquidsWaterSalt     || null,
       offPlanMeal:          form.offPlanMeal          || null,
       sleepScore:           form.sleepScore,
       energyScore:          form.energyScore,
@@ -411,10 +443,15 @@ export default function CoachingCheckin() {
               style={{ ...inputStyle, paddingRight: 68 }} />
           </WithUnit>
         </Q>
-        <Q label="Anything change with food, drinks, salt or condiments?">
+        <Q label="Anything change with food or condiments?">
           <textarea className="coaching-inp" style={taStyle}
-            placeholder="New foods, swapped sources, more/less salt, sauces, tea/coffee/fizzy — anything different from plan."
+            placeholder="New foods, swapped sauces, more/less salt, condiments — anything different from plan."
             value={form.foodChanges} onChange={e => upd('foodChanges', e.target.value)} />
+        </Q>
+        <Q label="Liquids, water &amp; salt">
+          <textarea className="coaching-inp" style={taStyle}
+            placeholder={"Liquids — tea, coffee, fizzy drinks, etc.\nWater intake + how much salt you're having daily."}
+            value={form.liquidsWaterSalt} onChange={e => upd('liquidsWaterSalt', e.target.value)} />
         </Q>
         <Q label="Did you have an off-plan meal? When, and what was it?"
            hint="I need the actual food, not just the day — detail matters.">
@@ -512,20 +549,37 @@ export default function CoachingCheckin() {
             placeholder="Everything — creatine, protein, vitamins, the lot."
             value={form.supplements} onChange={e => upd('supplements', e.target.value)} />
         </Q>
-        <Q label="Measurements" hint="Optional — waist is the one that matters most.">
-          <div style={{ marginBottom: 10 }}>
-            <WithUnit unit="cm">
-              <input className="coaching-inp" type="number" inputMode="decimal" placeholder="Waist"
-                value={form.waistCm} onChange={e => upd('waistCm', e.target.value)}
-                style={{ ...inputStyle, paddingRight: 48 }} />
-            </WithUnit>
-          </div>
-          <WithUnit unit="cm">
-            <input className="coaching-inp" type="number" inputMode="decimal" placeholder="Chest"
-              value={form.chestCm} onChange={e => upd('chestCm', e.target.value)}
-              style={{ ...inputStyle, paddingRight: 48 }} />
-          </WithUnit>
-        </Q>
+        <div style={{ marginBottom: 30 }}>
+          <button type="button" onClick={() => setMeasurementsOpen(o => !o)} style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            width: '100%', background: C.surface2, border: `1px solid ${C.glowLine}`,
+            borderRadius: measurementsOpen ? '10px 10px 0 0' : 10, padding: '14px 16px',
+            cursor: 'pointer', color: C.ash, fontFamily: "'Inter', sans-serif",
+            fontWeight: 600, fontSize: 14, transition: 'border-radius 0.2s',
+          }}>
+            <span>Add measurements <span style={{ color: C.ashDim, fontWeight: 400 }}>(optional)</span></span>
+            <span style={{ display: 'inline-block', fontSize: 12, color: C.ashDim, transition: 'transform 0.2s', transform: measurementsOpen ? 'rotate(90deg)' : 'none' }}>&#9654;</span>
+          </button>
+          {measurementsOpen && (
+            <div className="coaching-reveal" style={{ background: C.surface2, border: `1px solid ${C.glowLine}`, borderTop: 'none', borderRadius: '0 0 10px 10px', padding: '16px 16px 8px' }}>
+              {[
+                { key: 'waistCm',  label: 'Waist' },
+                { key: 'chestCm',  label: 'Chest' },
+                { key: 'hipsCm',   label: 'Hips'  },
+                { key: 'armCm',    label: 'Arm'   },
+                { key: 'thighCm',  label: 'Thigh' },
+              ].map(({ key, label }) => (
+                <div key={key} style={{ marginBottom: 10 }}>
+                  <WithUnit unit="cm">
+                    <input className="coaching-inp" type="number" inputMode="decimal" placeholder={label}
+                      value={form[key]} onChange={e => upd(key, e.target.value)}
+                      style={{ ...inputStyle, paddingRight: 48 }} />
+                  </WithUnit>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
         <Q label="Long-term goal — still the same?">
           <textarea className="coaching-inp" style={taStyle}
             placeholder="Has anything shifted in what you're chasing?"
@@ -625,11 +679,7 @@ export default function CoachingCheckin() {
 
         {/* ── Done state ── */}
         {done ? (
-          <div className="coaching-step" style={{ textAlign: 'center', padding: '60px 0' }}>
-            <div style={{ width: 74, height: 74, borderRadius: 99, margin: '0 auto 22px', border: `2px solid ${C.glowBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30, boxShadow: `0 0 28px -6px ${C.glow}` }}>✓</div>
-            <h2 style={h2Style}>Check-in Sent</h2>
-            <p style={{ ...subStyle, marginBottom: 0 }}>Your coach has it. You'll get a response in your Coaching tab within 24 hours.</p>
-          </div>
+          <DoneScreen navigate={navigate} />
         ) : (
           <>
             {/* ── Step content ── */}
