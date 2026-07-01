@@ -4,380 +4,380 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Plus 4 Performance — Your Coach in Your Pocket</title>
-<meta name="description" content="Get your free personalised training and nutrition snapshot in under a minute. Then unlock your full 12-week coaching dashboard for £9.99/month.">
+<meta name="description" content="Get your personalised 12-week training and nutrition plan built around your numbers. Start for just £1.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&family=Roboto+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&family=Roboto+Mono:wght@600&display=swap" rel="stylesheet">
 <style>
   :root {
     --ink: #08070A;
     --surface: #131119;
-    --surface-2: #1A1722;
+    --surface-2: #0C0A0F;
     --bone: #F3F1ED;
-    --ash: #87858E;
-    --ash-dim: #5C5A62;
-    --glow: rgba(255, 79, 196, 0.55);
-    --glow-line: rgba(255, 79, 196, 0.22);
-    --ease: cubic-bezier(0.16, 1, 0.3, 1);
+    --ash: #ABA9B0;
+    --ash-dim: #7A7880;
+    --glow: rgba(255, 79, 196, 0.5);
+    --glow-line: rgba(255, 79, 196, 0.25);
+    --glow-border: rgba(255, 79, 196, 0.42);
   }
-  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body {
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
     background: var(--ink);
     color: var(--bone);
-    font-family: 'Inter', -apple-system, sans-serif;
+    font-family: 'Inter', sans-serif;
     -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
   }
-  body { overflow-x: hidden; }
-
-  /* ── Ambient glows ── */
-  .ambient {
-    position: fixed;
-    top: -200px; left: -150px;
-    width: 600px; height: 600px;
-    background: radial-gradient(circle, var(--glow) 0%, transparent 65%);
-    opacity: 0.55;
-    pointer-events: none;
-    z-index: 0;
-  }
-  .ambient-2 {
-    position: fixed;
-    top: 400px; right: -200px;
-    width: 500px; height: 500px;
-    background: radial-gradient(circle, var(--glow) 0%, transparent 65%);
-    opacity: 0.3;
-    pointer-events: none;
-    z-index: 0;
+  button { font: inherit; cursor: pointer; }
+  button:disabled { opacity: 0.55; cursor: not-allowed; transform: none !important; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 40px; }
+  h1, h2, h3 { font-family: 'Oswald', sans-serif; text-transform: uppercase; }
+  .eyebrow {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 500;
+    letter-spacing: 0.3em;
+    font-size: 12px;
+    text-transform: uppercase;
+    color: var(--ash-dim);
   }
 
-  /* ── Nav ── */
-  nav {
-    position: relative;
-    z-index: 10;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 22px 32px;
-    max-width: 1100px;
-    margin: 0 auto;
+  /* ── Buttons ── */
+  .btn-primary {
+    display: inline-block;
+    padding: 17px 34px;
+    border-radius: 11px;
+    background: linear-gradient(160deg, #18151F, #100E15);
+    border: 1px solid var(--glow-border);
+    color: var(--bone);
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    cursor: pointer;
+    text-decoration: none;
+    box-shadow: 0 10px 28px -10px var(--glow);
+    transition: transform 0.1s, filter 0.18s;
   }
-  .brand {
+  .btn-primary:hover { filter: brightness(1.09); }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-ghost {
+    display: inline-block;
+    padding: 15px 30px;
+    border-radius: 11px;
+    background: transparent;
+    border: 1px solid var(--glow-line);
+    color: var(--ash);
     font-family: 'Oswald', sans-serif;
     font-weight: 600;
-    font-size: 14px;
-    letter-spacing: 2.5px;
-    color: var(--bone);
+    font-size: 13px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
     text-decoration: none;
+    transition: border-color 0.18s, color 0.18s;
   }
-  .nav-links { display: flex; gap: 28px; align-items: center; list-style: none; }
-  .nav-links a {
+  .btn-ghost:hover { border-color: var(--glow-border); color: var(--bone); }
+
+  /* ── Header ── */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: rgba(8, 7, 10, 0.82);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+  .nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 76px;
+  }
+  .logo { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+  .logo-mark {
+    width: 38px;
+    height: 38px;
+    border-radius: 9px;
+    background: linear-gradient(160deg, #1B1622, #100E15);
+    border: 1px solid var(--glow-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    box-shadow: 0 0 16px -6px var(--glow);
+    flex-shrink: 0;
+  }
+  .logo-text {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    font-size: 16px;
+    color: var(--bone);
+  }
+  .nav-right { display: flex; align-items: center; gap: 34px; }
+  .nav-right a {
     color: var(--ash);
     text-decoration: none;
-    font-size: 13px;
-    letter-spacing: 0.5px;
-    transition: color 0.2s var(--ease);
+    font-size: 14px;
+    font-weight: 500;
+    transition: color 0.15s;
   }
-  .nav-links a:hover { color: var(--bone); }
-  .nav-login {
-    color: var(--bone) !important;
-    border: 1px solid rgba(255,255,255,0.12) !important;
-    padding: 9px 18px;
-    border-radius: 8px;
-    font-family: 'Oswald', sans-serif !important;
+  .nav-right a:hover { color: var(--bone); }
+  .nav-right .btn-ghost { padding: 11px 22px; color: var(--ash); }
+  .nav-right .btn-ghost:hover { color: var(--bone); }
+
+  /* ── Marquee ── */
+  .marquee {
+    background: linear-gradient(90deg, rgba(232,56,158,0.10), rgba(255,79,196,0.06));
+    border-top: 1px solid var(--glow-line);
+    border-bottom: 1px solid var(--glow-line);
+    overflow: hidden;
+    padding: 11px 0;
+  }
+  .marquee-track {
+    display: flex;
+    gap: 52px;
+    white-space: nowrap;
+    animation: marquee-scroll 26s linear infinite;
+    width: max-content;
+  }
+  .marquee-track span {
+    font-family: 'Oswald', sans-serif;
     font-weight: 600;
-    font-size: 12px !important;
-    letter-spacing: 1px;
+    letter-spacing: 0.16em;
+    font-size: 12px;
     text-transform: uppercase;
-    transition: border-color 0.2s var(--ease), background 0.2s var(--ease) !important;
+    color: var(--ash);
+    display: inline-flex;
+    align-items: center;
+    gap: 52px;
   }
-  .nav-login:hover { border-color: rgba(255,255,255,0.3) !important; background: rgba(255,255,255,0.04); }
+  .marquee-track span::after { content: "✦"; color: #FF4FC4; }
+  @keyframes marquee-scroll {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
 
   /* ── Hero ── */
   .hero {
     position: relative;
-    z-index: 1;
-    max-width: 720px;
-    margin: 0 auto;
-    text-align: center;
-    padding: 50px 24px 30px;
+    padding: 80px 0 90px;
+    background-image: radial-gradient(40% 55% at 15% 20%, rgba(255,79,196,0.14), rgba(0,0,0,0) 60%);
   }
-  .eyebrow {
-    font-size: 12px;
-    letter-spacing: 2.5px;
-    color: var(--ash);
-    text-transform: uppercase;
-    margin-bottom: 20px;
-    opacity: 0;
-    animation: fadeUp 0.6s var(--ease) forwards;
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1.05fr 0.95fr;
+    gap: 64px;
+    align-items: center;
   }
-  h1 {
-    font-family: 'Oswald', sans-serif;
-    font-weight: 700;
-    font-size: 44px;
-    line-height: 1.08;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-    margin-bottom: 18px;
-    opacity: 0;
-    animation: fadeUp 0.65s var(--ease) 0.08s forwards;
-  }
-  .sub {
-    font-size: 16px;
-    line-height: 1.6;
-    color: #C4C2C9;
-    max-width: 480px;
-    margin: 0 auto 32px;
-    opacity: 0;
-    animation: fadeUp 0.65s var(--ease) 0.16s forwards;
-  }
-  .hero-ctas {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    max-width: 320px;
-    margin: 0 auto 12px;
-    opacity: 0;
-    animation: fadeUp 0.65s var(--ease) 0.24s forwards;
-  }
-  .btn-primary {
-    background: linear-gradient(160deg, #18151F 0%, #100E15 100%);
-    border: 1px solid var(--glow-line);
-    color: var(--bone);
-    border-radius: 10px;
-    padding: 17px;
-    font-family: 'Oswald', sans-serif;
-    font-weight: 600;
-    font-size: 14px;
-    letter-spacing: 1.6px;
-    text-transform: uppercase;
-    cursor: pointer;
-    box-shadow: 0 12px 32px -8px var(--glow);
-    transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease);
-    text-decoration: none;
-    display: block;
-    text-align: center;
-  }
-  .btn-primary:active { transform: scale(0.97); }
-  .btn-ghost {
-    background: transparent;
-    border: 1px solid rgba(255,255,255,0.1);
-    color: var(--ash);
-    border-radius: 10px;
-    padding: 14px;
-    font-family: 'Oswald', sans-serif;
-    font-weight: 500;
-    font-size: 12.5px;
-    letter-spacing: 1.2px;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: border-color 0.2s var(--ease), color 0.2s var(--ease), transform 0.2s var(--ease);
-    text-decoration: none;
-    display: block;
-    text-align: center;
-  }
-  .btn-ghost:hover { border-color: rgba(255,255,255,0.25); color: var(--bone); }
-  .btn-ghost:active { transform: scale(0.97); }
-  .microcopy {
-    font-size: 12px;
-    color: var(--ash-dim);
-    opacity: 0;
-    animation: fadeUp 0.6s var(--ease) 0.3s forwards;
-  }
+  .hero h1 { font-weight: 700; font-size: 66px; line-height: 0.98; margin: 18px 0 22px; }
+  .hero .lead { font-size: 19px; line-height: 1.6; color: var(--ash); max-width: 30em; margin-bottom: 16px; }
+  .hero .lead b { color: var(--bone); font-weight: 600; }
+  .hero-ctas { display: flex; gap: 14px; align-items: center; margin-top: 30px; flex-wrap: wrap; }
+  .hero-note { font-size: 13px; color: var(--ash-dim); margin-top: 16px; }
 
-  /* ── Calculator ── */
-  .calc-wrap {
-    position: relative;
-    z-index: 1;
-    max-width: 460px;
-    margin: 48px auto 0;
-    padding: 0 24px;
-    opacity: 0;
-    animation: fadeUpSlow 0.7s var(--ease) 0.4s forwards;
-  }
-  .calc-card {
-    background: linear-gradient(160deg, #131119 0%, #0C0A0F 100%);
-    border: 1px solid rgba(255,255,255,0.06);
+  /* ── Calculator (hero right column) ── */
+  .calc {
+    background: linear-gradient(160deg, var(--surface), var(--surface-2));
+    border: 1px solid var(--glow-line);
     border-radius: 18px;
-    padding: 28px 26px;
-    box-shadow: 0 20px 50px -16px rgba(0,0,0,0.6), 0 0 40px -16px var(--glow), 0 1px 0 rgba(255,255,255,0.03) inset;
+    padding: 30px;
+    box-shadow: 0 20px 50px -24px rgba(0,0,0,0.7), 0 0 30px -18px var(--glow);
   }
   .calc-label {
-    font-size: 11px;
-    letter-spacing: 2px;
-    color: var(--ash);
-    text-transform: uppercase;
-    margin-bottom: 18px;
     text-align: center;
+    font-family: 'Oswald', sans-serif;
+    letter-spacing: 0.2em;
+    font-size: 11px;
+    color: var(--ash-dim);
+    text-transform: uppercase;
+    margin-bottom: 20px;
   }
-  .calc-row { display: flex; gap: 10px; margin-bottom: 10px; }
-  .calc-field { flex: 1; }
-  .calc-field label {
+  .calc-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+  .field label {
     display: block;
     font-size: 10px;
-    letter-spacing: 1.3px;
-    color: var(--ash-dim);
+    letter-spacing: 0.14em;
     text-transform: uppercase;
+    color: var(--ash-dim);
     margin-bottom: 6px;
+    font-family: 'Oswald', sans-serif;
   }
-  .calc-field select, .calc-field input {
+  .field input, .field select {
     width: 100%;
-    background: var(--surface);
-    border: 1px solid rgba(255,255,255,0.07);
-    border-radius: 8px;
-    padding: 11px 12px;
+    background: var(--surface-2);
+    border: 1px solid var(--glow-line);
+    border-radius: 9px;
+    padding: 12px 13px;
     color: var(--bone);
     font-family: 'Inter', sans-serif;
-    font-size: 14px;
+    font-size: 15px;
     outline: none;
-    transition: border-color 0.25s var(--ease), box-shadow 0.25s var(--ease);
+    transition: border-color 0.2s;
     appearance: none;
     -webkit-appearance: none;
   }
-  .calc-field select:focus, .calc-field input:focus {
-    border-color: rgba(255, 79, 196, 0.4);
-    box-shadow: 0 0 18px -6px var(--glow);
-  }
-  .calc-field select {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2387858E'/%3E%3C/svg%3E");
+  .field input:focus, .field select:focus { border-color: var(--glow-border); }
+  .field select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237A7880'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
-    background-position: right 14px center;
+    background-position: right 13px center;
     padding-right: 32px;
   }
-  .calc-field select option { background: #131119; }
-  .calc-results {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin-top: 20px;
-  }
-  .result-card {
-    background: var(--surface);
-    border: 1px solid rgba(255, 79, 196, 0.12);
-    border-radius: 12px;
+  .field select option { background: var(--surface); }
+  .calc-results { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 18px 0; }
+  .result {
+    background: var(--surface-2);
+    border: 1px solid var(--glow-line);
+    border-radius: 11px;
     padding: 16px;
     text-align: center;
-    box-shadow: 0 0 24px -16px var(--glow);
   }
-  .result-num {
+  .result .n {
     font-family: 'Roboto Mono', monospace;
-    font-size: 26px;
     font-weight: 600;
-    color: var(--bone);
+    font-size: 30px;
     line-height: 1;
   }
-  .result-label {
-    font-size: 9.5px;
-    letter-spacing: 1.2px;
-    color: var(--ash-dim);
+  .result .l {
+    font-size: 9px;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
-    margin-top: 7px;
-  }
-  .calc-cta { margin-top: 18px; }
-  .calc-microcopy {
-    text-align: center;
-    font-size: 11.5px;
     color: var(--ash-dim);
-    margin-top: 12px;
-    line-height: 1.5;
-  }
-
-  /* ── Shared section layout ── */
-  .section {
-    position: relative;
-    z-index: 1;
-    max-width: 640px;
-    margin: 90px auto 0;
-    padding: 0 24px;
-    text-align: center;
-  }
-  .lower-eyebrow {
-    font-size: 11px;
-    letter-spacing: 2px;
-    color: var(--ash-dim);
-    text-transform: uppercase;
-    margin-bottom: 14px;
-  }
-  .lower-heading {
+    margin-top: 4px;
     font-family: 'Oswald', sans-serif;
-    font-weight: 700;
-    font-size: 28px;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-    margin-bottom: 14px;
-    color: var(--bone);
   }
-  .lower-body {
-    font-size: 15px;
-    line-height: 1.65;
-    color: #C4C2C9;
-    max-width: 440px;
-    margin: 0 auto 28px;
-  }
+  .calc .btn-primary { width: 100%; text-align: center; }
+  .calc-foot { font-size: 12px; color: var(--ash-dim); text-align: center; margin-top: 12px; line-height: 1.5; }
 
-  /* ── Coaching form ── */
-  .coach-form {
-    background: linear-gradient(160deg, #131119 0%, #0C0A0F 100%);
-    border: 1px solid rgba(255,255,255,0.06);
+  /* ── Sections ── */
+  section { padding: 80px 0; }
+  .section-eyebrow { text-align: center; display: block; margin-bottom: 12px; }
+  .section-title { text-align: center; font-weight: 700; font-size: 40px; margin-bottom: 46px; }
+
+  /* ── Proof / reviews ── */
+  .reviews { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+  .review {
+    background: linear-gradient(160deg, var(--surface), var(--surface-2));
+    border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 16px;
-    padding: 24px;
-    max-width: 380px;
-    margin: 0 auto;
-    box-shadow: 0 16px 40px -16px rgba(0,0,0,0.55), 0 0 30px -16px var(--glow);
-    text-align: left;
+    padding: 28px;
   }
-  .coach-form-label {
-    font-size: 11px;
-    letter-spacing: 1.6px;
-    color: var(--ash);
-    text-transform: uppercase;
+  .stars { color: #FF4FC4; letter-spacing: 3px; font-size: 15px; margin-bottom: 14px; }
+  .review p { font-size: 16px; line-height: 1.6; color: var(--bone); margin-bottom: 16px; }
+  .review .who { font-size: 13px; color: var(--ash); }
+  .review .who b { color: var(--bone); }
+
+  /* ── How it works ── */
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+  .step {
+    background: linear-gradient(160deg, var(--surface), var(--surface-2));
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 16px;
+    padding: 30px;
+  }
+  .step .num {
+    font-family: 'Roboto Mono', monospace;
+    font-weight: 600;
+    color: var(--ash-dim);
+    font-size: 14px;
     margin-bottom: 16px;
   }
-  .coach-form input, .coach-form textarea {
+  .step h3 { font-weight: 700; font-size: 20px; margin-bottom: 12px; }
+  .step p { font-size: 15px; line-height: 1.6; color: var(--ash); }
+
+  /* ── £1 Offer ── */
+  .offer-wrap {
+    background-image: radial-gradient(50% 90% at 50% 50%, rgba(255,79,196,0.10), rgba(0,0,0,0) 70%);
+  }
+  .offer {
+    max-width: 720px;
+    margin: 0 auto;
+    background: linear-gradient(160deg, var(--surface), var(--surface-2));
+    border: 1px solid var(--glow-border);
+    border-radius: 22px;
+    padding: 48px;
+    text-align: center;
+    box-shadow: 0 24px 60px -28px rgba(0,0,0,0.7), 0 0 44px -18px var(--glow);
+  }
+  .offer-badge {
+    display: inline-block;
+    font-family: 'Oswald', sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    font-size: 11px;
+    text-transform: uppercase;
+    border: 1px solid var(--glow-border);
+    border-radius: 99px;
+    padding: 7px 16px;
+    color: var(--bone);
+    box-shadow: 0 0 16px -6px var(--glow);
+    margin-bottom: 22px;
+  }
+  .offer h2 { font-weight: 700; font-size: 52px; line-height: 1; margin-bottom: 16px; }
+  .offer h2 .small { font-size: 26px; color: var(--ash); }
+  .offer > p { font-size: 17px; color: var(--ash); line-height: 1.6; max-width: 34em; margin: 0 auto 30px; }
+  .offer .btn-primary { font-size: 16px; padding: 19px 44px; }
+  .offer-sub { font-size: 13px; color: var(--ash-dim); margin-top: 16px; }
+
+  /* ── Elite coaching ── */
+  .elite-section { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; }
+  .elite-section h2 { font-weight: 700; font-size: 38px; margin: 12px 0 20px; }
+  .elite-lead { font-size: 17px; line-height: 1.65; color: var(--ash); margin-bottom: 14px; }
+  .elite-sub { color: var(--ash-dim); font-size: 15px; }
+  .apply {
+    background: linear-gradient(160deg, var(--surface), var(--surface-2));
+    border: 1px solid var(--glow-line);
+    border-radius: 18px;
+    padding: 32px;
+    box-shadow: 0 20px 50px -26px rgba(0,0,0,0.7);
+  }
+  .apply-label {
+    font-family: 'Oswald', sans-serif;
+    letter-spacing: 0.16em;
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--ash-dim);
+    margin-bottom: 18px;
+  }
+  .apply input, .apply textarea {
     width: 100%;
-    background: var(--surface);
-    border: 1px solid rgba(255,255,255,0.07);
-    border-radius: 8px;
-    padding: 12px 14px;
+    background: var(--surface-2);
+    border: 1px solid var(--glow-line);
+    border-radius: 10px;
+    padding: 14px;
     color: var(--bone);
     font-family: 'Inter', sans-serif;
-    font-size: 14px;
-    margin-bottom: 10px;
+    font-size: 15px;
+    margin-bottom: 12px;
     outline: none;
     display: block;
-    transition: border-color 0.25s var(--ease), box-shadow 0.25s var(--ease);
+    transition: border-color 0.2s;
     appearance: none;
     -webkit-appearance: none;
   }
-  .coach-form input::placeholder, .coach-form textarea::placeholder { color: var(--ash-dim); }
-  .coach-form input:focus, .coach-form textarea:focus {
-    border-color: rgba(255, 79, 196, 0.4);
-    box-shadow: 0 0 18px -6px var(--glow);
-  }
-  .coach-form textarea { resize: vertical; min-height: 90px; }
-  .submit-btn { width: 100%; cursor: pointer; border: 1px solid var(--glow-line) !important; margin-bottom: 0; }
-  .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
-  .coach-error {
+  .apply input::placeholder, .apply textarea::placeholder { color: var(--ash-dim); }
+  .apply input:focus, .apply textarea:focus { border-color: var(--glow-border); }
+  .apply textarea { min-height: 96px; resize: vertical; }
+  .apply .btn-primary { width: 100%; text-align: center; }
+  .apply-error {
     font-size: 12.5px;
     color: #fca5a5;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
     display: none;
     line-height: 1.5;
   }
-
-  /* ── Coaching success state ── */
-  .coach-success {
+  .apply-success {
     display: none;
     text-align: center;
-    padding: 36px 28px;
-    background: linear-gradient(160deg, #131119 0%, #0C0A0F 100%);
-    border: 1px solid rgba(255, 79, 196, 0.18);
-    border-radius: 16px;
-    max-width: 380px;
-    margin: 0 auto;
-    box-shadow: 0 0 32px -12px var(--glow);
+    padding: 36px 0;
   }
   .success-ring {
     width: 48px; height: 48px;
-    border: 1.5px solid rgba(255, 79, 196, 0.45);
+    border: 1.5px solid var(--glow-border);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -386,249 +386,109 @@
     font-size: 20px;
     color: #FF4FC4;
   }
-  .coach-success h3 {
+  .apply-success h3 {
     font-family: 'Oswald', sans-serif;
     font-size: 18px;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
     margin-bottom: 10px;
-    color: var(--bone);
   }
-  .coach-success p { font-size: 14px; color: #C4C2C9; line-height: 1.6; }
+  .apply-success p { font-size: 14px; color: var(--ash); line-height: 1.6; }
 
   /* ── Footer ── */
-  .site-footer {
-    position: relative;
-    z-index: 1;
-    max-width: 1100px;
-    margin: 80px auto 0;
-    padding: 28px 32px;
-    border-top: 1px solid rgba(255,255,255,0.06);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 12px;
-  }
-  .footer-brand {
-    font-family: 'Oswald', sans-serif;
-    font-size: 12px;
-    letter-spacing: 2px;
-    color: var(--ash-dim);
-  }
-  .footer-links { display: flex; gap: 24px; }
-  .footer-links a {
-    font-size: 12px;
-    color: var(--ash-dim);
-    text-decoration: none;
-    transition: color 0.2s;
-  }
-  .footer-links a:hover { color: var(--ash); }
-
-  /* ── Keyframes ── */
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(10px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes fadeUpSlow {
-    from { opacity: 0; transform: translateY(16px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-
-  /* ── Proof / testimonials ── */
-  .proof-section {
-    position: relative;
-    z-index: 1;
-    max-width: 800px;
-    margin: 80px auto 0;
-    padding: 0 24px;
-  }
-  .proof-eyebrow {
-    text-align: center;
-    font-size: 11px;
-    letter-spacing: 2px;
-    color: var(--ash-dim);
-    text-transform: uppercase;
-    margin-bottom: 28px;
-  }
-  .proof-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  .proof-card {
-    background: linear-gradient(160deg, #131119 0%, #0C0A0F 100%);
-    border: 1px solid rgba(255,255,255,0.06);
-    border-radius: 16px;
-    padding: 22px;
-    box-shadow: 0 14px 36px -16px rgba(0,0,0,0.55), 0 0 28px -18px var(--glow);
-  }
-  .proof-stars { color: #87858E; font-size: 13px; letter-spacing: 2px; margin-bottom: 12px; }
-  .proof-stars span { color: var(--bone); }
-  .proof-quote { font-size: 14px; line-height: 1.6; color: #D8D6CF; margin-bottom: 14px; }
-  .proof-source {
-    font-size: 11px;
-    letter-spacing: 0.5px;
-    color: var(--ash-dim);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .proof-source-badge { color: var(--bone); font-weight: 600; }
-
-  /* ── How it works ── */
-  .how-section {
-    position: relative;
-    z-index: 1;
-    max-width: 760px;
-    margin: 90px auto 0;
-    padding: 0 24px;
-    text-align: center;
-  }
-  .how-heading {
-    font-family: 'Oswald', sans-serif;
-    font-weight: 700;
-    font-size: 28px;
-    text-transform: uppercase;
-    margin-bottom: 40px;
-  }
-  .how-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; text-align: left; }
-  .how-card {
-    background: linear-gradient(160deg, #131119 0%, #0C0A0F 100%);
-    border: 1px solid rgba(255,255,255,0.06);
-    border-radius: 16px;
-    padding: 24px 20px;
-    box-shadow: 0 10px 28px -16px rgba(0,0,0,0.5);
-  }
-  .how-num {
-    font-family: 'Roboto Mono', monospace;
-    font-size: 13px;
-    color: var(--ash-dim);
-    letter-spacing: 1px;
-    margin-bottom: 12px;
-  }
-  .how-title {
-    font-family: 'Oswald', sans-serif;
-    font-weight: 600;
-    font-size: 16px;
-    text-transform: uppercase;
-    margin-bottom: 8px;
-  }
-  .how-body { font-size: 13.5px; line-height: 1.55; color: var(--ash); }
-
-  /* ── Offer banner ── */
-  .offer-banner {
-    position: relative;
-    z-index: 1;
-    max-width: 640px;
-    margin: 70px auto 0;
-    padding: 0 24px;
-  }
-  .offer-card {
-    background: linear-gradient(160deg, #18151F 0%, #100E15 100%);
-    border: 1px solid var(--glow-line);
-    border-radius: 16px;
-    padding: 26px 28px;
-    text-align: center;
-    box-shadow: 0 0 50px -16px var(--glow);
-  }
-  .offer-tag {
-    display: inline-block;
-    font-family: 'Oswald', sans-serif;
-    font-size: 11px;
-    letter-spacing: 1.5px;
-    color: var(--bone);
-    background: rgba(255,79,196,0.12);
-    border: 1px solid var(--glow-line);
-    padding: 5px 12px;
-    border-radius: 20px;
-    text-transform: uppercase;
-    margin-bottom: 14px;
-  }
-  .offer-heading {
-    font-family: 'Oswald', sans-serif;
-    font-weight: 700;
-    font-size: 22px;
-    text-transform: uppercase;
-    margin-bottom: 8px;
-  }
-  .offer-body { font-size: 14px; color: var(--ash); margin-bottom: 18px; }
+  footer { border-top: 1px solid rgba(255, 255, 255, 0.06); padding: 40px 0; }
+  .foot { display: flex; justify-content: space-between; align-items: center; }
+  .foot .logo-text { color: var(--ash-dim); font-size: 14px; }
+  .foot-links { display: flex; gap: 26px; }
+  .foot-links a { color: var(--ash-dim); text-decoration: none; font-size: 14px; }
+  .foot-links a:hover { color: var(--bone); }
 
   /* ── Responsive ── */
-  @media (max-width: 600px) {
-    nav { padding: 18px 20px; }
-    .nav-links { gap: 14px; }
-    h1 { font-size: 34px; }
-    .hero { padding: 36px 20px 24px; }
-    .calc-row { flex-direction: column; }
-    .section { padding: 0 20px; }
-    .proof-grid { grid-template-columns: 1fr; }
-    .how-grid { grid-template-columns: 1fr; text-align: center; }
-    .site-footer { padding: 24px 20px; }
+  @media (max-width: 900px) {
+    .hero-grid, .elite-section { grid-template-columns: 1fr; gap: 40px; }
+    .reviews, .steps { grid-template-columns: 1fr; }
+    .hero h1 { font-size: 46px; }
+    .offer h2 { font-size: 40px; }
+    .container { padding: 0 22px; }
+    .nav-right { gap: 18px; }
+    .nav-right a.hide-sm { display: none; }
+    .hero { padding: 50px 0 60px; }
+    section { padding: 56px 0; }
+    .offer { padding: 36px 24px; }
+    .calc-row { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 480px) {
+    .calc-row { grid-template-columns: 1fr; }
   }
 
+  /* ── Reduced motion ── */
   @media (prefers-reduced-motion: reduce) {
-    .eyebrow, h1, .sub, .hero-ctas, .microcopy, .calc-wrap {
-      animation: none !important;
-      opacity: 1 !important;
-    }
+    .marquee-track { animation-play-state: paused; }
   }
 </style>
 </head>
 <body>
 
-<div class="ambient"></div>
-<div class="ambient-2"></div>
-
-<!-- NAV -->
-<nav>
-  <a href="/" class="brand">PLUS 4 PERFORMANCE</a>
-  <ul class="nav-links">
-    <li><a href="#coaching">Coaching</a></li>
-    <li><a href="#pricing">Pricing</a></li>
-    <li><a href="/login" class="nav-login">Log In</a></li>
-  </ul>
-</nav>
-
-<!-- HERO -->
-<div class="hero">
-  <div class="eyebrow">Training · Nutrition · Coaching — Personalised To You</div>
-  <h1>Your coach<br>in your pocket.</h1>
-  <p class="sub">Get your free personalised snapshot — your calories, your protein, your training split — in under a minute. Then unlock your full coaching dashboard for £9.99/month.</p>
-  <div class="hero-ctas">
-    <a href="/intake" class="btn-primary">Get Your Free Snapshot →</a>
-    <a href="#coaching" class="btn-ghost">Looking for 1-to-1 coaching instead?</a>
+<header>
+  <div class="container nav">
+    <a href="/" class="logo">
+      <div class="logo-mark">P4</div>
+      <span class="logo-text">Plus 4 Performance</span>
+    </a>
+    <nav class="nav-right">
+      <a href="#coaching" class="hide-sm">Coaching</a>
+      <a href="#pricing" class="hide-sm">Pricing</a>
+      <a href="/login" class="btn-ghost">Log in</a>
+    </nav>
   </div>
-  <p class="microcopy">No card required · Takes 60 seconds</p>
+</header>
+
+<div class="marquee" aria-hidden="true">
+  <div class="marquee-track">
+    <span>Personalised training</span><span>Nutrition built around you</span><span>Weekly coaching check-ins</span><span>Progressive overload tracking</span><span>Real meal plans</span>
+    <span>Personalised training</span><span>Nutrition built around you</span><span>Weekly coaching check-ins</span><span>Progressive overload tracking</span><span>Real meal plans</span>
+  </div>
 </div>
 
-<!-- LIVE CALCULATOR -->
-<div class="calc-wrap">
-  <div class="calc-card">
-    <div class="calc-label">Try it now — see your numbers</div>
+<!-- HERO -->
+<section class="hero">
+  <div class="container hero-grid">
+    <div>
+      <span class="eyebrow">Training · Nutrition · Coaching — personalised to you</span>
+      <h1>Your Coach<br>In Your Pocket.</h1>
+      <p class="lead">Your <b>real</b> personalised 12-week training and nutrition plan — built around your goal, your numbers, your training days. <b>Just £1 for your first month.</b></p>
+      <div class="hero-ctas">
+        <a href="/intake" class="btn-primary">Start for £1 &rarr;</a>
+      </div>
+      <p class="hero-note">£1 first month, then £9.99/mo &middot; Cancel anytime</p>
+    </div>
 
-    <div class="calc-row">
-      <div class="calc-field">
-        <label for="sex">Sex</label>
-        <select id="sex">
-          <option value="male">Male</option>
-          <option value="female">Female</option>
-        </select>
+    <div class="calc">
+      <div class="calc-label">Free Tool — Your Maintenance Calories</div>
+      <div class="calc-row">
+        <div class="field">
+          <label for="sex">Sex</label>
+          <select id="sex">
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="age">Age</label>
+          <input type="number" id="age" value="28" min="14" max="90">
+        </div>
       </div>
-      <div class="calc-field">
-        <label for="age">Age</label>
-        <input type="number" id="age" value="28" min="14" max="90">
+      <div class="calc-row">
+        <div class="field">
+          <label for="height">Height (cm)</label>
+          <input type="number" id="height" value="178" min="120" max="230">
+        </div>
+        <div class="field">
+          <label for="weight">Weight (kg)</label>
+          <input type="number" id="weight" value="80" min="35" max="200">
+        </div>
       </div>
-    </div>
-    <div class="calc-row">
-      <div class="calc-field">
-        <label for="height">Height (cm)</label>
-        <input type="number" id="height" value="178" min="120" max="230">
-      </div>
-      <div class="calc-field">
-        <label for="weight">Weight (kg)</label>
-        <input type="number" id="weight" value="80" min="35" max="200">
-      </div>
-    </div>
-    <div class="calc-row">
-      <div class="calc-field" style="flex: 1 1 100%">
+      <div class="field" style="margin-bottom: 14px;">
         <label for="activity">Activity level</label>
         <select id="activity">
           <option value="1.2">Sedentary — little to no exercise</option>
@@ -637,119 +497,120 @@
           <option value="1.725">Very active — 6–7 sessions/week</option>
         </select>
       </div>
-    </div>
-
-    <div class="calc-results">
-      <div class="result-card">
-        <div class="result-num" id="bmr-val">0</div>
-        <div class="result-label">BMR (kcal)</div>
+      <div class="calc-results">
+        <div class="result">
+          <div class="n" id="bmr-val">0</div>
+          <div class="l">BMR kcal</div>
+        </div>
+        <div class="result">
+          <div class="n" id="tdee-val">0</div>
+          <div class="l">TDEE kcal</div>
+        </div>
       </div>
-      <div class="result-card">
-        <div class="result-num" id="tdee-val">0</div>
-        <div class="result-label">TDEE (kcal)</div>
-      </div>
+      <a href="/intake" class="btn-primary">Want a plan built around this? Start for £1 &rarr;</a>
+      <p class="calc-foot">Just a quick maintenance estimate to play with. Your real plan is built properly around your goal after you start.</p>
     </div>
-
-    <div class="calc-cta">
-      <a href="/intake" class="btn-primary" style="font-size: 13px; padding: 15px;">Get My Full Plan →</a>
-    </div>
-    <p class="calc-microcopy">This is your maintenance baseline. Your full plan adjusts this for your actual goal.</p>
   </div>
-</div>
+</section>
 
 <!-- PROOF -->
-<div class="proof-section">
-  <p class="proof-eyebrow">What early users are saying</p>
-  <div class="proof-grid">
-    <div class="proof-card">
-      <div class="proof-stars"><span>★★★★★</span></div>
-      <p class="proof-quote">"Tried this ahead of the official launch and it's genuinely solid — the plan felt properly tailored, not a generic template. Two weeks in and I'm progressing on every lift."</p>
-      <div class="proof-source"><span class="proof-source-badge">Verified review</span> · Trustpilot</div>
-    </div>
-    <div class="proof-card">
-      <div class="proof-stars"><span>★★★★★</span></div>
-      <p class="proof-quote">"Finally a plan built around me — my calories, my training days, my goal. The meal plan alone saves so much time figuring out what to eat."</p>
-      <div class="proof-source"><span class="proof-source-badge">Verified review</span> · Trustpilot</div>
+<section>
+  <div class="container">
+    <span class="eyebrow section-eyebrow">What early users are saying</span>
+    <div class="reviews">
+      <div class="review">
+        <div class="stars">★★★★★</div>
+        <p>"Tried this ahead of the official launch and it's genuinely solid — the plan felt properly tailored, not a generic template. Two weeks in and I'm progressing on every lift."</p>
+        <div class="who"><b>Verified review</b> &middot; Trustpilot</div>
+      </div>
+      <div class="review">
+        <div class="stars">★★★★★</div>
+        <p>"Finally a plan built around me — my calories, my training days, my goal. The meal plan alone saves so much time figuring out what to eat."</p>
+        <div class="who"><b>Verified review</b> &middot; Trustpilot</div>
+      </div>
     </div>
   </div>
-</div>
+</section>
 
 <!-- HOW IT WORKS -->
-<div class="how-section">
-  <h2 class="how-heading">How it works</h2>
-  <div class="how-grid">
-    <div class="how-card">
-      <div class="how-num">01</div>
-      <div class="how-title">Your Snapshot</div>
-      <p class="how-body">Answer a few quick questions about you, your goal, and how you train. Takes about a minute.</p>
-    </div>
-    <div class="how-card">
-      <div class="how-num">02</div>
-      <div class="how-title">Your Plan</div>
-      <p class="how-body">Get a 12-week training and nutrition plan built specifically around your numbers — not a generic template.</p>
-    </div>
-    <div class="how-card">
-      <div class="how-num">03</div>
-      <div class="how-title">Stay On Track</div>
-      <p class="how-body">Weekly AI check-ins, progress tracking, and plan updates every 12 weeks — coaching that adapts with you.</p>
+<section>
+  <div class="container">
+    <h2 class="section-title">How It Works</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="num">01</div>
+        <h3>Start for £1</h3>
+        <p>Tell us about you, your goal and how you train. Takes a few minutes — your first month is just £1.</p>
+      </div>
+      <div class="step">
+        <div class="num">02</div>
+        <h3>Your Plan</h3>
+        <p>Get your full 12-week training and nutrition plan, built specifically around your numbers — not a generic template.</p>
+      </div>
+      <div class="step">
+        <div class="num">03</div>
+        <h3>Stay On Track</h3>
+        <p>Weekly check-ins, progress tracking and plan updates every 12 weeks — coaching that adapts with you.</p>
+      </div>
     </div>
   </div>
-</div>
+</section>
 
-<!-- OFFER BANNER -->
-<div class="offer-banner">
-  <div class="offer-card">
-    <div class="offer-tag">Limited Offer</div>
-    <div class="offer-heading">Your First Month — £1</div>
-    <p class="offer-body">Try the full coaching dashboard for just £1. Then £9.99/month. Cancel anytime.</p>
-    <a href="/intake" class="btn-primary" style="display: inline-block; width: auto; padding: 14px 32px;">Claim Your Snapshot →</a>
+<!-- £1 OFFER -->
+<section class="offer-wrap" id="pricing">
+  <div class="container">
+    <div class="offer">
+      <span class="offer-badge">Limited Offer</span>
+      <h2>Your First Month <span class="small">&mdash;</span> £1</h2>
+      <p>Full access to your real personalised 12-week programme, progressive overload tracking, nutrition targets and a complete meal plan. Then £9.99/month. Cancel anytime.</p>
+      <a href="/intake" class="btn-primary">Start for £1 &rarr;</a>
+      <p class="offer-sub">£1 for your first month, then £9.99/month &middot; Cancel anytime</p>
+    </div>
   </div>
-</div>
+</section>
 
-<!-- PRICING -->
-<div id="pricing" class="section" style="max-width: 480px;">
-  <p class="lower-eyebrow">Simple, transparent pricing</p>
-  <h2 class="lower-heading" style="font-size: 38px;">£9.99 / month</h2>
-  <p class="lower-body">Full 12-week personalised programme, progressive overload tracking, nutrition targets and a complete meal plan — built specifically around your numbers. Cancel any time.</p>
-  <a href="/intake" class="btn-primary" style="max-width: 260px; margin: 0 auto; display: block; padding: 15px;">Start free →</a>
-</div>
-
-<!-- COACHING -->
-<div id="coaching" class="section" style="margin-bottom: 0;">
-  <p class="lower-eyebrow">Want a real coach behind it?</p>
-  <h2 class="lower-heading">1-to-1 Elite Coaching</h2>
-  <p class="lower-body">For people who want direct access to a coach — weekly check-ins, form review, and a programme built and adjusted by hand. Limited spots, by application.</p>
-
-  <form class="coach-form" id="coaching-form" novalidate>
-    <p class="coach-form-label">Apply for coaching</p>
-    <input  type="text"  id="apply-name"  placeholder="Your name"  required>
-    <input  type="email" id="apply-email" placeholder="Email"       required>
-    <textarea id="apply-goals" rows="4" placeholder="Tell us a bit about your goals" required></textarea>
-    <p class="coach-error" id="coaching-error">Something went wrong — please try again or email us at hello@plus4performance.com.</p>
-    <button type="submit" class="btn-primary submit-btn" id="coaching-submit">Send Application →</button>
-  </form>
-
-  <div class="coach-success" id="coaching-success">
-    <div class="success-ring">✓</div>
-    <h3>Application received</h3>
-    <p>We'll be in touch within 24 hours. Keep an eye on your inbox.</p>
+<!-- ELITE COACHING -->
+<section id="coaching">
+  <div class="container elite-section">
+    <div>
+      <span class="eyebrow">Want a real coach behind it?</span>
+      <h2>1-to-1 Elite Coaching</h2>
+      <p class="elite-lead">For people who want direct access to a coach — weekly check-ins, form review, and a programme built and adjusted by hand.</p>
+      <p class="elite-sub">Limited spots, by application.</p>
+    </div>
+    <div class="apply">
+      <div class="apply-label">Apply for coaching</div>
+      <form id="coaching-form" novalidate>
+        <input type="text" id="apply-name" placeholder="Your name" required>
+        <input type="email" id="apply-email" placeholder="Email" required>
+        <textarea id="apply-goals" rows="4" placeholder="Tell us a bit about your goals" required></textarea>
+        <p class="apply-error" id="coaching-error">Something went wrong — please try again or email us at hello@plus4performance.com.</p>
+        <button type="submit" class="btn-primary" id="coaching-submit">Send application &rarr;</button>
+      </form>
+      <div class="apply-success" id="coaching-success">
+        <div class="success-ring">&#10003;</div>
+        <h3>Application received</h3>
+        <p>We'll be in touch within 24 hours. Keep an eye on your inbox.</p>
+      </div>
+    </div>
   </div>
-</div>
+</section>
 
-<!-- FOOTER -->
-<footer class="site-footer">
-  <span class="footer-brand">PLUS 4 PERFORMANCE</span>
-  <div class="footer-links">
-    <a href="/privacy.html">Privacy</a>
-    <a href="/terms.html">Terms</a>
-    <a href="/faq">FAQ</a>
+<footer>
+  <div class="container foot">
+    <span class="logo-text">Plus 4 Performance</span>
+    <div class="foot-links">
+      <a href="/privacy.html">Privacy</a>
+      <a href="/terms.html">Terms</a>
+      <a href="/faq.html">FAQ</a>
+    </div>
   </div>
 </footer>
 
 <script>
   const API = 'https://plus4performance-production.up.railway.app';
 
-  // ── BMR / TDEE — Mifflin-St Jeor ─────────────────────────────────────────
+  // ── BMR / TDEE — Mifflin-St Jeor ────────────────────────────────────────────
   function runCalc() {
     const sex    = document.getElementById('sex').value;
     const age    = parseFloat(document.getElementById('age').value)    || 0;
@@ -757,7 +618,7 @@
     const weight = parseFloat(document.getElementById('weight').value) || 0;
     const factor = parseFloat(document.getElementById('activity').value);
     if (!age || !height || !weight) return;
-    const bmr  = sex === 'male'
+    const bmr = sex === 'male'
       ? (10 * weight) + (6.25 * height) - (5 * age) + 5
       : (10 * weight) + (6.25 * height) - (5 * age) - 161;
     animateNum('bmr-val',  Math.round(bmr));
@@ -777,7 +638,7 @@
     })(performance.now());
   }
 
-  document.querySelectorAll('.calc-field input, .calc-field select').forEach(el => {
+  document.querySelectorAll('#sex, #age, #height, #weight, #activity').forEach(el => {
     el.addEventListener('input',  runCalc);
     el.addEventListener('change', runCalc);
   });
@@ -808,7 +669,7 @@
     } catch {
       errEl.style.display = 'block';
       btn.disabled        = false;
-      btn.textContent     = 'Send Application →';
+      btn.textContent     = 'Send application →';
     }
   });
 </script>
