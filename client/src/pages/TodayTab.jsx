@@ -264,7 +264,7 @@ function WeightStatCard({ currentWeight }) {
   const intPart = currentWeight != null ? Math.round(currentWeight * 10) : 0;
   const counted = useCountUp(intPart, { delay: 500, duration: 900 });
   const display = currentWeight != null
-    ? (Number.isInteger(currentWeight) ? counted : (counted / 10).toFixed(1))
+    ? (Number.isInteger(currentWeight) ? Math.round(counted / 10) : (counted / 10).toFixed(1))
     : '—';
 
   return (
