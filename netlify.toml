@@ -10,8 +10,7 @@
     cp ../logo-mark.png dist/logo-mark.png &&
     cp ../calculator.html dist/calculator.html &&
     cp ../privacy.html dist/privacy.html &&
-    cp ../terms.html dist/terms.html &&
-    cp ../intake.html dist/intake-legacy.html 2>/dev/null || true
+    cp ../terms.html dist/terms.html
   """
   publish = "client/dist"
 
