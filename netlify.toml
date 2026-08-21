@@ -4,6 +4,7 @@
   command = """
     cd client && npm ci && npm run build &&
     cp ../index.html dist/index.html &&
+    cp -r ../images dist/images &&
     cp ../logo-mark.png dist/logo-mark.png &&
     cp ../faq.html dist/faq.html &&
     cp ../calculator.html dist/calculator.html &&
