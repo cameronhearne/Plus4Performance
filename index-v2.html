@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plus 4 Performance | Average to Elite</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0a0a0c;
+    --white:#ffffff;
+    --ash:#8e8e95;
+    --pebble:rgba(255,255,255,0.14);
+    --midnight:#0f0f14;
+    --charcoal:#17171d;
+    --ember:#1e3a6b;
+    --ember-deep:#152a4d;
+    --max:1200px;
+    --gap:80px;
+    --radius-pill:1000px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    color:var(--white);
+    background:var(--ink);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    position:relative;
+  }
+  body::before,
+  body::after{
+    content:'';
+    position:fixed;
+    z-index:-2;
+    pointer-events:none;
+    border-radius:50%;
+    filter:blur(90px);
+  }
+  body::before{
+    top:-10%;
+    left:-15%;
+    width:60vw;
+    height:60vw;
+    background:radial-gradient(circle, rgba(45,74,138,0.32) 0%, rgba(45,74,138,0) 70%);
+  }
+  body::after{
+    bottom:-15%;
+    right:-15%;
+    width:65vw;
+    height:65vw;
+    background:radial-gradient(circle, rgba(30,58,107,0.28) 0%, rgba(30,58,107,0) 70%);
+  }
+  .ambient-glow{
+    position:fixed;
+    top:35%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    width:80vw;
+    height:50vw;
+    background:radial-gradient(ellipse, rgba(50,80,150,0.22) 0%, rgba(50,80,150,0) 70%);
+    filter:blur(100px);
+    z-index:-2;
+    pointer-events:none;
+  }
+  img{max-width:100%;display:block;}
+  a{color:inherit;text-decoration:none;}
+  .wrap{max-width:var(--max);margin:0 auto;padding:0 24px;}
+  section{padding:var(--gap) 0;}
+
+  /* NAV */
+  nav{
+    position:absolute;top:0;left:0;right:0;z-index:10;
+    padding:28px 0;
+  }
+  nav .wrap{display:flex;align-items:center;justify-content:space-between;}
+  .nav-mark{font-weight:800;font-size:21px;letter-spacing:-0.01em;color:#fff;}
+  .nav-mark span{
+    color:#5b8def;
+    text-shadow:0 0 20px rgba(91,141,239,0.5);
+  }
+  .nav-links{display:flex;gap:32px;font-size:15px;color:rgba(255,255,255,0.75);}
+  .nav-links a:hover{color:#fff;}
+  .nav-cta{
+    border:1px solid rgba(255,255,255,0.6);
+    color:#fff;
+    padding:11px 22px;
+    border-radius:var(--radius-pill);
+    font-size:14px;font-weight:600;
+  }
+
+  /* HERO */
+  .hero{
+    background:var(--midnight);
+    color:#fff;
+    padding:0;
+    position:relative;
+    overflow:hidden;
+  }
+  .hero-inner{
+    display:grid;
+    grid-template-columns:1.05fr 0.95fr;
+    align-items:stretch;
+    min-height:92vh;
+  }
+  .hero-copy{
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    padding:140px 64px 80px 24px;
+    max-width:640px;
+  }
+  .eyebrow{
+    font-size:13px;
+    font-weight:700;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--ember);
+    margin-bottom:28px;
+  }
+  .hero h1{
+    font-size:64px;
+    font-weight:800;
+    letter-spacing:-0.03em;
+    line-height:1.02;
+    margin-bottom:28px;
+  }
+  .hero h1 .accent{color:var(--ember);}
+  .hero p.sub{
+    font-size:19px;
+    color:rgba(255,255,255,0.72);
+    line-height:1.6;
+    max-width:480px;
+    margin-bottom:40px;
+  }
+  .hero-ctas{display:flex;gap:16px;align-items:center;flex-wrap:wrap;}
+  .btn-filled{
+    background:var(--ember);
+    color:#fff;
+    padding:16px 30px;
+    border-radius:var(--radius-pill);
+    font-weight:700;
+    font-size:16px;
+    border:none;
+    cursor:pointer;
+    display:inline-block;
+  }
+  .btn-ghost{
+    background:transparent;
+    color:#fff;
+    padding:15px 29px;
+    border-radius:var(--radius-pill);
+    font-weight:600;
+    font-size:16px;
+    border:1px solid rgba(255,255,255,0.5);
+    display:inline-block;
+  }
+  .hero-meta{
+    margin-top:44px;
+    font-size:14px;
+    color:rgba(255,255,255,0.55);
+  }
+  .hero-image{
+    position:relative;
+    min-height:100%;
+  }
+  .hero-image img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    object-position:center 25%;
+  }
+  .hero-image::before{
+    content:'';
+    position:absolute;inset:0;
+    background:linear-gradient(90deg, var(--midnight) 0%, rgba(15,15,20,0) 18%);
+    z-index:1;
+  }
+
+  /* SECTION HEADERS */
+  .section-head{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:40px;
+    margin-bottom:56px;
+    align-items:end;
+  }
+  .section-head h2{
+    font-size:42px;
+    font-weight:800;
+    letter-spacing:-0.02em;
+    line-height:1.05;
+  }
+  .section-head p{
+    font-size:18px;
+    color:var(--ash);
+    line-height:1.61;
+  }
+  .kicker{
+    font-size:13px;
+    font-weight:700;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--ember);
+    margin-bottom:16px;
+    display:block;
+  }
+
+  /* HOW IT WORKS - feature grid */
+  .feature-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:0 80px;
+  }
+  .feature-block{
+    padding:28px 0;
+    border-top:1px solid var(--pebble);
+  }
+  .feature-block .num{
+    font-size:14px;
+    color:var(--ember);
+    font-weight:700;
+    margin-bottom:14px;
+    display:block;
+  }
+  .feature-block h3{
+    font-size:22px;
+    font-weight:700;
+    margin-bottom:12px;
+    letter-spacing:-0.01em;
+  }
+  .feature-block p{
+    font-size:17px;
+    color:var(--ash);
+    line-height:1.61;
+  }
+
+  /* GUARANTEE - featured accent card */
+  .guarantee-section{background:var(--ink);}
+  .guarantee-card{
+    background:var(--ember);
+    color:#fff;
+    padding:64px 56px;
+    display:grid;
+    grid-template-columns:0.9fr 1.1fr;
+    gap:48px;
+  }
+  .guarantee-card h2{
+    font-size:38px;
+    font-weight:800;
+    letter-spacing:-0.02em;
+    line-height:1.1;
+  }
+  .guarantee-card .lead{
+    font-size:17px;
+    color:rgba(255,255,255,0.85);
+    margin-top:20px;
+    line-height:1.6;
+  }
+  .g-list{list-style:none;}
+  .g-list li{
+    padding:18px 0;
+    border-top:1px solid rgba(255,255,255,0.25);
+    font-size:16px;
+    line-height:1.55;
+    display:flex;
+    gap:16px;
+  }
+  .g-list li:last-child{border-bottom:1px solid rgba(255,255,255,0.25);}
+  .g-list .gnum{font-weight:800;opacity:0.65;min-width:24px;}
+  .g-note{
+    font-size:13px;
+    color:rgba(255,255,255,0.65);
+    margin-top:20px;
+  }
+
+  /* PRICING */
+  .pricing-section{background:var(--charcoal);color:#fff;}
+  .pricing-section .kicker{color:var(--ember);}
+  .pricing-section h2{color:#fff;}
+  .pricing-section .section-head p{color:rgba(255,255,255,0.6);}
+  .price-row{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:24px;
+  }
+  .price-card{
+    border:1px solid rgba(255,255,255,0.15);
+    padding:44px 36px;
+    position:relative;
+    background:var(--charcoal);
+  }
+  .price-card::before{
+    content:'';
+    position:absolute;
+    left:10%;right:10%;
+    bottom:-1px;
+    height:70%;
+    background:radial-gradient(ellipse at center bottom, rgba(60,96,168,0.35) 0%, rgba(60,96,168,0) 70%);
+    filter:blur(18px);
+    pointer-events:none;
+    z-index:0;
+  }
+  .price-card > *{position:relative;z-index:1;}
+  .price-card:hover{
+    border-color:rgba(60,96,168,0.5);
+  }
+  .price-card .amount{
+    font-size:48px;
+    font-weight:800;
+    letter-spacing:-0.02em;
+    margin:16px 0 8px;
+  }
+  .price-card .label{
+    font-size:13px;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:rgba(255,255,255,0.5);
+    font-weight:700;
+  }
+  .price-card .desc{
+    font-size:15px;
+    color:rgba(255,255,255,0.6);
+    margin-top:14px;
+    line-height:1.6;
+  }
+  .scarcity{
+    margin-top:40px;
+    padding:20px 24px;
+    border:1px solid rgba(30,58,107,0.35);
+    background:rgba(30,58,107,0.08);
+    font-size:15px;
+    color:#fff;
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+  .scarcity strong{color:var(--ember);}
+
+  /* FAQ */
+  .faq-item{
+    border-top:1px solid var(--pebble);
+    padding:26px 0;
+  }
+  .faq-item:last-child{border-bottom:1px solid var(--pebble);}
+  .faq-item h4{
+    font-size:19px;
+    font-weight:700;
+    margin-bottom:10px;
+  }
+  .faq-item p{
+    font-size:16px;
+    color:var(--ash);
+    line-height:1.61;
+    max-width:640px;
+  }
+
+  /* FOOTER */
+  footer{
+    background:var(--ink);
+    color:#fff;
+    padding:64px 0 32px;
+  }
+  .footer-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    flex-wrap:wrap;
+    gap:40px;
+    padding-bottom:40px;
+    border-bottom:1px solid rgba(255,255,255,0.12);
+  }
+  .footer-mark{font-size:28px;font-weight:800;letter-spacing:-0.02em;}
+  .footer-mark span{color:#5b8def;text-shadow:0 0 20px rgba(91,141,239,0.4);}
+  .footer-tag{color:rgba(255,255,255,0.5);font-size:14px;margin-top:8px;}
+  .footer-links{display:flex;gap:48px;flex-wrap:wrap;}
+  .footer-col h5{font-size:13px;text-transform:uppercase;letter-spacing:0.1em;color:rgba(255,255,255,0.4);margin-bottom:14px;}
+  .footer-col a{display:block;font-size:15px;color:rgba(255,255,255,0.75);margin-bottom:10px;}
+  .footer-bottom{
+    display:flex;justify-content:space-between;
+    padding-top:28px;
+    font-size:13px;
+    color:rgba(255,255,255,0.4);
+    flex-wrap:wrap;gap:12px;
+  }
+
+  /* HOW IT WORKS - split layout with image */
+  .how-split{
+    display:grid;
+    grid-template-columns:0.85fr 1.15fr;
+    gap:64px;
+    align-items:start;
+  }
+  .how-image{
+    position:sticky;
+    top:100px;
+    overflow:visible;
+  }
+  .how-image::before{
+    content:'';
+    position:absolute;
+    left:-12%;right:-12%;
+    top:-8%;bottom:-8%;
+    background:radial-gradient(ellipse at center, rgba(60,96,168,0.4) 0%, rgba(60,96,168,0) 65%);
+    filter:blur(32px);
+    z-index:-1;
+    pointer-events:none;
+  }
+  .how-image-inner{
+    overflow:hidden;
+    position:relative;
+    box-shadow:0 0 60px rgba(30,58,107,0.25);
+  }
+  .how-image img{
+    width:100%;
+    height:640px;
+    object-fit:cover;
+    object-position:45% 45%;
+  }
+  .how-split .feature-grid{
+    grid-template-columns:1fr;
+  }
+
+  /* GUARANTEE with image */
+  .guarantee-card{
+    grid-template-columns:0.8fr 0.85fr 1fr;
+  }
+  .guarantee-image{
+    overflow:hidden;
+  }
+  .guarantee-image img{
+    width:100%;
+    height:100%;
+    min-height:420px;
+    object-fit:cover;
+    object-position:70% 20%;
+  }
+
+  /* PROCESS BAND - mirror shot dark section */
+  .process-band{
+    background:var(--midnight);
+    color:#fff;
+    padding:0;
+  }
+  .process-inner{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    min-height:560px;
+  }
+  .process-image{overflow:hidden;}
+  .process-image img{
+    width:100%;height:100%;
+    object-fit:cover;
+    object-position:35% 30%;
+  }
+  .process-copy{
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    padding:60px 64px;
+  }
+  .process-copy .kicker{color:var(--ember);}
+  .process-copy h2{
+    font-size:36px;
+    font-weight:800;
+    letter-spacing:-0.02em;
+    line-height:1.1;
+    margin-bottom:20px;
+  }
+  .process-copy p{
+    font-size:17px;
+    color:rgba(255,255,255,0.7);
+    line-height:1.61;
+  }
+
+  /* PLATE TEXTURE DIVIDER */
+  .plate-divider{
+    height:200px;
+    overflow:hidden;
+    position:relative;
+  }
+  .plate-divider img{
+    width:100%;height:100%;
+    object-fit:cover;
+    object-position:center 55%;
+    filter:brightness(0.6);
+  }
+  .plate-divider-text{
+    position:absolute;inset:0;
+    display:flex;align-items:center;justify-content:center;
+    color:#fff;
+    font-size:22px;
+    font-weight:700;
+    letter-spacing:0.02em;
+    text-align:center;
+    padding:0 24px;
+  }
+
+  /* SCROLL REVEAL */
+  .reveal{
+    opacity:0;
+    transform:translateY(36px) scale(0.985);
+    filter:blur(6px);
+    transition:opacity 1.1s cubic-bezier(0.16,1,0.3,1),
+               transform 1.1s cubic-bezier(0.16,1,0.3,1),
+               filter 1.1s cubic-bezier(0.16,1,0.3,1);
+    will-change:opacity, transform, filter;
+  }
+  .reveal.is-visible{
+    opacity:1;
+    transform:translateY(0) scale(1);
+    filter:blur(0);
+  }
+  .reveal-stagger > *{
+    opacity:0;
+    transform:translateY(30px) scale(0.98);
+    filter:blur(5px);
+    transition:opacity 0.9s cubic-bezier(0.16,1,0.3,1),
+               transform 0.9s cubic-bezier(0.16,1,0.3,1),
+               filter 0.9s cubic-bezier(0.16,1,0.3,1);
+    will-change:opacity, transform, filter;
+  }
+  .reveal-stagger.is-visible > *{
+    opacity:1;
+    transform:translateY(0) scale(1);
+    filter:blur(0);
+  }
+  .reveal-stagger.is-visible > *:nth-child(1){transition-delay:0.08s;}
+  .reveal-stagger.is-visible > *:nth-child(2){transition-delay:0.18s;}
+  .reveal-stagger.is-visible > *:nth-child(3){transition-delay:0.28s;}
+  .reveal-stagger.is-visible > *:nth-child(4){transition-delay:0.38s;}
+
+  /* HERO LOAD-IN */
+  .hero-load{
+    opacity:0;
+    transform:translateY(22px);
+    filter:blur(4px);
+    transition:opacity 1.2s cubic-bezier(0.16,1,0.3,1),
+               transform 1.2s cubic-bezier(0.16,1,0.3,1),
+               filter 1.2s cubic-bezier(0.16,1,0.3,1);
+  }
+  body.loaded .hero-load{
+    opacity:1;
+    transform:translateY(0);
+    filter:blur(0);
+  }
+  body.loaded .hero-load:nth-child(1){transition-delay:0.1s;}
+  body.loaded .hero-load:nth-child(2){transition-delay:0.25s;}
+  body.loaded .hero-load:nth-child(3){transition-delay:0.4s;}
+  body.loaded .hero-load:nth-child(4){transition-delay:0.55s;}
+  body.loaded .hero-load:nth-child(5){transition-delay:0.7s;}
+
+  /* Subtle parallax on hero image */
+  .hero-image img{
+    transition:transform 0.2s ease-out;
+  }
+
+  @media(prefers-reduced-motion: reduce){
+    .reveal, .reveal-stagger > *, .hero-load{
+      opacity:1 !important;
+      transform:none !important;
+      filter:none !important;
+      transition:none !important;
+    }
+  }
+
+  @media(max-width:860px){
+    .how-split{grid-template-columns:1fr;}
+    .how-image{position:static;}
+    .how-image img{height:320px;}
+    .guarantee-card{grid-template-columns:1fr;}
+    .guarantee-image img{min-height:240px;}
+    .process-inner{grid-template-columns:1fr;}
+    .process-image img{height:280px;}
+    .process-copy{padding:40px 24px;}
+    .hero-inner{grid-template-columns:1fr;min-height:auto;}
+    .hero-image{height:56vh;order:-1;}
+    .hero-image::before{background:linear-gradient(180deg, rgba(15,15,20,0) 60%, var(--midnight) 100%);}
+    .hero-copy{padding:48px 20px 56px;max-width:100%;}
+    .hero h1{font-size:42px;}
+    .section-head{grid-template-columns:1fr;}
+    .feature-grid{grid-template-columns:1fr;gap:0;}
+    .guarantee-card{grid-template-columns:1fr;padding:40px 28px;}
+    .price-row{grid-template-columns:1fr;}
+    .nav-links{display:none;}
+  }
+</style>
+</head>
+<body>
+<div class="ambient-glow"></div>
+
+<nav>
+  <div class="wrap">
+    <div class="nav-mark">PLUS<span>4</span>PERFORMANCE</div>
+    <div class="nav-links">
+      <a href="#how">How It Works</a>
+      <a href="#guarantee">Guarantee</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
+    </div>
+    <a href="#pricing" class="nav-cta">Apply Now</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-copy">
+      <span class="eyebrow hero-load">16-Week Coaching · Average to Elite</span>
+      <h1 class="hero-load">Don't hit your result? <span class="accent">Full refund.</span></h1>
+      <p class="sub hero-load">Personalised 1:1 online coaching, built around your agreed result. Hit it, or you get your money back.</p>
+      <div class="hero-ctas hero-load">
+        <a href="#pricing" class="btn-filled">Apply for a Place</a>
+        <a href="#how" class="btn-ghost">See How It Works</a>
+      </div>
+      <div class="hero-meta hero-load">5 places open. Applications close once they're filled.</div>
+    </div>
+    <div class="hero-image">
+      <img src="images/hero.jpg" alt="Plus 4 Performance coaching">
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div>
+        <span class="kicker">How It Works</span>
+        <h2>The system behind the guarantee.</h2>
+      </div>
+      <p>This isn't a plan you're handed and left to figure out. We review your training weekly, correct your form on camera, and adjust as you progress. That's the level of coaching your result actually needs.</p>
+    </div>
+    <div class="how-split reveal">
+      <div class="how-image"><div class="how-image-inner">
+        <img src="images/how-it-works.jpg" alt="16-week coaching in progress">
+      </div></div>
+      <div class="feature-grid reveal-stagger">
+        <div class="feature-block">
+          <span class="num">01</span>
+          <h3>Training Log Review</h3>
+          <p>Every session logged and reviewed. We catch the progressive overload stagnation you can't see from the inside.</p>
+        </div>
+        <div class="feature-block">
+          <span class="num">02</span>
+          <h3>Live Form Correction</h3>
+          <p>Video-based correction on real working sets, diagnosing the form breakdown that only shows up under fatigue.</p>
+        </div>
+        <div class="feature-block">
+          <span class="num">03</span>
+          <h3>Ongoing Progression</h3>
+          <p>Your training and nutrition updated whenever they need to be, not on a fixed schedule. If something's not working, we change it straight away.</p>
+        </div>
+        <div class="feature-block">
+          <span class="num">04</span>
+          <h3>Weekly Check-In + Accountability</h3>
+          <p>Two touchpoints every week: a check-in on your progress, and a separate accountability check to keep you on track.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="process-band">
+  <div class="process-inner reveal">
+    <div class="process-image">
+      <img src="images/the-standard.jpg" alt="Consistent training process">
+    </div>
+    <div class="process-copy">
+      <span class="kicker">The Standard</span>
+      <h2>No shortcuts. Just the reps that count.</h2>
+      <p>This isn't about grinding harder for the sake of it. It's about training with a system, a coach watching your compliance, and a plan that adjusts to what's actually working. That's the difference between average and elite.</p>
+    </div>
+  </div>
+</section>
+
+<div class="plate-divider">
+  <img src="images/plate-divider.jpg" alt="">
+  <div class="plate-divider-text">16 WEEKS. YOUR RESULT. GUARANTEED.</div>
+</div>
+
+<section id="guarantee" class="guarantee-section">
+  <div class="wrap">
+    <div class="guarantee-card reveal">
+      <div>
+        <h2>Your result. Or your money back.</h2>
+        <p class="lead">Meet the standard. Hit your result. If you don't, you get your money back. That simple.</p>
+      </div>
+      <div class="guarantee-image">
+        <img src="images/guarantee.jpg" alt="Real effort, real accountability">
+      </div>
+      <div>
+        <ul class="g-list">
+          <li><span class="gnum">01</span> Hit 90%+ compliance across training, nutrition, steps and weigh-ins, and stick with it for the full 16 weeks.</li>
+          <li><span class="gnum">02</span> Still miss your result? Full refund.</li>
+        </ul>
+        <p class="g-note">Full terms confirmed on your consultation call before you start.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="pricing" class="pricing-section">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div>
+        <span class="kicker">Investment</span>
+        <h2>One offer. Two ways to pay.</h2>
+      </div>
+      <p>16 weeks of personalised 1:1 coaching, delivered directly by Cameron. No hidden costs, no upsells.</p>
+    </div>
+    <div class="price-row reveal-stagger">
+      <div class="price-card">
+        <div class="label">Pay in Full</div>
+        <div class="amount">&pound;995</div>
+        <div class="desc">One upfront payment. Full 16-week programme, guarantee included.</div>
+      </div>
+      <div class="price-card">
+        <div class="label">Payment Plan</div>
+        <div class="amount">4 &times; &pound;275</div>
+        <div class="desc">Split across the programme. Same coaching, same guarantee.</div>
+      </div>
+    </div>
+    <div class="scarcity"><strong>5 places open.</strong>&nbsp;Applications close once they're filled.</div>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div>
+        <span class="kicker">FAQ</span>
+        <h2>Before you apply.</h2>
+      </div>
+      <p></p>
+    </div>
+    <div class="faq-item reveal">
+      <h4>How does the guarantee actually work?</h4>
+      <p>Simple. Hit 90%+ compliance across training, nutrition, steps and weigh-ins for the full 16 weeks. If you do that and still don't hit your agreed result, you get every penny back. Full terms are confirmed on your consultation call before you start, no surprises later.</p>
+    </div>
+    <div class="faq-item reveal">
+      <h4>Why should I pay this when I could hire any PT?</h4>
+      <p>Because most PTs are guessing. We're not. This is built on weekly reviews, form correction on camera, and a plan that actually adjusts based on what's working for you. You're not paying for a generic programme with your name on it. You're paying for someone watching your progress every single week and being accountable for the result.</p>
+    </div>
+    <div class="faq-item reveal">
+      <h4>How much time do I actually get with you?</h4>
+      <p>Real access, not a templated app experience. Weekly video check-ins, monthly live calls, and direct messaging when you need it. This isn't a subscription you log into and hope for the best. You're working with a coach who's actually looking at your training every week.</p>
+    </div>
+    <div class="faq-item reveal">
+      <h4>What if I'm away for work or travelling a lot?</h4>
+      <p>Doesn't matter. The programme is built around your life, not the other way round. Training and nutrition plans adapt to wherever you are, and check-ins happen remotely either way. If you're serious about the result, travel isn't an excuse we accept, and it's not one you'll need.</p>
+    </div>
+    <div class="faq-item reveal">
+      <h4>What happens after I apply?</h4>
+      <p>You'll be invited to a short consultation call. We confirm it's the right fit, agree your result, and go through the guarantee terms properly before anything starts. No pressure, no hard sell, just making sure this is right before you commit.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="footer-top">
+      <div>
+        <div class="footer-mark">PLUS<span>4</span>PERFORMANCE</div>
+        <div class="footer-tag">Average to Elite.</div>
+      </div>
+      <div class="footer-links">
+        <div class="footer-col">
+          <h5>Programme</h5>
+          <a href="#how">How It Works</a>
+          <a href="#guarantee">Guarantee</a>
+          <a href="#pricing">Pricing</a>
+        </div>
+        <div class="footer-col">
+          <h5>Start</h5>
+          <a href="#pricing">Apply Now</a>
+          <a href="#faq">FAQ</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 Plus 4 Performance. All rights reserved.</span>
+      <span>5 places open. Applications close once they're filled.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var els = document.querySelectorAll('.reveal, .reveal-stagger');
+  if(!('IntersectionObserver' in window)){
+    els.forEach(function(el){ el.classList.add('is-visible'); });
+    document.body.classList.add('loaded');
+    return;
+  }
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(entry){
+      if(entry.isIntersecting){
+        entry.target.classList.add('is-visible');
+        io.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.15, rootMargin: '0px 0px -60px 0px' });
+  els.forEach(function(el){ io.observe(el); });
+
+  // Hero load-in sequence
+  requestAnimationFrame(function(){
+    requestAnimationFrame(function(){
+      document.body.classList.add('loaded');
+    });
+  });
+
+  // Subtle parallax on hero image
+  var heroImg = document.querySelector('.hero-image img');
+  var prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(heroImg && !prefersReducedMotion){
+    var ticking = false;
+    window.addEventListener('scroll', function(){
+      if(!ticking){
+        window.requestAnimationFrame(function(){
+          var y = window.scrollY;
+          if(y < window.innerHeight){
+            heroImg.style.transform = 'translateY(' + (y * 0.12) + 'px) scale(1.06)';
+          }
+          ticking = false;
+        });
+        ticking = true;
+      }
+    }, { passive: true });
+  }
+})();
+</script>
+</body>
+</html>
