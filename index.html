@@ -13,7 +13,7 @@
     --ash:#8e8e95;
     --pebble:rgba(255,255,255,0.14);
     --midnight:#0f0f14;
-    --charcoal:#17171d;
+    --charcoal:#0d0d10;
     --ember:#1e3a6b;
     --ember-deep:#152a4d;
     --max:1200px;
@@ -290,7 +290,7 @@
     border:1px solid rgba(255,255,255,0.15);
     padding:44px 36px;
     position:relative;
-    background:var(--charcoal);
+    background:#18181f;
   }
   .price-card::before{
     content:'';
@@ -426,6 +426,7 @@
   /* GUARANTEE with image */
   .guarantee-card{
     grid-template-columns:0.8fr 0.85fr 1fr;
+    align-items:center;
   }
   .guarantee-image{
     overflow:hidden;
@@ -433,7 +434,7 @@
   .guarantee-image img{
     width:100%;
     height:100%;
-    min-height:420px;
+    max-height:480px;
     object-fit:cover;
     object-position:70% 20%;
   }
