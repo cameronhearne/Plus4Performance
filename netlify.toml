@@ -12,7 +12,6 @@
     cp ../calculator.html dist/calculator.html &&
     cp ../privacy.html dist/privacy.html &&
     cp ../terms.html dist/terms.html &&
-    cp ../plan.html dist/plan.html 2>/dev/null || true &&
     cp ../intake.html dist/intake-legacy.html 2>/dev/null || true
   """
   publish = "client/dist"
