@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://plus4performance.com/sitemap.xml

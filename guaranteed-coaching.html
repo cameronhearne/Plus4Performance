@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guaranteed Coaching | Plus 4 Performance</title>
+<meta name="description" content="16-week guaranteed 1:1 online coaching. Don't hit your agreed result? Full refund. Personalised training, weekly check-ins, and real accountability.">
+<meta property="og:title" content="Guaranteed Coaching | Plus 4 Performance">
+<meta property="og:description" content="16-week guaranteed 1:1 online coaching. Don't hit your agreed result? Full refund.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://plus4performance.com/guaranteed-coaching">
+<meta property="og:image" content="https://plus4performance.com/images/hero.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://plus4performance.com/guaranteed-coaching">
+<link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/images/favicon-192x192.png">
+<link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/site.css">
+<style>
+  /* SUB-NAV — this page only */
+  .sub-nav{
+    position:sticky;top:0;z-index:15;
+    background:var(--charcoal);
+    border-bottom:1px solid var(--pebble);
+  }
+  .sub-nav .wrap{display:flex;gap:32px;padding:14px 24px;overflow-x:auto;}
+  .sub-nav a{font-size:14px;color:rgba(255,255,255,0.7);white-space:nowrap;padding:6px 0;}
+  .sub-nav a:hover{color:#fff;}
+
+  /* HERO */
+  .hero{background:var(--midnight);position:relative;overflow:hidden;}
+  .hero-inner{display:grid;grid-template-columns:1.05fr 0.95fr;align-items:stretch;min-height:80vh;}
+  .hero-copy{display:flex;flex-direction:column;justify-content:center;padding:72px 64px 80px 24px;max-width:640px;}
+  .hero h1{font-size:60px;font-weight:800;letter-spacing:-0.03em;line-height:1.02;margin-bottom:28px;}
+  .hero h1 .accent{color:var(--ember-bright);}
+  .hero p.sub{font-size:19px;color:rgba(255,255,255,0.72);line-height:1.6;max-width:480px;margin-bottom:40px;}
+  .hero-ctas{display:flex;gap:16px;align-items:center;flex-wrap:wrap;}
+  .hero-meta{margin-top:44px;font-size:14px;color:rgba(255,255,255,0.55);}
+  .hero-image{position:relative;min-height:320px;}
+  .hero-image img{width:100%;height:100%;object-fit:cover;object-position:center 25%;}
+  .hero-image::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg, var(--midnight) 0%, rgba(15,15,20,0) 18%);z-index:1;}
+
+  /* HOW IT WORKS */
+  .feature-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 80px;}
+  .feature-block{padding:28px 0;border-top:1px solid var(--pebble);}
+  .feature-block .num{font-size:14px;color:var(--ember-bright);font-weight:700;margin-bottom:14px;display:block;}
+  .feature-block h3{font-size:22px;font-weight:700;margin-bottom:12px;letter-spacing:-0.01em;}
+  .feature-block p{font-size:17px;color:var(--ash);line-height:1.61;}
+  .how-split{display:grid;grid-template-columns:0.85fr 1.15fr;gap:64px;align-items:start;}
+  .how-image{position:sticky;top:76px;overflow:visible;}
+  .how-image::before{content:'';position:absolute;left:-12%;right:-12%;top:-8%;bottom:-8%;background:radial-gradient(ellipse at center, rgba(60,96,168,0.4) 0%, rgba(60,96,168,0) 65%);filter:blur(32px);z-index:-1;pointer-events:none;}
+  .how-image-inner{overflow:hidden;position:relative;box-shadow:0 0 60px rgba(30,58,107,0.25);}
+  .how-image img{width:100%;height:640px;object-fit:cover;object-position:45% 45%;}
+  .how-split .feature-grid{grid-template-columns:1fr;}
+
+  /* PROCESS BAND */
+  .process-band{background:var(--midnight);padding:0;}
+  .process-inner{display:grid;grid-template-columns:1fr 1fr;min-height:560px;}
+  .process-image{overflow:hidden;}
+  .process-image img{width:100%;height:100%;object-fit:cover;object-position:35% 30%;}
+  .process-copy{display:flex;flex-direction:column;justify-content:center;padding:60px 64px;}
+  .process-copy h2{font-size:36px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin-bottom:20px;}
+  .process-copy p{font-size:17px;color:rgba(255,255,255,0.7);line-height:1.61;}
+
+  /* PLATE DIVIDER */
+  .plate-divider{height:200px;overflow:hidden;position:relative;}
+  .plate-divider img{width:100%;height:100%;object-fit:cover;object-position:center 30%;filter:brightness(0.6);}
+  .plate-divider-text{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;font-weight:700;letter-spacing:0.02em;text-align:center;padding:0 24px;}
+
+  /* GUARANTEE */
+  .guarantee-section{background:var(--ink);}
+  .guarantee-card{background:var(--ember);color:#fff;padding:64px 56px;display:grid;grid-template-columns:0.8fr 0.85fr 1fr;gap:48px;align-items:center;}
+  .guarantee-card h2{font-size:38px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;}
+  .guarantee-card .lead{font-size:17px;color:rgba(255,255,255,0.85);margin-top:20px;line-height:1.6;}
+  .guarantee-image{overflow:hidden;}
+  .guarantee-image img{width:100%;height:100%;max-height:480px;object-fit:cover;object-position:70% 20%;}
+  .g-list{list-style:none;}
+  .g-list li{padding:18px 0;border-top:1px solid rgba(255,255,255,0.25);font-size:16px;line-height:1.55;display:flex;gap:16px;}
+  .g-list li:last-child{border-bottom:1px solid rgba(255,255,255,0.25);}
+  .g-list .gnum{font-weight:800;opacity:0.65;min-width:24px;}
+  .g-note{font-size:13px;color:rgba(255,255,255,0.65);margin-top:20px;}
+
+  /* PRICING */
+  .pricing-section{background:var(--charcoal);}
+  .pricing-section .section-head p{color:rgba(255,255,255,0.6);}
+  .price-statement{
+    border:1px solid rgba(255,255,255,0.15);
+    background:#18181f;
+    padding:56px;
+    text-align:center;
+    position:relative;
+    overflow:hidden;
+  }
+  .price-statement::before{
+    content:'';position:absolute;left:10%;right:10%;bottom:-1px;height:70%;
+    background:radial-gradient(ellipse at center bottom, rgba(60,96,168,0.35) 0%, rgba(60,96,168,0) 70%);
+    filter:blur(18px);pointer-events:none;z-index:0;
+  }
+  .price-statement > *{position:relative;z-index:1;}
+  .price-statement .label{font-size:13px;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.5);font-weight:700;margin-bottom:16px;}
+  .price-statement .amount{font-size:28px;font-weight:800;letter-spacing:-0.01em;line-height:1.3;max-width:520px;margin:0 auto 28px;}
+  .scarcity{margin-top:40px;padding:20px 24px;border:1px solid rgba(30,58,107,0.35);background:rgba(30,58,107,0.08);font-size:15px;color:#fff;display:flex;align-items:center;justify-content:center;gap:12px;text-align:center;}
+  .scarcity strong{color:var(--ember-bright);}
+  .pricing-cta{margin-top:32px;text-align:center;}
+
+  /* COACH BLOCK */
+  .coach-block{padding:56px 0;text-align:center;border-bottom:1px solid var(--pebble);}
+  .coach-block h3{font-size:26px;font-weight:800;letter-spacing:-0.01em;margin:10px 0 14px;}
+  .coach-block p{font-size:16px;color:var(--ash);max-width:520px;margin:0 auto;line-height:1.6;}
+
+  /* FAQ */
+  .faq-item{border-top:1px solid var(--pebble);padding:26px 0;}
+  .faq-item:last-child{border-bottom:1px solid var(--pebble);}
+  .faq-item h4{font-size:19px;font-weight:700;margin-bottom:10px;}
+  .faq-item p{font-size:16px;color:var(--ash);line-height:1.61;max-width:640px;}
+
+  @media(max-width:860px){
+    .how-split{grid-template-columns:1fr;}
+    .how-image{position:static;}
+    .how-image img{height:320px;}
+    .guarantee-card{grid-template-columns:1fr;padding:40px 28px;}
+    .guarantee-image img{min-height:240px;}
+    .process-inner{grid-template-columns:1fr;}
+    .process-image img{height:280px;}
+    .process-copy{padding:40px 24px;}
+    .hero-inner{grid-template-columns:1fr;min-height:auto;}
+    .hero-image{height:56vh;order:-1;}
+    .hero-image::before{background:linear-gradient(180deg, rgba(15,15,20,0) 60%, var(--midnight) 100%);}
+    .hero-copy{padding:48px 20px 56px;max-width:100%;}
+    .hero h1{font-size:42px;}
+    .feature-grid{grid-template-columns:1fr;gap:0;}
+    .price-statement{padding:36px 24px;}
+  }
+</style>
+</head>
+<body>
+<div class="ambient-glow"></div>
+<div id="site-header" class="site-header"></div>
+
+<nav class="sub-nav" aria-label="On this page">
+  <div class="wrap">
+    <a href="#how">How It Works</a>
+    <a href="#guarantee">Guarantee</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#faq">FAQ</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-copy">
+      <span class="eyebrow">16-Week Coaching &middot; Average to Elite</span>
+      <h1>Don't hit your result? <span class="accent">Full refund.</span></h1>
+      <p class="sub">Personalised 1:1 online coaching, built around your agreed result. Hit it, or you get your money back.</p>
+      <div class="hero-ctas">
+        <a href="https://tidycal.com/cameronhearne/30-minute-meeting" target="_blank" rel="noopener" class="btn-filled">Apply for a Place</a>
+        <a href="#how" class="btn-ghost">See How It Works</a>
+      </div>
+      <div class="hero-meta">5 places open. Applications close once they're filled.</div>
+    </div>
+    <div class="hero-image">
+      <img src="/images/hero.jpg" alt="Plus 4 Performance coaching">
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div>
+        <span class="kicker">How It Works</span>
+        <h2>The system behind the guarantee.</h2>
+      </div>
+      <p>This isn't a plan you're handed and left to figure out. We review your training weekly, correct your form on camera, and adjust as you progress. That's the level of coaching your result actually needs.</p>
+    </div>
+    <div class="how-split reveal">
+      <div class="how-image"><div class="how-image-inner">
+        <img src="/images/how-it-works.jpg" alt="16-week coaching in progress">
+      </div></div>
+      <div class="feature-grid reveal-stagger">
+        <div class="feature-block">
+          <span class="num">01</span>
+          <h3>Training Log Review</h3>
+          <p>Every session logged and reviewed. We catch the progressive overload stagnation you can't see from the inside.</p>
+        </div>
+        <div class="feature-block">
+          <span class="num">02</span>
+          <h3>Live Form Correction</h3>
+          <p>Video-based correction on real working sets, diagnosing the form breakdown that only shows up under fatigue.</p>
+        </div>
+        <div class="feature-block">
+          <span class="num">03</span>
+          <h3>Ongoing Progression</h3>
+          <p>Your training and nutrition updated whenever they need to be, not on a fixed schedule. If something's not working, we change it straight away.</p>
+        </div>
+        <div class="feature-block">
+          <span class="num">04</span>
+          <h3>Weekly Check-In + Accountability</h3>
+          <p>Two touchpoints every week: a check-in on your progress, and a separate accountability check to keep you on track.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="process-band">
+  <div class="process-inner reveal">
+    <div class="process-image">
+      <img src="/images/the-standard.jpg" alt="Consistent training process">
+    </div>
+    <div class="process-copy">
+      <span class="kicker">The Standard</span>
+      <h2>No shortcuts. Just the reps that count.</h2>
+      <p>This isn't about grinding harder for the sake of it. It's about training with a system, a coach watching your compliance, and a plan that adjusts to what's actually working. That's the difference between average and elite.</p>
+    </div>
+  </div>
+</section>
+
+<div class="plate-divider">
+  <img src="/images/coaching-card.jpg" alt="">
+  <div class="plate-divider-text">16 WEEKS. YOUR RESULT. GUARANTEED.</div>
+</div>
+
+<section id="guarantee" class="guarantee-section">
+  <div class="wrap">
+    <div class="guarantee-card reveal">
+      <div>
+        <h2>Your result. Or your money back.</h2>
+        <p class="lead">Meet the standard. Hit your result. If you don't, you get your money back. That simple.</p>
+      </div>
+      <div class="guarantee-image">
+        <img src="/images/guarantee.jpg" alt="Real effort, real accountability">
+      </div>
+      <div>
+        <ul class="g-list">
+          <li><span class="gnum">01</span> Hit 90%+ compliance across training, nutrition, steps and weigh-ins, and stick with it for the full 16 weeks.</li>
+          <li><span class="gnum">02</span> Still miss your result? Full refund.</li>
+        </ul>
+        <p class="g-note">Full terms confirmed on your consultation call before you start. See our <a href="/guarantee-terms" style="text-decoration:underline;">full guarantee terms</a>.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="pricing" class="pricing-section">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div>
+        <span class="kicker">Investment</span>
+        <h2>One offer. Priced on a call.</h2>
+      </div>
+      <p>16 weeks of personalised 1:1 coaching, delivered directly by Cameron and Ethan. No hidden costs, no upsells.</p>
+    </div>
+    <div class="reveal">
+      <div class="price-statement">
+        <div class="label">Investment</div>
+        <div class="amount">Price on application. We'll go through it on your call.</div>
+        <a href="https://tidycal.com/cameronhearne/30-minute-meeting" target="_blank" rel="noopener" class="btn-filled">Book Your Consultation Call</a>
+      </div>
+    </div>
+    <div class="scarcity"><strong>5 places open.</strong>&nbsp;Applications close once they're filled.</div>
+  </div>
+</section>
+
+<section class="coach-block">
+  <div class="wrap">
+    <span class="kicker">Your Coaches</span>
+    <h3>Plus 4 Performance</h3>
+    <p>15+ years of combined training experience, channelled into every plan we build. No theory, no guesswork, just what actually works.</p>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div>
+        <span class="kicker">FAQ</span>
+        <h2>Before you apply.</h2>
+      </div>
+      <p></p>
+    </div>
+    <div class="faq-item reveal">
+      <h4>How does the guarantee actually work?</h4>
+      <p>Simple. Hit 90%+ compliance across training, nutrition, steps and weigh-ins for the full 16 weeks. If you do that and still don't hit your agreed result, you get every penny back. Full terms are confirmed on your consultation call before you start, no surprises later.</p>
+    </div>
+    <div class="faq-item reveal">
+      <h4>Why should I pay this when I could hire any PT?</h4>
+      <p>Because most PTs are guessing. We're not. This is built on weekly reviews, form correction on camera, and a plan that actually adjusts based on what's working for you. You're not paying for a generic programme with your name on it. You're paying for someone watching your progress every single week and being accountable for the result.</p>
+    </div>
+    <div class="faq-item reveal">
+      <h4>How much time do I actually get with you?</h4>
+      <p>Real access, not a templated app experience. Weekly video check-ins, monthly live calls, and direct messaging when you need it. This isn't a subscription you log into and hope for the best. You're working with a coach who's actually looking at your training every week.</p>
+    </div>
+    <div class="faq-item reveal">
+      <h4>What if I'm away for work or travelling a lot?</h4>
+      <p>Doesn't matter. The programme is built around your life, not the other way round. Training and nutrition plans adapt to wherever you are, and check-ins happen remotely either way. If you're serious about the result, travel isn't an excuse we accept, and it's not one you'll need.</p>
+    </div>
+    <div class="faq-item reveal">
+      <h4>What happens after I apply?</h4>
+      <p>You'll be invited to a short consultation call. We confirm it's the right fit, agree your result, and go through the guarantee terms properly before anything starts. No pressure, no hard sell, just making sure this is right before you commit.</p>
+    </div>
+  </div>
+</section>
+
+<div id="site-footer"></div>
+
+<script src="/js/site.js" defer></script>
+</body>
+</html>

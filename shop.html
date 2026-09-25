@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shop | Plus 4 Performance</title>
+<meta name="description" content="Clothing we designed and wear ourselves. Made to order, printed on demand.">
+<meta property="og:title" content="Shop | Plus 4 Performance">
+<meta property="og:description" content="Clothing we designed and wear ourselves. Made to order, printed on demand.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://plus4performance.com/shop">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://plus4performance.com/shop">
+<link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+<link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/site.css">
+<style>
+  .shop-filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:40px;}
+  .filter-tab{
+    border:1px solid var(--pebble);
+    background:transparent;
+    color:rgba(255,255,255,0.7);
+    border-radius:var(--radius-pill);
+    padding:10px 20px;
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    min-height:44px;
+  }
+  .filter-tab:hover{color:#fff;border-color:rgba(255,255,255,0.4);}
+  .filter-tab[aria-pressed="true"]{background:var(--ember);color:#fff;border-color:var(--ember);}
+
+  .shop-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:32px;
+  }
+  .shop-card-media-link{display:block;}
+  .shop-card-media{
+    position:relative;
+    aspect-ratio:1/1;
+    border-radius:var(--radius);
+    overflow:hidden;
+    background:#ffffff;
+    margin-bottom:16px;
+  }
+  .shop-card-media img{
+    position:absolute;inset:0;
+    width:100%;height:100%;
+    object-fit:cover;
+  }
+  .shop-card-img-back{opacity:0;transition:opacity 0.25s ease;}
+  @media(hover:hover) and (pointer:fine){
+    .shop-card-media-link:hover .shop-card-img-back{opacity:1;}
+  }
+  .shop-card-name-link{display:block;font-size:16px;font-weight:700;margin-bottom:4px;color:#fff;}
+  .shop-card-name-link:hover{color:var(--ember-bright);}
+  .shop-card-price{font-size:15px;color:var(--ash);margin-bottom:10px;}
+
+  .shop-card-swatches{display:flex;gap:4px;}
+  .swatch-btn{
+    width:24px;height:24px;
+    display:flex;align-items:center;justify-content:center;
+    background:none;
+    border:none;
+    padding:0;
+    cursor:pointer;
+  }
+  .swatch-dot{
+    width:14px;height:14px;
+    border-radius:50%;
+    border:1px solid rgba(255,255,255,0.3);
+    display:block;
+  }
+  .swatch-btn[aria-pressed="true"] .swatch-dot{
+    box-shadow:0 0 0 2px var(--ink), 0 0 0 4px var(--ember-bright);
+  }
+  @media(max-width:860px){
+    .shop-grid{grid-template-columns:repeat(2,1fr);gap:20px;}
+  }
+</style>
+</head>
+<body>
+<div id="site-header" class="site-header"></div>
+
+<section class="page-hero">
+  <div class="wrap">
+    <h1>Shop</h1>
+    <p>Clothing we designed and wear ourselves. Made to order.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="shop-filters" role="group" aria-label="Filter products">
+      <button type="button" class="filter-tab" data-filter="all" aria-pressed="true">All</button>
+      <button type="button" class="filter-tab" data-filter="tees" aria-pressed="false">Tees</button>
+      <button type="button" class="filter-tab" data-filter="hoodies" aria-pressed="false">Hoodies</button>
+      <button type="button" class="filter-tab" data-filter="joggers" aria-pressed="false">Joggers</button>
+    </div>
+    <div class="shop-grid reveal-stagger" id="shop-grid"></div>
+  </div>
+</section>
+
+<div id="site-footer"></div>
+
+<script src="/js/products.js"></script>
+<script src="/js/site.js" defer></script>
+<script>
+(function(){
+  var currentFilter = 'all';
+
+  function slugifyColour(name){
+    return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-)$/g, '');
+  }
+
+  function priceLabel(p){
+    return (p.price === null || p.price === undefined) ? 'Coming soon' : '&pound;' + p.price;
+  }
+
+  function cardHTML(p){
+    var colourIndex = 0;
+    var colour = p.colours[colourIndex];
+    var href = '/shop/' + p.slug + '?colour=' + slugifyColour(colour.name);
+
+    return (
+      '<div class="shop-card" data-slug="' + p.slug + '" data-category="' + p.category + '" data-colour-index="' + colourIndex + '">' +
+        '<a class="shop-card-media-link reveal" href="' + href + '" aria-label="View ' + p.name + '">' +
+          '<div class="shop-card-media" data-media></div>' +
+        '</a>' +
+        '<a class="shop-card-name-link" href="' + href + '" data-name-link>' + p.name + '</a>' +
+        '<div class="shop-card-price">' + priceLabel(p) + '</div>' +
+        '<div class="shop-card-swatches" role="group" aria-label="Colour">' +
+          p.colours.map(function(c, i){
+            return '<button type="button" class="swatch-btn" data-colour-index="' + i + '" ' +
+              'aria-pressed="' + (i === 0 ? 'true' : 'false') + '" aria-label="Show in ' + c.name + '">' +
+              '<span class="swatch-dot" style="background:' + c.swatch + '"></span>' +
+            '</button>';
+          }).join('') +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  function renderCardMedia(cardEl, product, colourIndex){
+    var colour = product.colours[colourIndex];
+    var media = cardEl.querySelector('[data-media]');
+    var html = '<img class="shop-card-img-front" src="' + colour.images[0] + '" alt="' + product.name + ' in ' + colour.name + '" loading="lazy">';
+    if(colour.images[1]){
+      html += '<img class="shop-card-img-back" src="' + colour.images[1] + '" alt="' + product.name + ' in ' + colour.name + ', back" loading="lazy">';
+    }
+    media.innerHTML = html;
+
+    var href = '/shop/' + product.slug + '?colour=' + slugifyColour(colour.name);
+    cardEl.querySelector('.shop-card-media-link').setAttribute('href', href);
+    cardEl.querySelector('[data-name-link]').setAttribute('href', href);
+  }
+
+  function render(){
+    var grid = document.getElementById('shop-grid');
+    if(!grid || !window.P4P_PRODUCTS) return;
+    var products = window.P4P_PRODUCTS.filter(function(p){
+      return currentFilter === 'all' || p.category === currentFilter;
+    });
+    grid.innerHTML = products.map(cardHTML).join('');
+
+    grid.querySelectorAll('.shop-card').forEach(function(cardEl){
+      var slug = cardEl.getAttribute('data-slug');
+      var product = window.P4P_PRODUCTS.filter(function(p){ return p.slug === slug; })[0];
+      renderCardMedia(cardEl, product, 0);
+
+      cardEl.querySelectorAll('.swatch-btn').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          cardEl.querySelectorAll('.swatch-btn').forEach(function(b){ b.setAttribute('aria-pressed', 'false'); });
+          btn.setAttribute('aria-pressed', 'true');
+          var colourIndex = parseInt(btn.getAttribute('data-colour-index'), 10);
+          cardEl.setAttribute('data-colour-index', colourIndex);
+          renderCardMedia(cardEl, product, colourIndex);
+        });
+      });
+    });
+
+    grid.querySelectorAll('.reveal').forEach(function(el){ el.classList.add('is-visible'); });
+  }
+
+  function initFilters(){
+    var tabs = document.querySelectorAll('.filter-tab');
+    tabs.forEach(function(tab){
+      tab.addEventListener('click', function(){
+        tabs.forEach(function(t){ t.setAttribute('aria-pressed', 'false'); });
+        tab.setAttribute('aria-pressed', 'true');
+        currentFilter = tab.getAttribute('data-filter');
+        render();
+      });
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    render();
+    initFilters();
+  });
+})();
+</script>
+</body>
+</html>

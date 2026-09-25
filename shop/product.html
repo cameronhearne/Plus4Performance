@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title id="doc-title">Product | Plus 4 Performance Shop</title>
+<meta id="doc-description" name="description" content="Training clothing from Plus 4 Performance.">
+<link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+<link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/site.css">
+<style>
+  .product-layout{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:start;}
+
+  .product-gallery-main{
+    position:relative;
+    aspect-ratio:1/1;
+    border-radius:var(--radius);
+    overflow:hidden;
+    background:#ffffff;
+    margin-bottom:16px;
+  }
+  .product-gallery-main img{width:100%;height:100%;object-fit:cover;}
+  .product-gallery-thumbs{display:flex;gap:12px;flex-wrap:wrap;}
+  .thumb-btn{
+    width:72px;height:72px;
+    border-radius:8px;
+    overflow:hidden;
+    background:#ffffff;
+    border:2px solid transparent;
+    padding:0;
+    cursor:pointer;
+  }
+  .thumb-btn[aria-pressed="true"]{border-color:var(--ember-bright);}
+  .thumb-btn img{width:100%;height:100%;object-fit:cover;}
+
+  .product-info h1{font-size:32px;font-weight:800;letter-spacing:-0.02em;margin-bottom:12px;line-height:1.1;}
+  .product-price{font-size:22px;font-weight:700;color:#fff;margin-bottom:20px;}
+  .product-price.is-muted{color:var(--ash);}
+  .product-desc{font-size:16px;color:var(--ash);line-height:1.7;margin-bottom:28px;}
+
+  .product-section{margin-bottom:28px;}
+  .product-section h2{font-size:13px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:12px;}
+
+  .colour-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .colour-swatch-btn{
+    width:32px;height:32px;
+    border-radius:50%;
+    border:1px solid rgba(255,255,255,0.3);
+    padding:0;
+    cursor:pointer;
+  }
+  .colour-swatch-btn[aria-pressed="true"]{box-shadow:0 0 0 2px var(--ink), 0 0 0 4px var(--ember-bright);}
+  .colour-name{font-size:14px;color:rgba(255,255,255,0.85);font-weight:600;}
+
+  .size-list{display:flex;flex-wrap:wrap;gap:10px;}
+  .size-pill{
+    border:1px solid var(--pebble);
+    background:transparent;
+    color:#fff;
+    border-radius:8px;
+    padding:10px 16px;
+    font-size:14px;
+    min-width:44px;
+    min-height:44px;
+    text-align:center;
+    cursor:pointer;
+  }
+  .size-pill:hover{border-color:rgba(255,255,255,0.5);}
+  .size-pill[aria-pressed="true"]{background:var(--ember);border-color:var(--ember);}
+
+  .product-ship{font-size:14px;color:var(--ash);margin-bottom:24px;}
+  .buy-note{font-size:13px;color:var(--ash);margin-bottom:12px;}
+  .btn-filled:disabled{opacity:0.45;cursor:not-allowed;}
+  .btn-filled:disabled:hover{background:var(--ember);}
+
+  .product-links{display:flex;gap:20px;margin-top:24px;font-size:14px;}
+  .product-links a{color:rgba(255,255,255,0.6);text-decoration:underline;}
+  .product-links a:hover{color:#fff;}
+  .not-found{padding:80px 0;text-align:center;}
+
+  /* YOU MIGHT ALSO LIKE */
+  .also-like{margin-top:96px;padding-top:64px;border-top:1px solid var(--pebble);}
+  .also-like h2{font-size:26px;font-weight:800;letter-spacing:-0.01em;margin-bottom:32px;}
+  .also-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:32px;}
+  .shop-card{display:block;}
+  .shop-card-media{
+    position:relative;aspect-ratio:1/1;
+    border-radius:var(--radius);overflow:hidden;
+    background:#ffffff;
+    margin-bottom:16px;
+  }
+  .shop-card-media img{width:100%;height:100%;object-fit:cover;}
+  .shop-card-name{font-size:16px;font-weight:700;margin-bottom:4px;}
+  .shop-card-price{font-size:15px;color:var(--ash);}
+
+  @media(max-width:860px){
+    .product-layout{grid-template-columns:1fr;gap:32px;}
+    .also-grid{grid-template-columns:repeat(2,1fr);gap:20px;}
+  }
+</style>
+</head>
+<body>
+<div id="site-header" class="site-header"></div>
+
+<section id="product-root">
+  <div class="wrap">
+    <p>Loading...</p>
+  </div>
+</section>
+
+<div id="site-footer"></div>
+
+<script src="/js/products.js"></script>
+<script src="/js/site.js" defer></script>
+<script>
+(function(){
+  function getSlug(){
+    var parts = window.location.pathname.split('/').filter(Boolean);
+    // matches /shop/:slug via the Netlify rewrite, and direct /shop/product.html?slug=... for local testing
+    var params = new URLSearchParams(window.location.search);
+    if(params.get('slug')) return params.get('slug');
+    var last = parts[parts.length - 1];
+    if(last === 'product.html' || last === 'shop') return null;
+    return last;
+  }
+
+  function slugifyColour(name){
+    return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-)$/g, '');
+  }
+
+  function getInitialColourIndex(product){
+    var wanted = new URLSearchParams(window.location.search).get('colour');
+    if(!wanted) return 0;
+    var idx = product.colours.findIndex(function(c){ return slugifyColour(c.name) === wanted; });
+    return idx === -1 ? 0 : idx;
+  }
+
+  function isComingSoon(p){
+    return p.price === null || p.price === undefined || !p.stripePaymentLink || p.stripePaymentLink === 'REPLACE_WITH_LINK';
+  }
+
+  function priceHTML(p){
+    return isComingSoon(p) && (p.price === null || p.price === undefined)
+      ? '<span class="product-price is-muted">Coming soon</span>'
+      : '<span class="product-price">&pound;' + p.price + '</span>';
+  }
+
+  function otherProducts(all, product){
+    var idx = all.indexOf(product);
+    var picks = [];
+    for(var i = 1; i < all.length && picks.length < 3; i++){
+      picks.push(all[(idx + i) % all.length]);
+    }
+    return picks;
+  }
+
+  function alsoLikeCard(p){
+    var c = p.colours[0];
+    var price = (p.price === null || p.price === undefined) ? 'Coming soon' : '&pound;' + p.price;
+    return (
+      '<a class="shop-card reveal is-visible" href="/shop/' + p.slug + '">' +
+        '<div class="shop-card-media"><img src="' + c.images[0] + '" alt="' + p.name + ' in ' + c.name + '" loading="lazy"></div>' +
+        '<div class="shop-card-name">' + p.name + '</div>' +
+        '<div class="shop-card-price">' + price + '</div>' +
+      '</a>'
+    );
+  }
+
+  function render(){
+    var root = document.getElementById('product-root');
+    var slug = getSlug();
+    var all = window.P4P_PRODUCTS || [];
+    var product = all.filter(function(p){ return p.slug === slug; })[0];
+
+    if(!product){
+      root.innerHTML =
+        '<div class="wrap not-found">' +
+          '<span class="eyebrow">Shop</span>' +
+          '<h1 style="font-size:32px;font-weight:800;margin-bottom:16px;">We couldn\'t find that product.</h1>' +
+          '<a href="/shop" class="btn-filled">Back to Shop</a>' +
+        '</div>';
+      return;
+    }
+
+    document.title = product.name + ' | Plus 4 Performance Shop';
+    document.getElementById('doc-title').textContent = product.name + ' | Plus 4 Performance Shop';
+    document.getElementById('doc-description').setAttribute('content', product.description);
+
+    var comingSoon = isComingSoon(product);
+    var initialColourIndex = getInitialColourIndex(product);
+
+    var sizesHTML = '<div class="size-list" role="group" aria-label="Size">' + product.sizes.map(function(s){
+      return '<button type="button" class="size-pill" aria-pressed="false" aria-label="Size ' + s + '">' + s + '</button>';
+    }).join('') + '</div>';
+
+    var swatchesHTML = '<div class="colour-row" role="group" aria-label="Colour">' + product.colours.map(function(c, i){
+      return '<button type="button" class="colour-swatch-btn" style="background:' + c.swatch + '" ' +
+        'aria-pressed="' + (i === initialColourIndex ? 'true' : 'false') + '" aria-label="Colour ' + c.name + '" data-colour-index="' + i + '"></button>';
+    }).join('') + '<span class="colour-name" id="colour-name">' + product.colours[initialColourIndex].name + '</span></div>';
+
+    var ctaHTML = comingSoon
+      ? '<button type="button" class="btn-filled" disabled>Coming soon</button>'
+      : (
+          '<p class="buy-note">You\'ll confirm your colour and size at checkout.</p>' +
+          '<button type="button" class="btn-filled" id="buy-now-btn" disabled aria-disabled="true">Buy Now</button>'
+        );
+
+    var others = otherProducts(all, product);
+    var alsoLikeHTML = others.length
+      ? (
+          '<div class="also-like">' +
+            '<h2>You might also like</h2>' +
+            '<div class="also-grid">' + others.map(alsoLikeCard).join('') + '</div>' +
+          '</div>'
+        )
+      : '';
+
+    root.innerHTML =
+      '<div class="wrap">' +
+        '<div class="product-layout reveal is-visible">' +
+          '<div class="product-gallery">' +
+            '<div class="product-gallery-main"><img id="gallery-main-img" src="" alt=""></div>' +
+            '<div class="product-gallery-thumbs" id="gallery-thumbs"></div>' +
+          '</div>' +
+          '<div class="product-info">' +
+            '<span class="eyebrow">Shop</span>' +
+            '<h1>' + product.name + '</h1>' +
+            priceHTML(product) +
+            '<p class="product-desc">' + product.description + '</p>' +
+            '<div class="product-section">' +
+              '<h2>Colour</h2>' +
+              swatchesHTML +
+            '</div>' +
+            '<div class="product-section">' +
+              '<h2>Size</h2>' +
+              sizesHTML +
+            '</div>' +
+            '<p class="product-ship">Made to order. Dispatched within 7 to 10 working days.</p>' +
+            ctaHTML +
+            '<div class="product-links">' +
+              '<a href="/size-guide">Size Guide</a>' +
+              '<a href="/shipping-returns">Shipping &amp; Returns</a>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        alsoLikeHTML +
+      '</div>';
+
+    var selectedColourIndex = initialColourIndex;
+    var selectedSize = null;
+
+    function renderGallery(){
+      var colour = product.colours[selectedColourIndex];
+      var mainImg = document.getElementById('gallery-main-img');
+      mainImg.src = colour.images[0];
+      mainImg.alt = product.name + ' in ' + colour.name;
+
+      var thumbs = document.getElementById('gallery-thumbs');
+      thumbs.innerHTML = colour.images.map(function(src, i){
+        var label = i === 0 ? (product.name + ' in ' + colour.name) : (product.name + ' in ' + colour.name + ', back');
+        return '<button type="button" class="thumb-btn" aria-pressed="' + (i === 0 ? 'true' : 'false') + '" aria-label="Show ' + label + '" data-src="' + src + '" data-alt="' + label + '">' +
+          '<img src="' + src + '" alt="" loading="lazy">' +
+        '</button>';
+      }).join('');
+
+      thumbs.querySelectorAll('.thumb-btn').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          thumbs.querySelectorAll('.thumb-btn').forEach(function(b){ b.setAttribute('aria-pressed', 'false'); });
+          btn.setAttribute('aria-pressed', 'true');
+          mainImg.src = btn.getAttribute('data-src');
+          mainImg.alt = btn.getAttribute('data-alt');
+        });
+      });
+    }
+
+    function updateBuyButton(){
+      if(comingSoon) return;
+      var btn = document.getElementById('buy-now-btn');
+      if(!btn) return;
+      var ready = !!selectedSize;
+      btn.disabled = !ready;
+      btn.setAttribute('aria-disabled', ready ? 'false' : 'true');
+    }
+
+    document.querySelectorAll('.colour-swatch-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        document.querySelectorAll('.colour-swatch-btn').forEach(function(b){ b.setAttribute('aria-pressed', 'false'); });
+        btn.setAttribute('aria-pressed', 'true');
+        selectedColourIndex = parseInt(btn.getAttribute('data-colour-index'), 10);
+        document.getElementById('colour-name').textContent = product.colours[selectedColourIndex].name;
+        renderGallery();
+      });
+    });
+
+    document.querySelectorAll('.size-pill').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        document.querySelectorAll('.size-pill').forEach(function(b){ b.setAttribute('aria-pressed', 'false'); });
+        btn.setAttribute('aria-pressed', 'true');
+        selectedSize = btn.textContent.trim();
+        updateBuyButton();
+      });
+    });
+
+    if(!comingSoon){
+      var buyBtn = document.getElementById('buy-now-btn');
+      buyBtn.addEventListener('click', function(){
+        if(buyBtn.disabled) return;
+        window.open(product.stripePaymentLink, '_blank', 'noopener');
+      });
+    }
+
+    renderGallery();
+  }
+
+  document.addEventListener('DOMContentLoaded', render);
+})();
+</script>
+</body>
+</html>
