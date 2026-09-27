@@ -22,18 +22,43 @@
 <link rel="stylesheet" href="/css/site.css">
 <style>
   /* HERO */
-  .hero{background:var(--midnight);position:relative;overflow:hidden;}
-  .hero-inner{
-    display:grid;
-    grid-template-columns:1.05fr 0.95fr;
-    align-items:stretch;
+  .hero{
+    background:var(--midnight);
+    position:relative;
+    overflow:hidden;
     min-height:640px;
+    display:flex;
+    align-items:center;
   }
+  .hero-image{
+    position:absolute;
+    top:0;right:0;bottom:0;
+    width:60%;
+    z-index:0;
+  }
+  .hero-image img{
+    width:100%;height:100%;
+    object-fit:cover;
+    object-position:40% 20%;
+    display:block;
+    -webkit-mask-image:linear-gradient(to right, transparent 0%, black 35%), linear-gradient(to bottom, transparent 0%, black 15%, black 80%, transparent 100%);
+    -webkit-mask-composite:source-in;
+    mask-image:linear-gradient(to right, transparent 0%, black 35%), linear-gradient(to bottom, transparent 0%, black 15%, black 80%, transparent 100%);
+    mask-composite:intersect;
+  }
+  .hero-image::after{
+    content:'';
+    position:absolute;
+    inset:0;
+    background:linear-gradient(to right, rgba(15,15,20,0.2) 0%, rgba(15,15,20,0.2) 15%, transparent 33%);
+    z-index:1;
+  }
+  .hero-inner{position:relative;z-index:2;width:100%;}
   .hero-copy{
     display:flex;
     flex-direction:column;
     justify-content:center;
-    padding:80px 64px 80px 24px;
+    padding:80px 0;
     max-width:640px;
   }
   .hero h1{
@@ -52,14 +77,6 @@
     margin-bottom:36px;
   }
   .hero-ctas{display:flex;gap:16px;align-items:center;flex-wrap:wrap;}
-  .hero-image{position:relative;min-height:320px;}
-  .hero-image img{width:100%;height:100%;object-fit:cover;object-position:40% 20%;}
-  .hero-image::before{
-    content:'';
-    position:absolute;inset:0;
-    background:linear-gradient(90deg, var(--midnight) 0%, rgba(15,15,20,0) 18%);
-    z-index:1;
-  }
 
   /* COACHING CARDS */
   .coaching-cards{
@@ -195,10 +212,7 @@
   .signup-message.success{color:#7fd88f;}
 
   @media(max-width:860px){
-    .hero-inner{grid-template-columns:1fr;min-height:auto;}
-    .hero-image{height:56vh;order:-1;}
-    .hero-image::before{background:linear-gradient(180deg, rgba(15,15,20,0) 60%, var(--midnight) 100%);}
-    .hero-copy{padding:48px 20px 56px;max-width:100%;}
+    .hero-copy{padding:48px 0 56px;max-width:100%;}
     .hero h1{font-size:38px;}
     .coaching-cards{grid-template-columns:1fr;gap:24px;}
     .steps-grid{grid-template-columns:1fr;gap:32px;}
@@ -207,13 +221,28 @@
     .coaches-grid{grid-template-columns:1fr;gap:32px;}
     .signup-wrap{grid-template-columns:1fr;}
   }
+
+  @media(max-width:768px){
+    .hero{min-height:560px;}
+    .hero-image{width:100%;left:0;}
+    .hero-image img{
+      -webkit-mask-image:linear-gradient(to bottom, black 0%, transparent 100%);
+      -webkit-mask-composite:source-over;
+      mask-image:linear-gradient(to bottom, black 0%, transparent 100%);
+      mask-composite:add;
+    }
+    .hero-image::after{background:rgba(15,15,20,0.55);}
+  }
 </style>
 </head>
 <body data-legacy-hash-redirect>
 <div id="site-header" class="site-header"></div>
 
 <section class="hero">
-  <div class="hero-inner">
+  <div class="hero-image">
+    <img src="/images/hero-home.jpg" alt="Cameron and Ethan training">
+  </div>
+  <div class="wrap hero-inner">
     <div class="hero-copy">
       <span class="eyebrow reveal is-visible">Online Coaching</span>
       <h1 class="reveal is-visible">1:1 online coaching.<br><span class="accent">Built around you.</span></h1>
@@ -222,9 +251,6 @@
         <a href="https://tidycal.com/cameronhearne/30-minute-meeting" target="_blank" rel="noopener" class="btn-filled">Book a Call</a>
         <a href="#results" class="btn-ghost">See Our Results</a>
       </div>
-    </div>
-    <div class="hero-image">
-      <img src="/images/hero-home.jpg" alt="Cameron and Ethan training">
     </div>
   </div>
 </section>
