@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Affiliate Login — Prototype v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#08070A;
+    --surface:#131119;
+    --surface-2:#0C0A0F;
+    --bone:#F3F1ED;
+    --ash:#ABA9B0;
+    --ash-dim:#7A7880;
+    --glow:rgba(255,79,196,0.5);
+    --glow-line:rgba(255,79,196,0.25);
+    --glow-border:rgba(255,79,196,0.42);
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    background:var(--ink);
+    /* ambient pink haze, top-left, matching sign-in reference */
+    background-image:
+      radial-gradient(46% 42% at 12% 14%, rgba(255,79,196,0.20) 0%, rgba(120,30,140,0.10) 38%, rgba(0,0,0,0) 72%);
+    color:var(--bone);
+    font-family:'Inter',sans-serif;
+    display:flex;align-items:center;justify-content:center;
+    padding:24px;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .card{
+    width:100%;max-width:440px;
+    background:linear-gradient(160deg,var(--surface) 0%,var(--surface-2) 100%);
+    border:1px solid var(--glow-line);
+    border-radius:16px;
+    padding:46px 40px 42px;
+    box-shadow:0 12px 30px -16px rgba(0,0,0,0.55), 0 0 24px -16px var(--glow);
+    opacity:0;transform:translateY(14px);
+    animation:fadeUp .5s ease forwards;
+  }
+
+  .wordmark{
+    font-family:'Oswald',sans-serif;font-weight:600;
+    letter-spacing:0.30em;font-size:15px;text-transform:uppercase;
+    color:var(--ash);
+    opacity:0;transform:translateY(10px);animation:fadeUp .5s ease .06s forwards;
+  }
+  .eyebrow{
+    font-family:'Oswald',sans-serif;font-weight:500;
+    letter-spacing:0.34em;font-size:11px;text-transform:uppercase;
+    color:var(--ash-dim);margin-top:44px;
+    opacity:0;transform:translateY(10px);animation:fadeUp .5s ease .12s forwards;
+  }
+  h1{
+    font-family:'Oswald',sans-serif;font-weight:700;
+    font-size:46px;line-height:1.02;letter-spacing:0.01em;text-transform:uppercase;
+    color:var(--bone);margin-top:12px;
+    opacity:0;transform:translateY(10px);animation:fadeUp .5s ease .18s forwards;
+  }
+  .sub{
+    font-size:15px;line-height:1.55;color:var(--ash);margin-top:18px;max-width:34ch;
+    opacity:0;transform:translateY(10px);animation:fadeUp .5s ease .24s forwards;
+  }
+
+  .field{opacity:0;transform:translateY(10px);animation:fadeUp .5s ease .30s forwards;}
+  .field-label{
+    display:block;font-family:'Inter',sans-serif;font-weight:600;
+    letter-spacing:0.18em;font-size:11px;text-transform:uppercase;
+    color:var(--ash);margin-top:38px;margin-bottom:12px;
+  }
+  input[type=email]{
+    width:100%;background:var(--surface-2);
+    border:1px solid var(--glow-line);border-radius:10px;
+    padding:16px 18px;color:var(--bone);
+    font-family:'Inter',sans-serif;font-size:16px;outline:none;
+    transition:border-color .18s ease, box-shadow .18s ease;
+  }
+  input[type=email]::placeholder{color:var(--ash-dim);}
+  input[type=email]:focus{
+    border-color:var(--glow-border);
+    box-shadow:0 0 0 3px rgba(255,79,196,0.10), 0 0 18px -6px var(--glow);
+  }
+
+  .btn{
+    width:100%;margin-top:28px;padding:18px;
+    background:linear-gradient(160deg,#18151F,#100E15);
+    border:1px solid var(--glow-border);border-radius:11px;
+    color:var(--bone);
+    font-family:'Oswald',sans-serif;font-weight:700;
+    font-size:14px;letter-spacing:0.2em;text-transform:uppercase;
+    cursor:pointer;
+    box-shadow:0 10px 26px -10px var(--glow);
+    transition:transform .1s ease, box-shadow .18s ease, filter .18s ease;
+    opacity:0;animation:fadeUp .5s ease .36s forwards;
+  }
+  .btn:hover{filter:brightness(1.08);box-shadow:0 12px 34px -8px var(--glow);}
+  .btn:active{transform:scale(0.97);}
+  .btn:focus-visible{outline:2px solid var(--bone);outline-offset:3px;}
+
+  @media (max-width:420px){
+    .card{padding:38px 28px 34px;}
+    h1{font-size:38px;}
+  }
+  @keyframes fadeUp{to{opacity:1;transform:translateY(0);}}
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none!important;transition:none!important;opacity:1!important;transform:none!important;}
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="wordmark">Plus 4 Performance</div>
+    <div class="eyebrow">Affiliate Portal</div>
+    <h1>Partner Login</h1>
+    <p class="sub">Enter your affiliate email and we'll send you a one-time login link — no password needed.</p>
+
+    <div class="field">
+      <label class="field-label" for="email">Email address</label>
+      <input id="email" type="email" placeholder="you@example.com" autocomplete="email">
+    </div>
+
+    <button class="btn">Send login link &rarr;</button>
+  </div>
+</body>
+</html>

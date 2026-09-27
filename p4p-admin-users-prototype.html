@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Users Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&family=Roboto+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #08070A; --surface: #131119; --surface-2: #0C0A0F;
+    --bone: #F3F1ED; --ash: #ABA9B0; --ash-dim: #7A7880;
+    --glow: rgba(255, 79, 196, 0.5); --glow-line: rgba(255, 79, 196, 0.25);
+    --green: #4A9968; --green-line: rgba(74,153,104,0.35); --green-glow: rgba(74,153,104,0.3);
+    --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--ink); color: var(--bone); font-family: 'Inter', sans-serif; padding-bottom: 60px; }
+  .ambient { position: fixed; top: -180px; left: -120px; width: 480px; height: 480px;
+    background: radial-gradient(circle, var(--glow) 0%, transparent 65%); opacity: 0.4; pointer-events: none; z-index: 0; }
+  nav { position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: center;
+    padding: 20px 32px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .nav-left { display: flex; align-items: center; gap: 14px; }
+  .brand { font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 14px; letter-spacing: 2.5px; }
+  .admin-pill { background: var(--surface-2); border: 1px solid var(--glow-line); border-radius: 7px;
+    padding: 5px 12px; font-family: 'Oswald', sans-serif; font-size: 10.5px; font-weight: 700; letter-spacing: 1px;
+    color: var(--bone); box-shadow: 0 0 12px -4px var(--glow); }
+  .nav-right { display: flex; gap: 22px; font-size: 12px; color: var(--ash); }
+  .content { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 28px 24px; }
+  .tabs { display: flex; gap: 4px; background: var(--surface); border-radius: 10px; padding: 5px;
+    margin-bottom: 36px; overflow-x: auto; }
+  .tab { padding: 10px 16px; border-radius: 7px; font-family: 'Oswald', sans-serif; font-size: 12px;
+    font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--ash); white-space: nowrap; cursor: pointer; }
+  .tab.active { background: linear-gradient(160deg, #1A1722, #100E15); color: var(--bone);
+    box-shadow: 0 0 16px -4px var(--glow), 0 1px 0 rgba(255,255,255,0.04) inset; }
+
+  h1 { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 32px; text-transform: uppercase;
+    margin-bottom: 22px; }
+  h1 span { color: var(--ash-dim); font-weight: 500; font-size: 22px; }
+
+  .search-input { width: 100%; max-width: 420px; background: var(--surface); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px; padding: 14px 16px; color: var(--bone); font-size: 14px; margin-bottom: 24px;
+    transition: border-color 0.25s var(--ease), box-shadow 0.25s var(--ease); }
+  .search-input:focus { outline: none; border-color: var(--glow-line); box-shadow: 0 0 18px -8px var(--glow); }
+
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: 10.5px; letter-spacing: 1.2px; color: var(--ash-dim); text-transform: uppercase;
+    padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+  td { padding: 16px 14px; font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  tr:last-child td { border-bottom: none; }
+  .name-cell { display: flex; align-items: center; gap: 10px; }
+  .pill { display: inline-block; padding: 5px 11px; border-radius: 7px; font-family: 'Oswald', sans-serif;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; }
+  .pill.active { background: rgba(74,153,104,0.1); border: 1px solid var(--green-line); color: var(--green);
+    box-shadow: 0 0 10px -4px var(--green-glow); }
+  .pill.nosub { background: var(--surface-2); border: 1px solid rgba(255,255,255,0.08); color: var(--ash-dim); }
+  .pill.admin { background: var(--surface-2); border: 1px solid var(--glow-line); color: var(--bone);
+    box-shadow: 0 0 10px -4px var(--glow); }
+  .muted { color: var(--ash-dim); }
+
+  .pagination { display: flex; justify-content: flex-end; align-items: center; gap: 14px; margin-top: 20px;
+    font-size: 13px; color: var(--ash-dim); }
+  .page-btn { background: var(--surface); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px;
+    padding: 9px 16px; color: var(--ash); font-family: 'Oswald', sans-serif; font-size: 11.5px; font-weight: 600;
+    letter-spacing: 0.5px; cursor: pointer; }
+  .page-btn:disabled { opacity: 0.4; cursor: default; }
+</style>
+</head>
+<body>
+<div class="ambient"></div>
+<nav>
+  <div class="nav-left"><div class="brand">PLUS 4 PERFORMANCE</div><div class="admin-pill">Admin</div></div>
+  <div class="nav-right"><span>← Dashboard</span><span>Sign Out</span></div>
+</nav>
+<div class="content">
+  <div class="tabs">
+    <div class="tab">Overview</div><div class="tab active">Users</div><div class="tab">Affiliates</div><div class="tab">Flagged 1RMs</div>
+  </div>
+  <h1>Users <span>(4)</span></h1>
+  <input class="search-input" placeholder="Search name or email...">
+  <table>
+    <thead><tr><th>Name</th><th>Email</th><th>Signed Up ↓</th><th>Status</th><th>Last Active</th><th>Plan Start</th></tr></thead>
+    <tbody>
+      <tr><td>Cam Hearne</td><td class="muted">cameron@plus4performance.com</td><td>24 Jun 2026</td><td><span class="pill nosub">No Sub</span></td><td>24 Jun 2026</td><td>26 Jun 2026</td></tr>
+      <tr><td>Nathan Millington</td><td class="muted">nathan.millo16@gmail.com</td><td>19 Jun 2026</td><td><span class="pill active">Active</span></td><td>19 Jun 2026</td><td>22 Jun 2026</td></tr>
+      <tr><td class="muted">—</td><td class="muted">cameron@thehearnes.co.uk</td><td>17 Jun 2026</td><td><span class="pill nosub">No Sub</span></td><td>19 Jun 2026</td><td class="muted">—</td></tr>
+      <tr><td class="name-cell">Cameron Hearne <span class="pill admin">Admin</span></td><td class="muted">cameronhearne@gmail.com</td><td>30 May 2026</td><td><span class="pill active">Active</span></td><td>25 Jun 2026</td><td>25 Jun 2026</td></tr>
+    </tbody>
+  </table>
+  <div class="pagination">Page 1 of 1 <button class="page-btn" disabled>← Prev</button><button class="page-btn" disabled>Next →</button></div>
+</div>
+</body>
+</html>

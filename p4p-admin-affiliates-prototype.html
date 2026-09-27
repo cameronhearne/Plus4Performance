@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Affiliates Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&family=Roboto+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #08070A; --surface: #131119; --surface-2: #0C0A0F;
+    --bone: #F3F1ED; --ash: #ABA9B0; --ash-dim: #7A7880;
+    --glow: rgba(255, 79, 196, 0.5); --glow-line: rgba(255, 79, 196, 0.25);
+    --green: #4A9968; --green-line: rgba(74,153,104,0.35); --green-glow: rgba(74,153,104,0.3);
+    --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--ink); color: var(--bone); font-family: 'Inter', sans-serif; padding-bottom: 60px; }
+  .ambient { position: fixed; top: -180px; left: -120px; width: 480px; height: 480px;
+    background: radial-gradient(circle, var(--glow) 0%, transparent 65%); opacity: 0.4; pointer-events: none; z-index: 0; }
+  nav { position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: center;
+    padding: 20px 32px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .nav-left { display: flex; align-items: center; gap: 14px; }
+  .brand { font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 14px; letter-spacing: 2.5px; }
+  .admin-pill { background: var(--surface-2); border: 1px solid var(--glow-line); border-radius: 7px;
+    padding: 5px 12px; font-family: 'Oswald', sans-serif; font-size: 10.5px; font-weight: 700; letter-spacing: 1px;
+    color: var(--bone); box-shadow: 0 0 12px -4px var(--glow); }
+  .nav-right { display: flex; gap: 22px; font-size: 12px; color: var(--ash); }
+  .content { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 28px 24px; }
+  .tabs { display: flex; gap: 4px; background: var(--surface); border-radius: 10px; padding: 5px;
+    margin-bottom: 36px; overflow-x: auto; }
+  .tab { padding: 10px 16px; border-radius: 7px; font-family: 'Oswald', sans-serif; font-size: 12px;
+    font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--ash); white-space: nowrap; cursor: pointer; }
+  .tab.active { background: linear-gradient(160deg, #1A1722, #100E15); color: var(--bone);
+    box-shadow: 0 0 16px -4px var(--glow), 0 1px 0 rgba(255,255,255,0.04) inset; }
+
+  h1 { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 28px; text-transform: uppercase; margin-bottom: 20px; }
+
+  .card { background: linear-gradient(160deg, var(--surface) 0%, var(--surface-2) 100%);
+    border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 26px;
+    box-shadow: 0 12px 30px -16px rgba(0,0,0,0.55); margin-bottom: 36px; max-width: 640px; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .field-label { font-size: 11px; letter-spacing: 1.3px; color: var(--ash-dim); text-transform: uppercase; margin-bottom: 8px; }
+  .field input, .field select { width: 100%; background: var(--surface-2); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px; padding: 13px 15px; color: var(--bone); font-size: 14px;
+    transition: border-color 0.25s var(--ease), box-shadow 0.25s var(--ease); }
+  .field input:focus, .field select:focus { outline: none; border-color: var(--glow-line); box-shadow: 0 0 18px -8px var(--glow); }
+  .btn { background: linear-gradient(160deg, #18151F, #100E15); border: 1px solid var(--glow-line);
+    color: var(--bone); border-radius: 10px; padding: 14px 26px; font-family: 'Oswald', sans-serif;
+    font-weight: 700; font-size: 12.5px; letter-spacing: 1.2px; text-transform: uppercase; cursor: pointer;
+    box-shadow: 0 10px 26px -8px var(--glow); }
+
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: 10.5px; letter-spacing: 1.2px; color: var(--ash-dim); text-transform: uppercase;
+    padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+  td { padding: 16px 14px; font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .code-chip { font-family: 'Roboto Mono', monospace; background: var(--surface-2); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 6px; padding: 4px 9px; font-size: 12.5px; color: var(--bone); }
+  .pill { display: inline-block; padding: 5px 11px; border-radius: 7px; font-family: 'Oswald', sans-serif;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; }
+  .pill.active { background: rgba(74,153,104,0.1); border: 1px solid var(--green-line); color: var(--green);
+    box-shadow: 0 0 10px -4px var(--green-glow); }
+  .muted { color: var(--ash-dim); }
+</style>
+</head>
+<body>
+<div class="ambient"></div>
+<nav>
+  <div class="nav-left"><div class="brand">PLUS 4 PERFORMANCE</div><div class="admin-pill">Admin</div></div>
+  <div class="nav-right"><span>← Dashboard</span><span>Sign Out</span></div>
+</nav>
+<div class="content">
+  <div class="tabs">
+    <div class="tab">Overview</div><div class="tab">Users</div><div class="tab active">Affiliates</div><div class="tab">Flagged 1RMs</div>
+  </div>
+
+  <h1>Add Affiliate</h1>
+  <div class="card">
+    <div class="field-row">
+      <div class="field"><div class="field-label">Name</div><input placeholder="Full name"></div>
+      <div class="field"><div class="field-label">Email</div><input placeholder="their@email.com"></div>
+    </div>
+    <div class="field" style="margin-bottom:16px;"><div class="field-label">Referral Code</div><input placeholder="e.g. NATHAN — leave blank to auto-generate"></div>
+    <div class="field-row" style="margin-bottom:20px;">
+      <div class="field"><div class="field-label">Commission Type</div><select><option>Flat (£ per referral)</option></select></div>
+      <div class="field"><div class="field-label">Amount (£)</div><input placeholder="0.00"></div>
+    </div>
+    <button class="btn">Create Affiliate</button>
+  </div>
+
+  <h1>All Affiliates</h1>
+  <table>
+    <thead><tr><th>Name</th><th>Email</th><th>Code</th><th>Commission</th><th>Earned</th><th>Paid</th><th>Pending</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Cameron Hearne</td><td class="muted">cameron@thehearnes.co.uk</td>
+        <td><span class="code-chip">22HWX5SD</span></td><td>£5.00</td><td>£0.00</td><td>£0.00</td><td class="muted">£0.00</td>
+        <td><span class="pill active">Active</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+</body>
+</html>

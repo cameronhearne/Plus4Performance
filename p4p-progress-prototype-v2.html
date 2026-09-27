@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Progress Screen Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&family=Roboto+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #08070A; --surface: #131119; --surface-2: #0C0A0F;
+    --bone: #F3F1ED; --ash: #ABA9B0; --ash-dim: #7A7880;
+    --glow: rgba(255, 79, 196, 0.5); --glow-line: rgba(255, 79, 196, 0.22);
+    --purple-deep: #6B1FB8; --purple-mid: #9B2FE0; --purple-bright: #C961F5;
+    --purple-glow: rgba(155, 47, 224, 0.45);
+    --green-deep: #1E4A2E; --green-mid: #2D6B42; --green-bright: #4A9968;
+    --green-glow: rgba(74, 153, 104, 0.4);
+    --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--ink); color: var(--bone); font-family: 'Inter', sans-serif; padding-bottom: 60px; }
+  .ambient { position: fixed; top: -180px; left: -120px; width: 480px; height: 480px;
+    background: radial-gradient(circle, var(--glow) 0%, transparent 65%); opacity: 0.45; pointer-events: none; z-index: 0; }
+
+  nav { position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: center;
+    padding: 20px 32px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .brand { font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 14px; letter-spacing: 2.5px; }
+  .nav-right { display: flex; gap: 22px; font-size: 12px; color: var(--ash); }
+
+  .content { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding: 28px 24px; }
+
+  .tabs { display: flex; gap: 4px; background: var(--surface); border-radius: 10px; padding: 5px;
+    margin-bottom: 28px; overflow-x: auto; }
+  .tab { padding: 10px 16px; border-radius: 7px; font-family: 'Oswald', sans-serif; font-size: 12px;
+    font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--ash); white-space: nowrap; cursor: pointer; }
+  .tab.active { background: linear-gradient(160deg, #1A1722, #100E15); color: var(--bone);
+    box-shadow: 0 0 16px -4px var(--glow), 0 1px 0 rgba(255,255,255,0.04) inset; }
+
+  .card { background: linear-gradient(160deg, var(--surface) 0%, var(--surface-2) 100%);
+    border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 22px;
+    box-shadow: 0 12px 30px -16px rgba(0,0,0,0.55); margin-bottom: 18px;
+    opacity: 0; animation: fadeUp 0.6s var(--ease) forwards; }
+  .card-label { font-size: 11px; letter-spacing: 1.6px; color: var(--ash-dim); text-transform: uppercase; margin-bottom: 16px; }
+
+  /* log weight row */
+  .weight-row { display: flex; gap: 12px; }
+  .weight-input { flex: 1; background: var(--surface-2); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; }
+  .weight-input input { background: none; border: none; color: var(--bone); font-size: 16px; width: 100%; outline: none; }
+  .weight-input span { color: var(--ash-dim); font-size: 13px; }
+
+  .cta { background: linear-gradient(160deg, #18151F, #100E15); border: 1px solid var(--glow-line);
+    color: var(--bone); border-radius: 10px; padding: 14px 24px; font-family: 'Oswald', sans-serif;
+    font-weight: 600; font-size: 13px; letter-spacing: 1.4px; text-transform: uppercase; cursor: pointer;
+    box-shadow: 0 8px 22px -8px var(--glow); transition: transform 0.2s var(--ease); white-space: nowrap; }
+  .cta:active { transform: scale(0.97); }
+
+  .cta-block { width: 100%; text-align: center; margin-bottom: 18px;
+    opacity: 0; animation: fadeUp 0.6s var(--ease) 0.06s forwards; }
+
+  /* chart */
+  .chart-card { opacity: 0; animation: fadeUp 0.6s var(--ease) 0.12s forwards; }
+  .chart-wrap { position: relative; height: 200px; margin-top: 8px; }
+  svg.chart { width: 100%; height: 100%; overflow: visible; }
+  .chart-line { fill: none; stroke: url(#purpleLine); stroke-width: 3; stroke-linecap: round;
+    filter: drop-shadow(0 0 6px var(--purple-glow)); }
+  .chart-dot { fill: var(--purple-bright); filter: drop-shadow(0 0 4px var(--purple-glow)); }
+  .chart-grid-label { font-size: 10px; fill: var(--ash-dim); font-family: 'Inter', sans-serif; }
+  .chart-target-line { stroke: rgba(255,255,255,0.15); stroke-dasharray: 3 3; stroke-width: 1; }
+
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 18px;
+    opacity: 0; animation: fadeUp 0.6s var(--ease) 0.18s forwards; }
+  .stat-box { background: linear-gradient(160deg, var(--surface) 0%, var(--surface-2) 100%);
+    border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; padding: 18px;
+    box-shadow: 0 10px 24px -14px rgba(0,0,0,0.5); }
+  .stat-box.highlight { border-color: var(--glow-line); box-shadow: 0 10px 24px -14px rgba(0,0,0,0.5), 0 0 20px -10px var(--glow); }
+  .stat-box.positive { border-color: rgba(74,153,104,0.35); box-shadow: 0 10px 24px -14px rgba(0,0,0,0.5), 0 0 22px -10px var(--green-glow), 0 1px 0 rgba(255,255,255,0.03) inset; }
+  .stat-num { font-family: 'Roboto Mono', monospace; font-size: 24px; font-weight: 600; margin-bottom: 6px; }
+  .stat-label { font-size: 10.5px; letter-spacing: 1.2px; color: var(--ash-dim); text-transform: uppercase; }
+  .stat-sub { font-size: 11px; color: var(--ash-dim); margin-top: 4px; }
+
+  .history-card { display: flex; justify-content: space-between; align-items: center; padding: 18px 22px;
+    cursor: pointer; }
+  .history-date { font-weight: 600; font-size: 15px; margin-bottom: 4px; }
+  .history-meta { font-size: 13px; color: var(--ash); }
+  .history-meta b { color: var(--bone); }
+  .history-arrow { color: var(--ash-dim); }
+
+  .pr-note { font-style: italic; font-size: 13px; color: var(--ash); margin-bottom: 18px; line-height: 1.5;
+    opacity: 0; animation: fadeUp 0.6s var(--ease) 0.06s forwards; }
+
+  .pr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+    opacity: 0; animation: fadeUp 0.6s var(--ease) 0.1s forwards; }
+  .pr-card { background: linear-gradient(160deg, var(--surface) 0%, var(--surface-2) 100%);
+    border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 20px;
+    box-shadow: 0 12px 28px -16px rgba(0,0,0,0.55); }
+  .pr-label { font-size: 11px; letter-spacing: 1.5px; color: var(--ash-dim); text-transform: uppercase; margin-bottom: 8px; }
+  .pr-num { font-family: 'Roboto Mono', monospace; font-size: 30px; font-weight: 600; margin-bottom: 6px; }
+  .pr-best { font-size: 11px; font-weight: 600; color: var(--bone); letter-spacing: 1px; text-transform: uppercase; }
+  .pr-date { font-size: 11.5px; color: var(--ash-dim); margin-top: 2px; margin-bottom: 14px; }
+  .pr-history-link { font-size: 12px; color: var(--ash); cursor: pointer; margin-bottom: 10px; }
+  .pr-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .pr-field label { display: block; font-size: 10px; letter-spacing: 1px; color: var(--ash-dim); text-transform: uppercase; margin-bottom: 6px; }
+  .pr-field input { width: 100%; background: var(--surface-2); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px; padding: 11px 12px; color: var(--bone); font-size: 14px; }
+  .pr-field-pair { display: flex; gap: 8px; }
+  .pr-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px; }
+  .pr-btn { background: linear-gradient(160deg, #18151F, #100E15); border: 1px solid var(--glow-line);
+    color: var(--bone); border-radius: 9px; padding: 12px; font-family: 'Oswald', sans-serif; font-weight: 600;
+    font-size: 12px; letter-spacing: 1px; text-transform: uppercase; cursor: pointer;
+    box-shadow: 0 6px 16px -8px var(--glow); }
+  .pr-btn.secondary { background: var(--surface-2); border-color: rgba(255,255,255,0.08); box-shadow: none; color: var(--ash); }
+
+  @keyframes fadeUp { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
+  @media (max-width: 600px) { .stat-grid { grid-template-columns: 1fr; } .pr-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<div class="ambient"></div>
+
+<nav>
+  <div class="brand">PLUS 4 PERFORMANCE</div>
+  <div class="nav-right"><span>Admin</span><span>Sign Out</span></div>
+</nav>
+
+<div class="content">
+  <div class="tabs">
+    <div class="tab">Today</div><div class="tab">Plan</div><div class="tab">Nutrition</div>
+    <div class="tab active">Progress</div><div class="tab">Achievements</div><div class="tab">Logbook</div>
+    <div class="tab">Community</div><div class="tab">Shop</div><div class="tab">Account</div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">Today's Weight</div>
+    <div class="weight-row">
+      <div class="weight-input"><input type="text" placeholder="e.g. 84.5"><span>kg</span></div>
+      <button class="cta">Log Weight</button>
+    </div>
+  </div>
+
+  <div class="cta-block"><button class="cta" style="width:100%;">Log Check-in →</button></div>
+
+  <div class="card chart-card">
+    <div class="card-label">Weight Over Time</div>
+    <div class="chart-wrap">
+      <svg class="chart" viewBox="0 0 600 180" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="purpleLine" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#6B1FB8"/><stop offset="100%" stop-color="#C961F5"/>
+          </linearGradient>
+        </defs>
+        <line x1="0" y1="40" x2="600" y2="40" class="chart-target-line"/>
+        <text x="540" y="34" class="chart-grid-label">Target 100kg</text>
+        <path class="chart-line" d="M 10,140 L 590,50"/>
+        <circle class="chart-dot" cx="10" cy="140" r="5"/>
+        <circle class="chart-dot" cx="590" cy="50" r="5"/>
+        <text x="10" y="160" class="chart-grid-label">13 Jun</text>
+        <text x="540" y="160" class="chart-grid-label">14 Jun</text>
+        <text x="10" y="132" class="chart-grid-label">Start 95kg</text>
+        <text x="500" y="42" class="chart-grid-label">Now 98kg</text>
+      </svg>
+    </div>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat-box"><div class="stat-num">95 KG</div><div class="stat-label">Starting Weight</div></div>
+    <div class="stat-box highlight"><div class="stat-num">98 KG</div><div class="stat-label">Current Weight</div></div>
+    <div class="stat-box positive"><div class="stat-num">2.0 KG</div><div class="stat-label">To Go</div><div class="stat-sub">↑ to go</div></div>
+  </div>
+
+  <div class="card-label" style="margin-bottom:14px;">Check-in History</div>
+  <div class="card" style="padding:0; margin-bottom:10px;">
+    <div class="history-card">
+      <div><div class="history-date">Sunday, 14 June 2026</div><div class="history-meta"><b>98 KG</b> · 1 measurement · 1 photo</div></div>
+      <div class="history-arrow">▾</div>
+    </div>
+  </div>
+  <div class="card" style="padding:0; margin-bottom:30px;">
+    <div class="history-card">
+      <div><div class="history-date">Saturday, 13 June 2026</div><div class="history-meta"><b>95 KG</b></div></div>
+      <div class="history-arrow">▾</div>
+    </div>
+  </div>
+
+  <div class="card-label" style="margin-bottom:6px; font-size:16px; color:var(--bone); letter-spacing:0.5px;">1RM Tracker</div>
+  <p class="pr-note">Always lift with a spotter or safety equipment when testing your max. When in doubt, use the calculator to estimate from your working weight — it's safer and just as useful.</p>
+
+  <div class="pr-grid">
+    <div class="pr-card">
+      <div class="pr-label">Bench Press</div>
+      <div class="pr-num">500 KG</div>
+      <div class="pr-best">Personal Best</div>
+      <div class="pr-date">19 Jun 2026</div>
+      <div class="chart-wrap" style="height:60px;">
+        <svg class="chart" viewBox="0 0 300 60" preserveAspectRatio="none">
+          <path class="chart-line" stroke-width="2" d="M 5,40 C 80,42 150,44 200,38 C 230,34 260,15 295,5"/>
+        </svg>
+      </div>
+      <div class="pr-history-link">▾ History (6)</div>
+      <div class="pr-inputs">
+        <div class="pr-field"><label>Max (kg)</label><input placeholder="e.g. 120"></div>
+        <div class="pr-field-pair">
+          <div class="pr-field"><label>Calculator</label><input placeholder="KG"></div>
+          <div class="pr-field" style="margin-top:18px;"><input placeholder="Reps"></div>
+        </div>
+      </div>
+      <div class="pr-actions"><button class="pr-btn">Log PR</button><button class="pr-btn secondary">Calculate</button></div>
+    </div>
+
+    <div class="pr-card">
+      <div class="pr-label">Squat</div>
+      <div class="pr-num">133.5 KG</div>
+      <div class="pr-best">Personal Best</div>
+      <div class="pr-date">14 Jun 2026</div>
+      <div class="pr-history-link" style="margin-top:14px;">▾ History (1)</div>
+      <div class="pr-inputs">
+        <div class="pr-field"><label>Max (kg)</label><input placeholder="e.g. 120"></div>
+        <div class="pr-field-pair">
+          <div class="pr-field"><label>Calculator</label><input placeholder="KG"></div>
+          <div class="pr-field" style="margin-top:18px;"><input placeholder="Reps"></div>
+        </div>
+      </div>
+      <div class="pr-actions"><button class="pr-btn">Log PR</button><button class="pr-btn secondary">Calculate</button></div>
+    </div>
+
+    <div class="pr-card">
+      <div class="pr-label">Deadlift</div>
+      <div class="pr-num">180 KG</div>
+      <div class="pr-best">Personal Best</div>
+      <div class="pr-date">14 Jun 2026</div>
+      <div class="pr-history-link" style="margin-top:14px;">▾ History (1)</div>
+      <div class="pr-inputs">
+        <div class="pr-field"><label>Max (kg)</label><input placeholder="e.g. 120"></div>
+        <div class="pr-field-pair">
+          <div class="pr-field"><label>Calculator</label><input placeholder="KG"></div>
+          <div class="pr-field" style="margin-top:18px;"><input placeholder="Reps"></div>
+        </div>
+      </div>
+      <div class="pr-actions"><button class="pr-btn">Log PR</button><button class="pr-btn secondary">Calculate</button></div>
+    </div>
+
+    <div class="pr-card">
+      <div class="pr-label">Overhead Press</div>
+      <div class="pr-num">100 KG</div>
+      <div class="pr-best">Personal Best</div>
+      <div class="pr-date">14 Jun 2026</div>
+      <div class="pr-history-link" style="margin-top:14px;">▾ History (1)</div>
+      <div class="pr-inputs">
+        <div class="pr-field"><label>Max (kg)</label><input placeholder="e.g. 120"></div>
+        <div class="pr-field-pair">
+          <div class="pr-field"><label>Calculator</label><input placeholder="KG"></div>
+          <div class="pr-field" style="margin-top:18px;"><input placeholder="Reps"></div>
+        </div>
+      </div>
+      <div class="pr-actions"><button class="pr-btn">Log PR</button><button class="pr-btn secondary">Calculate</button></div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Logbook Screen Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&family=Roboto+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #08070A; --surface: #131119; --surface-2: #0C0A0F;
+    --bone: #F3F1ED; --ash: #ABA9B0; --ash-dim: #7A7880;
+    --glow: rgba(255, 79, 196, 0.5); --glow-line: rgba(255, 79, 196, 0.25);
+    --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--ink); color: var(--bone); font-family: 'Inter', sans-serif; padding-bottom: 60px; }
+  .ambient { position: fixed; top: -180px; left: -120px; width: 480px; height: 480px;
+    background: radial-gradient(circle, var(--glow) 0%, transparent 65%); opacity: 0.45; pointer-events: none; z-index: 0; }
+
+  nav { position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: center;
+    padding: 20px 32px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .brand { font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 14px; letter-spacing: 2.5px; }
+  .nav-right { display: flex; gap: 22px; font-size: 12px; color: var(--ash); }
+
+  .content { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding: 28px 24px; }
+
+  .tabs { display: flex; gap: 4px; background: var(--surface); border-radius: 10px; padding: 5px;
+    margin-bottom: 36px; overflow-x: auto; }
+  .tab { padding: 10px 16px; border-radius: 7px; font-family: 'Oswald', sans-serif; font-size: 12px;
+    font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--ash); white-space: nowrap; cursor: pointer; }
+  .tab.active { background: linear-gradient(160deg, #1A1722, #100E15); color: var(--bone);
+    box-shadow: 0 0 16px -4px var(--glow), 0 1px 0 rgba(255,255,255,0.04) inset; }
+
+  .section-label { font-size: 11px; letter-spacing: 2px; color: var(--ash-dim); text-transform: uppercase;
+    margin-bottom: 12px; }
+
+  .session-select { position: relative; margin-bottom: 36px; }
+  .select-box { background: var(--surface); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px;
+    padding: 16px 18px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;
+    transition: border-color 0.25s var(--ease), box-shadow 0.25s var(--ease); }
+  .select-box.open { border-color: var(--glow-line); box-shadow: 0 0 20px -8px var(--glow); }
+  .select-box .placeholder { color: var(--ash-dim); font-size: 14px; }
+  .select-box .chev { color: var(--ash-dim); transition: transform 0.25s var(--ease); }
+  .select-box.open .chev { transform: rotate(180deg); }
+
+  .select-dropdown { display: none; margin-top: 8px; background: var(--surface); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px; overflow: hidden; box-shadow: 0 14px 34px -16px rgba(0,0,0,0.6); }
+  .select-dropdown.show { display: block; }
+  .select-phase { font-size: 10px; letter-spacing: 1.3px; color: var(--ash-dim); text-transform: uppercase;
+    padding: 12px 18px 6px; }
+  .select-option { padding: 13px 18px; font-size: 14px; cursor: pointer; transition: background 0.15s var(--ease); }
+  .select-option:hover { background: rgba(255,255,255,0.03); }
+
+  .session-card { background: linear-gradient(160deg, var(--surface) 0%, var(--surface-2) 100%);
+    border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; margin-bottom: 14px; overflow: hidden;
+    box-shadow: 0 12px 30px -16px rgba(0,0,0,0.55);
+    opacity: 0; animation: fadeUpSlow 0.55s var(--ease) forwards; }
+  .session-card:nth-child(1) { animation-delay: 0.06s; }
+  .session-card:nth-child(2) { animation-delay: 0.1s; }
+
+  .session-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 22px; cursor: pointer; }
+  .session-title { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 16px; text-transform: uppercase; margin-bottom: 4px; }
+  .session-meta { font-size: 12.5px; color: var(--ash-dim); }
+  .session-toggle { color: var(--ash-dim); font-size: 16px; font-weight: 300; transition: transform 0.3s var(--ease); }
+
+  .session-body { display: none; padding: 0 22px 18px; }
+  .session-card.open .session-body { display: block; }
+
+  .log-row { display: flex; justify-content: space-between; align-items: center; padding: 13px 0;
+    border-top: 1px solid rgba(255,255,255,0.05); font-size: 14px; }
+  .log-row-right { display: flex; align-items: center; gap: 8px; }
+  .log-weight { font-family: 'Roboto Mono', monospace; font-size: 13.5px; color: var(--bone); }
+
+  .pr-badge { display: inline-flex; align-items: center; justify-content: center; padding: 3px 8px;
+    border-radius: 6px; background: var(--surface-2); border: 1px solid var(--glow-line);
+    box-shadow: 0 0 10px -2px var(--glow); font-family: 'Oswald', sans-serif; font-size: 10px;
+    font-weight: 700; letter-spacing: 0.5px; color: var(--bone); }
+
+  @keyframes fadeUpSlow { from { opacity:0; transform: translateY(12px); } to { opacity:1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+
+<div class="ambient"></div>
+
+<nav>
+  <div class="brand">PLUS 4 PERFORMANCE</div>
+  <div class="nav-right"><span>Admin</span><span>Sign Out</span></div>
+</nav>
+
+<div class="content">
+  <div class="tabs">
+    <div class="tab">Today</div><div class="tab">Plan</div><div class="tab">Nutrition</div>
+    <div class="tab">Progress</div><div class="tab">Achievements</div><div class="tab active">Logbook</div>
+    <div class="tab">Community</div><div class="tab">Shop</div><div class="tab">Account</div>
+  </div>
+
+  <div class="section-label">Session</div>
+  <div class="session-select">
+    <div class="select-box" onclick="toggleSelect(this)">
+      <span class="placeholder">Select a session...</span>
+      <span class="chev">▾</span>
+    </div>
+    <div class="select-dropdown">
+      <div class="select-phase">Phase 1 — Foundation</div>
+      <div class="select-option">Push A</div>
+      <div class="select-option">Pull A</div>
+      <div class="select-option">Legs A — Quad Focus</div>
+      <div class="select-option">Push B</div>
+      <div class="select-option">Pull B</div>
+      <div class="select-phase">Phase 2 — Accumulation</div>
+      <div class="select-option">Pull A — Lat Focus</div>
+    </div>
+  </div>
+
+  <div class="section-label" style="font-size:18px; color:var(--bone); letter-spacing:0.5px; margin-bottom:16px;">Previous Sessions</div>
+
+  <div class="session-card open">
+    <div class="session-header" onclick="toggleSession(this.parentElement)">
+      <div>
+        <div class="session-title">Push A — Chest Focus</div>
+        <div class="session-meta">14 Jun 2026 · 4 exercises</div>
+      </div>
+      <div class="session-toggle">−</div>
+    </div>
+    <div class="session-body">
+      <div class="log-row"><span>Barbell Bench Press</span><div class="log-row-right"><span class="log-weight">98 kg</span><span class="pr-badge">PR</span></div></div>
+      <div class="log-row"><span>Barbell Bench Press</span><div class="log-row-right"><span class="log-weight">95 kg</span><span class="pr-badge">PR</span></div></div>
+      <div class="log-row"><span>Barbell Bench Press</span><div class="log-row-right"><span class="log-weight">50 kg</span></div></div>
+      <div class="log-row"><span>Incline Dumbbell Press</span><div class="log-row-right"><span class="log-weight">50 kg</span></div></div>
+    </div>
+  </div>
+
+  <div class="session-card open">
+    <div class="session-header" onclick="toggleSession(this.parentElement)">
+      <div>
+        <div class="session-title">Pull A — Lat Focus</div>
+        <div class="session-meta">14 Jun 2026 · 2 exercises</div>
+      </div>
+      <div class="session-toggle">−</div>
+    </div>
+    <div class="session-body">
+      <div class="log-row"><span>Chest Supported Row</span><div class="log-row-right"><span class="log-weight">50 kg</span></div></div>
+      <div class="log-row"><span>T-Bar Row</span><div class="log-row-right"><span class="log-weight">50 kg</span></div></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function toggleSelect(box) {
+    box.classList.toggle('open');
+    box.nextElementSibling.classList.toggle('show');
+  }
+  function toggleSession(card) {
+    card.classList.toggle('open');
+    card.querySelector('.session-toggle').textContent = card.classList.contains('open') ? '−' : '+';
+  }
+  document.querySelectorAll('.select-option').forEach(opt => {
+    opt.addEventListener('click', () => {
+      const box = document.querySelector('.select-box');
+      box.querySelector('.placeholder').textContent = opt.textContent;
+      box.querySelector('.placeholder').style.color = 'var(--bone)';
+      toggleSelect(box);
+    });
+  });
+</script>
+
+</body>
+</html>

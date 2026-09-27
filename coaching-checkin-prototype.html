@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coaching Check-in — Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&family=Roboto+Mono:wght@600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#08070A; --surface:#131119; --surface-2:#0C0A0F;
+    --bone:#F3F1ED; --ash:#ABA9B0; --ash-dim:#7A7880;
+    --glow:rgba(255,79,196,0.5); --glow-line:rgba(255,79,196,0.25);
+    --glow-border:rgba(255,79,196,0.42);
+    --pink-grad:linear-gradient(90deg,#E8389E,#FF4FC4,#FF8FE0);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    background:var(--ink);
+    background-image:radial-gradient(50% 38% at 50% 0%, rgba(255,79,196,0.10) 0%, rgba(0,0,0,0) 70%);
+    color:var(--bone); font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased; padding:0 0 40px;
+  }
+
+  .wrap{max-width:480px;margin:0 auto;padding:0 20px;}
+
+  /* ── top bar: progress + step label ── */
+  .topbar{position:sticky;top:0;background:linear-gradient(180deg,var(--ink) 70%,rgba(8,7,10,0));padding:22px 0 16px;z-index:5;}
+  .bar-track{height:4px;background:var(--surface);border-radius:99px;overflow:hidden;}
+  .bar-fill{height:100%;background:var(--pink-grad);box-shadow:0 0 12px -2px var(--glow);border-radius:99px;width:16%;transition:width .35s ease;}
+  .step-meta{display:flex;justify-content:space-between;align-items:baseline;margin-top:12px;}
+  .step-eyebrow{font-family:'Oswald',sans-serif;font-weight:500;letter-spacing:0.3em;font-size:10px;text-transform:uppercase;color:var(--ash-dim);}
+  .step-count{font-family:'Roboto Mono',monospace;font-weight:600;font-size:11px;color:var(--ash-dim);}
+
+  /* ── step ── */
+  .step{display:none;animation:fadeUp .4s ease;}
+  .step.active{display:block;}
+  h2{font-family:'Oswald',sans-serif;font-weight:700;font-size:30px;line-height:1.05;text-transform:uppercase;color:var(--bone);margin:18px 0 6px;}
+  .sub{font-size:14px;color:var(--ash);margin-bottom:26px;line-height:1.5;}
+
+  .q{margin-bottom:30px;}
+  .q-label{display:block;font-family:'Inter',sans-serif;font-weight:600;font-size:15px;color:var(--bone);margin-bottom:6px;}
+  .q-hint{display:block;font-size:13px;color:var(--ash-dim);margin-bottom:14px;}
+
+  /* ── 1-10 scale ── */
+  .scale{display:grid;grid-template-columns:repeat(10,1fr);gap:6px;}
+  .scale button{
+    aspect-ratio:1;background:var(--surface-2);border:1px solid var(--glow-line);
+    border-radius:8px;color:var(--ash);font-family:'Roboto Mono',monospace;font-weight:600;
+    font-size:14px;cursor:pointer;transition:all .15s ease;padding:0;
+  }
+  .scale button:hover{border-color:var(--glow-border);}
+  .scale button.sel{
+    color:var(--bone);border-color:var(--glow-border);
+    box-shadow:0 0 0 1px var(--glow-border),0 0 14px -3px var(--glow);
+    background:linear-gradient(160deg,#1B1622,#120E18);
+  }
+  .scale-ends{display:flex;justify-content:space-between;margin-top:8px;font-size:11px;color:var(--ash-dim);}
+
+  /* ── inputs ── */
+  input[type=text],input[type=number],textarea{
+    width:100%;background:var(--surface-2);border:1px solid var(--glow-line);
+    border-radius:10px;padding:14px 16px;color:var(--bone);font-family:'Inter',sans-serif;
+    font-size:16px;outline:none;transition:border-color .18s,box-shadow .18s;
+  }
+  textarea{min-height:90px;resize:vertical;line-height:1.5;}
+  input::placeholder,textarea::placeholder{color:var(--ash-dim);}
+  input:focus,textarea:focus{border-color:var(--glow-border);box-shadow:0 0 0 3px rgba(255,79,196,0.10);}
+  .with-unit{position:relative;}
+  .with-unit .unit{position:absolute;right:16px;top:50%;transform:translateY(-50%);color:var(--ash-dim);font-size:14px;font-family:'Roboto Mono',monospace;}
+
+  /* ── segmented (yes/no, on-plan) ── */
+  .seg{display:flex;gap:8px;}
+  .seg button{
+    flex:1;background:var(--surface-2);border:1px solid var(--glow-line);border-radius:9px;
+    padding:13px;color:var(--ash);font-family:'Inter',sans-serif;font-weight:600;font-size:14px;
+    cursor:pointer;transition:all .15s;
+  }
+  .seg button.sel{color:var(--bone);border-color:var(--glow-border);box-shadow:0 0 14px -4px var(--glow);background:linear-gradient(160deg,#1B1622,#120E18);}
+
+  .reveal{display:none;margin-top:14px;}
+  .reveal.show{display:block;animation:fadeUp .3s ease;}
+
+  /* ── photos ── */
+  .photo-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+  .photo-slot{
+    aspect-ratio:3/4;background:var(--surface-2);border:1px dashed var(--glow-line);border-radius:10px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;
+    color:var(--ash-dim);font-size:12px;transition:border-color .18s;text-align:center;padding:8px;
+  }
+  .photo-slot:hover{border-color:var(--glow-border);}
+  .photo-slot .ic{font-size:22px;}
+  .photo-slot.filled{border-style:solid;border-color:var(--glow-border);color:var(--bone);box-shadow:0 0 16px -6px var(--glow);}
+  .photo-note{font-size:12px;color:var(--ash-dim);margin-top:12px;line-height:1.5;}
+  .posing-add{background:var(--surface-2);border:1px dashed var(--glow-line);border-radius:10px;padding:20px;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;color:var(--ash);font-size:14px;font-weight:500;transition:border-color .18s;}
+  .posing-add:hover{border-color:var(--glow-border);}
+  .posing-add.filled{border-style:solid;border-color:var(--glow-border);color:var(--bone);box-shadow:0 0 16px -6px var(--glow);}
+  .posing-add .ic{font-size:18px;}
+
+  /* ── monthly badge ── */
+  .monthly-flag{display:inline-flex;align-items:center;gap:7px;font-family:'Oswald',sans-serif;font-weight:600;letter-spacing:0.16em;font-size:10px;text-transform:uppercase;color:var(--ash);border:1px solid var(--glow-line);border-radius:99px;padding:5px 12px;margin-bottom:14px;}
+  .monthly-flag .dot{width:6px;height:6px;border-radius:99px;background:var(--pink-grad);box-shadow:0 0 8px var(--glow);}
+
+  /* ── nav buttons ── */
+  .nav{display:flex;gap:12px;margin-top:8px;}
+  .btn{
+    flex:1;padding:17px;border-radius:11px;font-family:'Oswald',sans-serif;font-weight:700;
+    font-size:13px;letter-spacing:0.18em;text-transform:uppercase;cursor:pointer;
+    transition:transform .1s,box-shadow .18s,filter .18s;
+  }
+  .btn-primary{
+    background:linear-gradient(160deg,#18151F,#100E15);border:1px solid var(--glow-border);
+    color:var(--bone);box-shadow:0 10px 26px -10px var(--glow);
+  }
+  .btn-primary:hover{filter:brightness(1.08);box-shadow:0 12px 34px -8px var(--glow);}
+  .btn-primary:active{transform:scale(0.97);}
+  .btn-ghost{background:transparent;border:1px solid var(--glow-line);color:var(--ash);flex:0 0 92px;}
+  .btn-ghost:active{transform:scale(0.97);}
+
+  /* ── done state ── */
+  .done{display:none;text-align:center;padding:60px 0;animation:fadeUp .5s ease;}
+  .done.show{display:block;}
+  .done .ring{width:74px;height:74px;border-radius:99px;margin:0 auto 22px;border:2px solid var(--glow-border);display:flex;align-items:center;justify-content:center;font-size:30px;box-shadow:0 0 28px -6px var(--glow);}
+  .done h2{margin-bottom:10px;}
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="bar-track"><div class="bar-fill" id="bar"></div></div>
+    <div class="step-meta">
+      <span class="step-eyebrow" id="eyebrow">Weekly Check-in</span>
+      <span class="step-count" id="count">01 / 06</span>
+    </div>
+  </div>
+
+  <!-- STEP 1 — BODY -->
+  <section class="step active" data-step="1">
+    <h2>Body</h2>
+    <p class="sub">Start with the number. Everything else is context for it.</p>
+    <div class="q">
+      <label class="q-label">Current weight</label>
+      <span class="q-hint">Same time of day, same conditions as last week if you can.</span>
+      <div class="with-unit"><input type="number" inputmode="decimal" placeholder="0.0"><span class="unit">kg</span></div>
+    </div>
+  </section>
+
+  <!-- STEP 2 — TRAINING & CARDIO -->
+  <section class="step" data-step="2">
+    <h2>Training &amp; Cardio</h2>
+    <p class="sub">How the work in the gym actually went.</p>
+    <div class="q">
+      <label class="q-label">How's training been?</label>
+      <span class="q-hint">10 = hitting PBs.</span>
+      <div class="scale" data-scale></div>
+      <div class="scale-ends"><span>Struggling</span><span>PBs</span></div>
+    </div>
+    <div class="q">
+      <label class="q-label">Missed any sessions?</label>
+      <div class="seg" data-seg data-reveal="miss-train"><button>No</button><button>Yes</button></div>
+      <div class="reveal" id="miss-train"><textarea placeholder="Which sessions, and why?"></textarea></div>
+    </div>
+    <div class="q">
+      <label class="q-label">Cardio this week</label>
+      <span class="q-hint">What machine, what you did, how long.</span>
+      <textarea placeholder="e.g. Stairmaster, 20 min steady, 3x this week"></textarea>
+    </div>
+    <div class="q">
+      <label class="q-label">Missed any scheduled cardio?</label>
+      <div class="seg" data-seg data-reveal="miss-cardio"><button>No</button><button>Yes</button></div>
+      <div class="reveal" id="miss-cardio"><textarea placeholder="What did you miss, and why?"></textarea></div>
+    </div>
+    <div class="q">
+      <label class="q-label">Average daily steps</label>
+      <div class="with-unit"><input type="number" inputmode="numeric" placeholder="0"><span class="unit">steps</span></div>
+    </div>
+  </section>
+
+  <!-- STEP 3 — NUTRITION -->
+  <section class="step" data-step="3">
+    <h2>Nutrition</h2>
+    <p class="sub">The honest version. I can only adjust what I can see.</p>
+    <div class="q">
+      <label class="q-label">Did you manage a full week on plan?</label>
+      <div class="seg" data-seg><button>Yes</button><button>Mostly</button><button>No</button></div>
+    </div>
+    <div class="q">
+      <label class="q-label">Missed any meals?</label>
+      <div class="seg" data-seg data-reveal="miss-meals"><button>No</button><button>Yes</button></div>
+      <div class="reveal" id="miss-meals"><textarea placeholder="Which meals, how often?"></textarea></div>
+    </div>
+    <div class="q">
+      <label class="q-label">Appetite this week</label>
+      <div class="scale" data-scale></div>
+      <div class="scale-ends"><span>No appetite</span><span>Ravenous</span></div>
+    </div>
+    <div class="q">
+      <label class="q-label">Digestion</label>
+      <div class="scale" data-scale></div>
+      <div class="scale-ends"><span>Poor</span><span>Perfect</span></div>
+      <div class="reveal show" style="margin-top:14px"><input type="text" placeholder="Anything worth noting? (optional)"></div>
+    </div>
+    <div class="q">
+      <label class="q-label">Alcohol this week?</label>
+      <div class="seg" data-seg data-reveal="alc"><button>No</button><button>Yes</button></div>
+      <div class="reveal" id="alc"><input type="text" placeholder="Roughly how much, and when?"></div>
+    </div>
+    <div class="q">
+      <label class="q-label">Water — average per day</label>
+      <div class="with-unit"><input type="number" inputmode="decimal" placeholder="0.0"><span class="unit">litres</span></div>
+    </div>
+    <div class="q">
+      <label class="q-label">Anything change with food, drinks, salt or condiments?</label>
+      <textarea placeholder="New foods, swapped sources, more/less salt, sauces, tea/coffee/fizzy — anything different from plan."></textarea>
+    </div>
+    <div class="q">
+      <label class="q-label">Did you have an off-plan meal? When, and what was it?</label>
+      <span class="q-hint">I need the actual food, not just the day — detail matters.</span>
+      <input type="text" placeholder="e.g. Friday night — pizza and a couple of beers">
+    </div>
+  </section>
+
+  <!-- STEP 4 — RECOVERY -->
+  <section class="step" data-step="4">
+    <h2>Recovery</h2>
+    <p class="sub">Recovery drives everything else. Be straight with me.</p>
+    <div class="q">
+      <label class="q-label">Sleep quality</label>
+      <div class="scale" data-scale></div>
+      <div class="scale-ends"><span>Wrecked</span><span>Fully rested</span></div>
+    </div>
+    <div class="q">
+      <label class="q-label">Daytime energy</label>
+      <div class="scale" data-scale></div>
+      <div class="scale-ends"><span>Flat</span><span>Firing</span></div>
+    </div>
+  </section>
+
+  <!-- STEP 5 — PHOTOS -->
+  <section class="step" data-step="5">
+    <h2>Progress Photos</h2>
+    <p class="sub">Optional this week — but the camera sees what the scale can't.</p>
+    <div class="photo-row">
+      <div class="photo-slot" onclick="this.classList.toggle('filled')"><span class="ic">+</span>Front</div>
+      <div class="photo-slot" onclick="this.classList.toggle('filled')"><span class="ic">+</span>Side</div>
+      <div class="photo-slot" onclick="this.classList.toggle('filled')"><span class="ic">+</span>Back</div>
+    </div>
+    <p class="photo-note">Same lighting, same time of day, relaxed. These are for tracking — consistency beats quality.</p>
+
+    <div style="height:1px;background:var(--glow-line);margin:26px 0 22px;"></div>
+
+    <label class="q-label">Posing shots <span style="color:var(--ash-dim);font-weight:400;">— optional</span></label>
+    <span class="q-hint" style="margin-bottom:14px;">Caught good light, or hit a pump worth showing off? Drop them here. No rules — these are the ones to feel good about.</span>
+    <div class="posing-add" onclick="this.classList.toggle('filled')">
+      <span class="ic">+</span> Add posing photos
+    </div>
+    <p class="photo-note">All photos stored privately — only you and your coach ever see them.</p>
+  </section>
+
+  <!-- MONTHLY REVIEW (only on 4th-week check-ins) -->
+  <section class="step" data-step="6" data-monthly>
+    <span class="monthly-flag"><span class="dot"></span>Monthly Review</span>
+    <h2>The Bigger Picture</h2>
+    <p class="sub">A few extra questions once a month. Skip what doesn't apply.</p>
+    <div class="q">
+      <label class="q-label">Supplements you're currently taking</label>
+      <textarea placeholder="Everything — creatine, protein, vitamins, the lot."></textarea>
+    </div>
+    <div class="q">
+      <label class="q-label">Measurements</label>
+      <span class="q-hint">Optional — waist is the one that matters most.</span>
+      <div class="with-unit" style="margin-bottom:10px"><input type="number" inputmode="decimal" placeholder="Waist"><span class="unit">cm</span></div>
+      <div class="with-unit"><input type="number" inputmode="decimal" placeholder="Chest"><span class="unit">cm</span></div>
+    </div>
+    <div class="q">
+      <label class="q-label">Long-term goal — still the same?</label>
+      <textarea placeholder="Has anything shifted in what you're chasing?"></textarea>
+    </div>
+    <div class="q">
+      <label class="q-label">Anything I can do to coach you better?</label>
+      <textarea placeholder="Be honest — this is how the service improves."></textarea>
+    </div>
+  </section>
+
+  <!-- STEP 7 — NOTES FOR COACH -->
+  <section class="step" data-step="7">
+    <h2>For Your Coach</h2>
+    <p class="sub">Last bit. This is what I read first.</p>
+    <div class="q">
+      <label class="q-label">Biggest win this week</label>
+      <textarea placeholder="Something went right. What was it?"></textarea>
+    </div>
+    <div class="q">
+      <label class="q-label">Any upcoming social events to work around?</label>
+      <textarea placeholder="Weddings, holidays, meals out — anything coming up."></textarea>
+    </div>
+    <div class="q">
+      <label class="q-label">Questions for me</label>
+      <textarea placeholder="Anything you're unsure about or want me to look at."></textarea>
+    </div>
+  </section>
+
+  <!-- DONE -->
+  <section class="done" id="done">
+    <div class="ring">&#10003;</div>
+    <h2>Check-in Sent</h2>
+    <p class="sub" style="margin-bottom:0">Your coach has it. You'll get a response in your Coaching tab within 24 hours.</p>
+  </section>
+
+  <div class="nav" id="nav">
+    <button class="btn btn-ghost" id="back" style="display:none">Back</button>
+    <button class="btn btn-primary" id="next">Next</button>
+  </div>
+</div>
+
+<script>
+  // Build 1-10 scales
+  document.querySelectorAll('[data-scale]').forEach(s=>{
+    for(let i=1;i<=10;i++){const b=document.createElement('button');b.textContent=i;
+      b.onclick=()=>{s.querySelectorAll('button').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');};
+      s.appendChild(b);}
+  });
+  // Segmented selectors + reveals
+  document.querySelectorAll('[data-seg]').forEach(seg=>{
+    seg.querySelectorAll('button').forEach(b=>{
+      b.onclick=()=>{
+        seg.querySelectorAll('button').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');
+        const rev=seg.dataset.reveal;
+        if(rev){document.getElementById(rev).classList.toggle('show', b.textContent==='Yes');}
+      };
+    });
+  });
+
+  // ── Stepping ──
+  // Toggle this to preview a normal week (false) vs a monthly check-in week (true)
+  const IS_MONTHLY = true;
+  let steps = [...document.querySelectorAll('.step')];
+  if(!IS_MONTHLY) steps = steps.filter(s=>!s.hasAttribute('data-monthly'));
+  let i = 0;
+  const bar=document.getElementById('bar'),count=document.getElementById('count'),
+        eyebrow=document.getElementById('eyebrow'),back=document.getElementById('back'),
+        next=document.getElementById('next'),nav=document.getElementById('nav'),done=document.getElementById('done');
+
+  function render(){
+    document.querySelectorAll('.step').forEach(s=>s.classList.remove('active'));
+    steps[i].classList.add('active');
+    bar.style.width=((i+1)/steps.length*100)+'%';
+    count.textContent=String(i+1).padStart(2,'0')+' / '+String(steps.length).padStart(2,'0');
+    eyebrow.textContent = steps[i].hasAttribute('data-monthly') ? 'Monthly Review' : 'Weekly Check-in';
+    back.style.display = i===0 ? 'none' : 'block';
+    next.textContent = i===steps.length-1 ? 'Send Check-in' : 'Next';
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+  next.onclick=()=>{ if(i<steps.length-1){i++;render();} else { nav.style.display='none'; document.querySelectorAll('.step').forEach(s=>s.classList.remove('active')); done.classList.add('show'); window.scrollTo({top:0,behavior:'smooth'}); } };
+  back.onclick=()=>{ if(i>0){i--;render();} };
+  render();
+</script>
+</body>
+</html>

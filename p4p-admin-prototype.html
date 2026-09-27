@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Overview Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&family=Roboto+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #08070A; --surface: #131119; --surface-2: #0C0A0F;
+    --bone: #F3F1ED; --ash: #ABA9B0; --ash-dim: #7A7880;
+    --glow: rgba(255, 79, 196, 0.5); --glow-line: rgba(255, 79, 196, 0.25);
+    --purple-deep: #6B1FB8; --purple-mid: #9B2FE0; --purple-bright: #C961F5;
+    --purple-glow: rgba(155, 47, 224, 0.45);
+    --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--ink); color: var(--bone); font-family: 'Inter', sans-serif; padding-bottom: 60px; }
+  .ambient { position: fixed; top: -180px; left: -120px; width: 480px; height: 480px;
+    background: radial-gradient(circle, var(--glow) 0%, transparent 65%); opacity: 0.4; pointer-events: none; z-index: 0; }
+
+  nav { position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: center;
+    padding: 20px 32px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .nav-left { display: flex; align-items: center; gap: 14px; }
+  .brand { font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 14px; letter-spacing: 2.5px; }
+  .admin-pill { background: var(--surface-2); border: 1px solid var(--glow-line); border-radius: 7px;
+    padding: 5px 12px; font-family: 'Oswald', sans-serif; font-size: 10.5px; font-weight: 700; letter-spacing: 1px;
+    color: var(--bone); box-shadow: 0 0 12px -4px var(--glow); }
+  .nav-right { display: flex; gap: 22px; font-size: 12px; color: var(--ash); align-items: center; }
+
+  .content { position: relative; z-index: 1; max-width: 1000px; margin: 0 auto; padding: 28px 24px; }
+
+  .tabs { display: flex; gap: 4px; background: var(--surface); border-radius: 10px; padding: 5px;
+    margin-bottom: 36px; overflow-x: auto; }
+  .tab { padding: 10px 16px; border-radius: 7px; font-family: 'Oswald', sans-serif; font-size: 12px;
+    font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--ash); white-space: nowrap; cursor: pointer; }
+  .tab.active { background: linear-gradient(160deg, #1A1722, #100E15); color: var(--bone);
+    box-shadow: 0 0 16px -4px var(--glow), 0 1px 0 rgba(255,255,255,0.04) inset; }
+
+  h1 { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 32px; text-transform: uppercase;
+    margin-bottom: 26px; opacity: 0; animation: fadeUp 0.6s var(--ease) forwards; }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 28px;
+    opacity: 0; animation: fadeUp 0.6s var(--ease) 0.08s forwards; }
+  .stat-card { background: linear-gradient(160deg, var(--surface) 0%, var(--surface-2) 100%);
+    border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 22px;
+    box-shadow: 0 10px 26px -16px rgba(0,0,0,0.55), 0 0 20px -16px var(--glow); }
+  .stat-label { font-size: 11px; letter-spacing: 1.4px; color: var(--ash-dim); text-transform: uppercase; margin-bottom: 12px; }
+  .stat-num { font-family: 'Roboto Mono', monospace; font-size: 30px; font-weight: 600; margin-bottom: 8px; }
+  .stat-sub { font-size: 11.5px; color: var(--ash-dim); }
+
+  .chart-card { background: linear-gradient(160deg, var(--surface) 0%, var(--surface-2) 100%);
+    border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 26px;
+    box-shadow: 0 12px 30px -16px rgba(0,0,0,0.55);
+    opacity: 0; animation: fadeUp 0.6s var(--ease) 0.16s forwards; }
+  .chart-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 14px; }
+  .chart-title { font-size: 11px; letter-spacing: 1.6px; color: var(--ash-dim); text-transform: uppercase; }
+  .period-toggle { display: flex; gap: 4px; background: var(--surface-2); border-radius: 9px; padding: 4px; }
+  .period-opt { padding: 9px 16px; border-radius: 6px; font-family: 'Oswald', sans-serif; font-weight: 600;
+    font-size: 11.5px; letter-spacing: 0.8px; text-transform: uppercase; color: var(--ash); cursor: pointer; }
+  .period-opt.active { background: linear-gradient(160deg, #1A1722, #100E15); color: var(--bone);
+    box-shadow: 0 0 14px -4px var(--glow); }
+
+  .bar-chart { display: flex; align-items: flex-end; gap: 10px; height: 220px; position: relative;
+    padding-left: 36px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .y-axis { position: absolute; left: 0; top: 0; bottom: 20px; width: 32px; display: flex;
+    flex-direction: column; justify-content: space-between; font-size: 10px; color: var(--ash-dim); text-align: right; }
+  .bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; gap: 8px; }
+  .bar { width: 100%; max-width: 38px; border-radius: 5px 5px 0 0;
+    background: linear-gradient(180deg, var(--purple-bright), var(--purple-mid) 60%, var(--purple-deep));
+    box-shadow: 0 0 14px -4px var(--purple-glow); }
+  .bar-date { font-size: 10px; color: var(--ash-dim); margin-top: 8px; }
+
+  @keyframes fadeUp { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
+  @media (max-width: 700px) { .stat-grid { grid-template-columns: 1fr 1fr; } }
+</style>
+</head>
+<body>
+
+<div class="ambient"></div>
+
+<nav>
+  <div class="nav-left"><div class="brand">PLUS 4 PERFORMANCE</div><div class="admin-pill">Admin</div></div>
+  <div class="nav-right"><span>← Dashboard</span><span>Sign Out</span></div>
+</nav>
+
+<div class="content">
+  <div class="tabs">
+    <div class="tab active">Overview</div>
+    <div class="tab">Users</div>
+    <div class="tab">Affiliates</div>
+    <div class="tab">Flagged 1RMs</div>
+  </div>
+
+  <h1>Overview</h1>
+
+  <div class="stat-grid">
+    <div class="stat-card"><div class="stat-label">Total Users</div><div class="stat-num">4</div></div>
+    <div class="stat-card"><div class="stat-label">Active Subscribers</div><div class="stat-num">2</div></div>
+    <div class="stat-card"><div class="stat-label">MRR</div><div class="stat-num">£19.98</div><div class="stat-sub">@ £9.99/user</div></div>
+    <div class="stat-card"><div class="stat-label">Churn This Month</div><div class="stat-num">0%</div><div class="stat-sub">cancelled / active at month start</div></div>
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-head">
+      <div class="chart-title">Revenue — Last 30 Days</div>
+      <div class="period-toggle">
+        <div class="period-opt active">Daily</div>
+        <div class="period-opt">Weekly</div>
+        <div class="period-opt">Monthly</div>
+      </div>
+    </div>
+    <div class="bar-chart">
+      <div class="y-axis"><span>£12</span><span>£9</span><span>£6</span><span>£3</span><span>£0</span></div>
+      <div class="bar-wrap"><div class="bar" style="height:75%;"></div><div class="bar-date">05-31</div></div>
+      <div class="bar-wrap"><div class="bar" style="height:0%;"></div><div class="bar-date">06-09</div></div>
+      <div class="bar-wrap"><div class="bar" style="height:75%;"></div><div class="bar-date">06-19</div></div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

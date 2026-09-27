@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&family=Roboto+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #08070A; --surface: #131119; --surface-2: #0C0A0F;
+    --bone: #F3F1ED; --ash: #87858E; --ash-dim: #5C5A62;
+    --glow: rgba(255, 79, 196, 0.5); --glow-line: rgba(255, 79, 196, 0.22);
+    --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--ink); color: var(--bone); font-family: 'Inter', sans-serif; padding-bottom: 60px; }
+  .ambient { position: fixed; top: -180px; left: -120px; width: 480px; height: 480px;
+    background: radial-gradient(circle, var(--glow) 0%, transparent 65%); opacity: 0.4; pointer-events: none; z-index: 0; }
+
+  nav { position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: center;
+    padding: 20px 32px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .brand { font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 14px; letter-spacing: 2.5px; }
+  .nav-right { display: flex; gap: 22px; font-size: 12px; color: var(--ash); letter-spacing: 0.5px; }
+
+  .content { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding: 36px 24px; }
+
+  h1 { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 32px; text-transform: uppercase;
+    margin-bottom: 28px; opacity: 0; animation: fadeUp 0.6s var(--ease) forwards; }
+
+  .tabs { display: flex; gap: 4px; background: var(--surface); border-radius: 10px; padding: 5px;
+    margin-bottom: 32px; overflow-x: auto; opacity: 0; animation: fadeUp 0.6s var(--ease) 0.08s forwards; }
+  .tab { padding: 10px 16px; border-radius: 7px; font-family: 'Oswald', sans-serif; font-size: 12px;
+    font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--ash); white-space: nowrap; cursor: pointer; }
+  .tab.active { background: linear-gradient(160deg, #1A1722, #100E15); color: var(--bone);
+    box-shadow: 0 0 16px -4px var(--glow), 0 1px 0 rgba(255,255,255,0.04) inset; }
+
+  .stats-row { display: flex; gap: 24px; align-items: center; margin-bottom: 8px; flex-wrap: wrap;
+    opacity: 0; animation: fadeUp 0.65s var(--ease) 0.16s forwards; }
+
+  .ring-wrap { position: relative; width: 130px; height: 130px; }
+  .ring-wrap svg { transform: rotate(-90deg); }
+  .ring-bg { fill: none; stroke: var(--surface); stroke-width: 8; }
+  .ring-fill { fill: none; stroke: url(#ringGrad); stroke-width: 9; stroke-linecap: round;
+    filter: drop-shadow(0 0 10px rgba(155, 47, 224, 0.6)) drop-shadow(0 0 22px rgba(201, 97, 245, 0.3));
+    transition: stroke-dashoffset 1.2s var(--ease); }
+  .ring-center { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex;
+    flex-direction: column; align-items: center; justify-content: center; }
+  .ring-num { font-family: 'Roboto Mono', monospace; font-size: 32px; font-weight: 600; line-height: 1; }
+  .ring-label { font-size: 10px; letter-spacing: 1px; color: var(--ash-dim); text-transform: uppercase; margin-top: 4px; }
+
+  .stat-card { background: linear-gradient(160deg, var(--surface) 0%, var(--surface-2) 100%);
+    border: 1px solid rgba(255, 79, 196, 0.1); border-radius: 14px; padding: 18px 24px; text-align: center;
+    box-shadow: 0 10px 26px -14px rgba(0,0,0,0.55), 0 0 24px -16px var(--glow); min-width: 130px; }
+  .stat-num { font-family: 'Roboto Mono', monospace; font-size: 30px; font-weight: 600; line-height: 1; }
+  .stat-label { font-size: 10.5px; letter-spacing: 1.2px; color: var(--ash-dim); text-transform: uppercase; margin-top: 8px; }
+
+  .streak-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .streak-icon { color: var(--ash-dim); }
+  .streak-icon.active { color: var(--bone); filter: drop-shadow(0 0 10px var(--glow)); }
+
+  .goal-note { font-style: italic; color: #C4C2C9; font-size: 14.5px; margin: 18px 0 28px;
+    opacity: 0; animation: fadeUp 0.6s var(--ease) 0.22s forwards; }
+
+  .pill-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 44px;
+    opacity: 0; animation: fadeUp 0.6s var(--ease) 0.28s forwards; }
+  .pill { background: linear-gradient(160deg, var(--surface) 0%, var(--surface-2) 100%);
+    border: 1px solid var(--glow-line); border-radius: 10px; padding: 12px 20px;
+    box-shadow: 0 0 18px -10px var(--glow); }
+  .pill-label { font-size: 10px; letter-spacing: 1.3px; color: var(--ash-dim); text-transform: uppercase; }
+  .pill-value { font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 14px; margin-top: 4px; }
+
+  .section-heading { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; }
+  .section-title { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 18px; text-transform: uppercase; }
+  .section-link { font-size: 12.5px; color: var(--ash); cursor: pointer; }
+
+  .mission-card { background: linear-gradient(160deg, var(--surface) 0%, var(--surface-2) 100%);
+    border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 24px;
+    box-shadow: 0 14px 36px -18px rgba(0,0,0,0.55), 0 0 30px -18px var(--glow); margin-bottom: 18px; }
+  .mission-label { font-size: 11px; letter-spacing: 1.8px; color: var(--bone); text-transform: uppercase;
+    font-weight: 600; margin-bottom: 6px; }
+  .mission-title { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 24px; text-transform: uppercase; margin-bottom: 14px; }
+  .mission-tags { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
+  .tag { background: var(--surface-2); border: 1px solid rgba(255,255,255,0.07); border-radius: 6px;
+    padding: 6px 12px; font-size: 11px; letter-spacing: 0.8px; color: var(--ash); text-transform: uppercase; }
+
+  .btn-outline { background: transparent; border: 1px solid var(--glow-line); color: var(--bone);
+    border-radius: 9px; padding: 13px 20px; font-family: 'Oswald', sans-serif; font-weight: 600;
+    font-size: 12.5px; letter-spacing: 1.2px; text-transform: uppercase; cursor: pointer;
+    box-shadow: 0 0 18px -10px var(--glow); transition: transform 0.2s var(--ease); display: inline-block; }
+  .btn-outline:active { transform: scale(0.97); }
+
+  .exercise-list { margin-top: 18px; border-top: 1px solid rgba(255,255,255,0.06); }
+  .ex-header { display: grid; grid-template-columns: 1fr 60px 60px 70px; padding: 12px 4px;
+    font-size: 10.5px; letter-spacing: 1.2px; color: var(--ash-dim); text-transform: uppercase; }
+  .ex-row { display: grid; grid-template-columns: 1fr 60px 60px 70px; align-items: center;
+    padding: 16px 4px; border-top: 1px solid rgba(255,255,255,0.04); cursor: pointer; font-size: 14px; }
+  .ex-row .arrow { color: var(--ash-dim); margin-left: 8px; font-size: 11px; transition: transform 0.25s var(--ease); }
+  .ex-row.open .arrow { transform: rotate(180deg); }
+  .ex-detail { display: none; padding: 14px 4px 18px; font-size: 13px; line-height: 1.6; color: var(--ash);
+    border-top: 1px solid rgba(255,255,255,0.03); }
+  .ex-detail.show { display: block; }
+  .ex-detail b { color: var(--bone); }
+
+  .complete-btn { width: 100%; margin-top: 18px; background: linear-gradient(160deg, #18151F, #100E15);
+    border: 1px solid var(--glow-line); color: var(--bone); border-radius: 10px; padding: 16px;
+    font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 1.8px;
+    text-transform: uppercase; cursor: pointer; box-shadow: 0 10px 28px -8px var(--glow); }
+
+  .nutrition-card { background: linear-gradient(160deg, var(--surface) 0%, var(--surface-2) 100%);
+    border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 6px 24px;
+    box-shadow: 0 14px 36px -18px rgba(0,0,0,0.55); margin-bottom: 24px; }
+  .nut-row { display: flex; justify-content: space-between; padding: 16px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 14.5px; }
+  .nut-row:last-child { border-bottom: none; }
+  .nut-row span:last-child { font-weight: 600; }
+
+  .log-weight-btn { width: 100%; background: transparent; border: 1px solid rgba(255,255,255,0.1);
+    color: var(--ash); border-radius: 10px; padding: 15px; font-family: 'Oswald', sans-serif;
+    font-weight: 600; font-size: 12.5px; letter-spacing: 1.2px; text-transform: uppercase; cursor: pointer; }
+
+  @keyframes fadeUp { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } }
+  @media (max-width: 640px) { .stats-row { gap: 14px; } .ex-header, .ex-row { grid-template-columns: 1fr 44px 44px 56px; font-size: 12.5px; } }
+</style>
+</head>
+<body>
+
+<div class="ambient"></div>
+
+<nav>
+  <div class="brand">PLUS 4 PERFORMANCE</div>
+  <div class="nav-right"><span>Admin</span><span>Sign Out</span></div>
+</nav>
+
+<div class="content">
+  <h1>Welcome Back, Cameron.</h1>
+
+  <div class="tabs">
+    <div class="tab active">Today</div>
+    <div class="tab">Plan</div>
+    <div class="tab">Nutrition</div>
+    <div class="tab">Progress</div>
+    <div class="tab">Achievements</div>
+    <div class="tab">Logbook</div>
+    <div class="tab">Community</div>
+    <div class="tab">Shop</div>
+    <div class="tab">Account</div>
+  </div>
+
+  <div class="stats-row">
+    <div class="ring-wrap">
+      <svg width="130" height="130" viewBox="0 0 130 130">
+        <defs>
+          <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#6B1FB8"/><stop offset="45%" stop-color="#9B2FE0"/><stop offset="100%" stop-color="#C961F5"/>
+          </linearGradient>
+        </defs>
+        <circle class="ring-bg" cx="65" cy="65" r="56"/>
+        <circle class="ring-fill" id="ringFill" cx="65" cy="65" r="56" stroke-dasharray="352" stroke-dashoffset="352"/>
+      </svg>
+      <div class="ring-center"><div class="ring-num">4</div><div class="ring-label">of 12</div></div>
+    </div>
+
+    <div class="stat-card"><div class="stat-num" id="weightNum">0</div><div class="stat-label">Current Weight</div></div>
+
+    <div class="streak-wrap">
+      <svg class="streak-icon" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M12 2C12 2 7 8 7 13a5 5 0 0010 0c0-2-1-3-1-3s0 2-1.5 2c-1 0-1-1.2-1-1.2S15 9 12 2z"/>
+      </svg>
+      <div class="stat-num" style="font-size:24px;">0</div>
+      <div class="stat-label" style="margin-top:0;">Week Streak</div>
+    </div>
+  </div>
+
+  <p class="goal-note">You're 3.0kg into your goal. Keep going.</p>
+
+  <div class="pill-row">
+    <div class="pill"><div class="pill-label">Goal</div><div class="pill-value">Muscle Building</div></div>
+    <div class="pill"><div class="pill-label">Calories</div><div class="pill-value">3374 kcal</div></div>
+    <div class="pill"><div class="pill-label">Protein</div><div class="pill-value">228g</div></div>
+  </div>
+
+  <div class="section-heading"><div class="section-title">Today's Session</div><div class="section-link">This week →</div></div>
+  <div class="mission-card">
+    <div class="mission-label">Today's Mission</div>
+    <div class="mission-title">Push B</div>
+    <div class="mission-tags">
+      <div class="tag">9 Exercises</div><div class="tag">120 min</div><div class="tag">Chest & Shoulders</div>
+    </div>
+    <button class="btn-outline">Open Logbook →</button>
+
+    <div class="exercise-list">
+      <div class="ex-header"><div>Exercise</div><div>Sets</div><div>Reps</div><div>Rest</div></div>
+      <div class="ex-row" onclick="toggleEx(this)">
+        <div>Face Pull <span class="arrow">▾</span></div><div>3</div><div>15</div><div>60 sec</div>
+      </div>
+      <div class="ex-row" onclick="toggleEx(this)">
+        <div>Incline Smith Machine Bench Press <span class="arrow">▾</span></div><div>3</div><div>10</div><div>3 min</div>
+      </div>
+      <div class="ex-row" onclick="toggleEx(this)">
+        <div>Cable Fly — High to Low <span class="arrow">▾</span></div><div>3</div><div>12</div><div>90 sec</div>
+      </div>
+      <div class="ex-detail show" id="flyDetail">
+        <b>Cue:</b> Set cables above shoulder height, stand centred with a slight forward lean, keep elbows softly bent, sweep hands together in an arc ending at hip height, squeeze the lower chest hard.<br><br>
+        <b>Avoid:</b> Don't turn this into a press — if the elbows bend significantly you're pressing, not flying, and the chest isolation is lost.
+      </div>
+      <div class="ex-row" onclick="toggleEx(this)">
+        <div>Overhead Barbell Press <span class="arrow">▾</span></div><div>3</div><div>10</div><div>3 min</div>
+      </div>
+      <div class="ex-row" onclick="toggleEx(this)">
+        <div>Cable Lateral Raise <span class="arrow">▾</span></div><div>3</div><div>15</div><div>90 sec</div>
+      </div>
+    </div>
+    <button class="complete-btn">Session Complete</button>
+  </div>
+
+  <div class="section-heading" style="margin-top:36px;"><div class="section-title">Today's Nutrition</div></div>
+  <div class="nutrition-card">
+    <div class="nut-row"><span>Calories</span><span>3374 kcal</span></div>
+    <div class="nut-row"><span>Protein</span><span>228g</span></div>
+    <div class="nut-row"><span>Carbs</span><span>371g</span></div>
+    <div class="nut-row"><span>Fat</span><span>95g</span></div>
+  </div>
+
+  <button class="log-weight-btn">Log Today's Weight →</button>
+</div>
+
+<script>
+  function toggleEx(row) {
+    row.classList.toggle('open');
+    const next = row.nextElementSibling;
+    if (next && next.classList.contains('ex-detail')) next.classList.toggle('show');
+  }
+  function animateNum(el, target, duration) {
+    const start = performance.now();
+    function tick(now) {
+      const p = Math.min((now-start)/duration, 1);
+      const eased = 1 - Math.pow(1-p, 3);
+      el.textContent = Math.round(eased * target);
+      if (p < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+  setTimeout(() => {
+    animateNum(document.getElementById('weightNum'), 98, 900);
+    document.getElementById('ringFill').style.strokeDashoffset = 352 - (352 * (4/12));
+  }, 500);
+</script>
+
+</body>
+</html>

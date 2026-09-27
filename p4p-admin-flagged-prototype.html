@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Flagged 1RMs Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #08070A; --surface: #131119; --surface-2: #0C0A0F;
+    --bone: #F3F1ED; --ash: #ABA9B0; --ash-dim: #7A7880;
+    --glow: rgba(255, 79, 196, 0.5); --glow-line: rgba(255, 79, 196, 0.25);
+    --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--ink); color: var(--bone); font-family: 'Inter', sans-serif; padding-bottom: 60px; }
+  .ambient { position: fixed; top: -180px; left: -120px; width: 480px; height: 480px;
+    background: radial-gradient(circle, var(--glow) 0%, transparent 65%); opacity: 0.4; pointer-events: none; z-index: 0; }
+  nav { position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: center;
+    padding: 20px 32px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .nav-left { display: flex; align-items: center; gap: 14px; }
+  .brand { font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 14px; letter-spacing: 2.5px; }
+  .admin-pill { background: var(--surface-2); border: 1px solid var(--glow-line); border-radius: 7px;
+    padding: 5px 12px; font-family: 'Oswald', sans-serif; font-size: 10.5px; font-weight: 700; letter-spacing: 1px;
+    color: var(--bone); box-shadow: 0 0 12px -4px var(--glow); }
+  .nav-right { display: flex; gap: 22px; font-size: 12px; color: var(--ash); }
+  .content { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 28px 24px; }
+  .tabs { display: flex; gap: 4px; background: var(--surface); border-radius: 10px; padding: 5px;
+    margin-bottom: 36px; overflow-x: auto; }
+  .tab { padding: 10px 16px; border-radius: 7px; font-family: 'Oswald', sans-serif; font-size: 12px;
+    font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--ash); white-space: nowrap; cursor: pointer; }
+  .tab.active { background: linear-gradient(160deg, #1A1722, #100E15); color: var(--bone);
+    box-shadow: 0 0 16px -4px var(--glow), 0 1px 0 rgba(255,255,255,0.04) inset; }
+
+  h1 { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 28px; text-transform: uppercase; margin-bottom: 10px; }
+  .sub { color: var(--ash); font-size: 14.5px; margin-bottom: 36px; }
+
+  .empty-card { background: linear-gradient(160deg, var(--surface) 0%, var(--surface-2) 100%);
+    border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 60px 24px; text-align: center;
+    box-shadow: 0 12px 30px -16px rgba(0,0,0,0.55); }
+  .empty-text { color: var(--ash); font-size: 14.5px; }
+</style>
+</head>
+<body>
+<div class="ambient"></div>
+<nav>
+  <div class="nav-left"><div class="brand">PLUS 4 PERFORMANCE</div><div class="admin-pill">Admin</div></div>
+  <div class="nav-right"><span>← Dashboard</span><span>Sign Out</span></div>
+</nav>
+<div class="content">
+  <div class="tabs">
+    <div class="tab">Overview</div><div class="tab">Users</div><div class="tab">Affiliates</div><div class="tab active">Flagged 1RMs</div>
+  </div>
+  <h1>Flagged 1RMs</h1>
+  <p class="sub">Entries pending review before appearing on leaderboards</p>
+  <div class="empty-card"><div class="empty-text">No flagged entries pending review.</div></div>
+</div>
+</body>
+</html>

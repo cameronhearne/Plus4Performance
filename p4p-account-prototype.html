@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Account Screen Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&family=Roboto+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #08070A; --surface: #131119; --surface-2: #0C0A0F;
+    --bone: #F3F1ED; --ash: #ABA9B0; --ash-dim: #7A7880;
+    --glow: rgba(255, 79, 196, 0.5); --glow-line: rgba(255, 79, 196, 0.25);
+    --green: #4A9968; --green-glow: rgba(74, 153, 104, 0.4); --green-line: rgba(74,153,104,0.35);
+    --red: #C0392B; --red-glow: rgba(192, 57, 43, 0.3); --red-line: rgba(192,57,43,0.4);
+    --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--ink); color: var(--bone); font-family: 'Inter', sans-serif; padding-bottom: 60px; }
+  .ambient { position: fixed; top: -180px; left: -120px; width: 480px; height: 480px;
+    background: radial-gradient(circle, var(--glow) 0%, transparent 65%); opacity: 0.45; pointer-events: none; z-index: 0; }
+  nav { position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: center;
+    padding: 20px 32px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .brand { font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 14px; letter-spacing: 2.5px; }
+  .nav-right { display: flex; gap: 22px; font-size: 12px; color: var(--ash); }
+  .content { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding: 28px 24px; }
+  .tabs { display: flex; gap: 4px; background: var(--surface); border-radius: 10px; padding: 5px;
+    margin-bottom: 36px; overflow-x: auto; }
+  .tab { padding: 10px 16px; border-radius: 7px; font-family: 'Oswald', sans-serif; font-size: 12px;
+    font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--ash); white-space: nowrap; cursor: pointer; }
+  .tab.active { background: linear-gradient(160deg, #1A1722, #100E15); color: var(--bone);
+    box-shadow: 0 0 16px -4px var(--glow), 0 1px 0 rgba(255,255,255,0.04) inset; }
+
+  .card { background: linear-gradient(160deg, var(--surface) 0%, var(--surface-2) 100%);
+    border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 26px;
+    box-shadow: 0 12px 30px -16px rgba(0,0,0,0.55); margin-bottom: 22px; }
+  .card-title { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 18px; text-transform: uppercase;
+    margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+
+  /* profile */
+  .profile-row { display: flex; gap: 18px; align-items: center; margin-bottom: 22px; }
+  .avatar { width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(160deg, #2A2010, #1A1408);
+    border: 2px solid var(--glow-line); display: flex; align-items: center; justify-content: center;
+    font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 20px; color: var(--bone); }
+  .profile-name { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 19px; text-transform: uppercase; margin-bottom: 4px; }
+  .profile-email { font-size: 13.5px; color: var(--ash-dim); }
+  .tag-row { display: flex; gap: 10px; margin-bottom: 24px; flex-wrap: wrap; }
+  .tag { background: var(--surface-2); border: 1px solid var(--glow-line); border-radius: 8px; padding: 9px 16px;
+    font-family: 'Oswald', sans-serif; font-size: 11.5px; font-weight: 600; letter-spacing: 0.8px;
+    text-transform: uppercase; color: var(--bone); box-shadow: 0 0 12px -6px var(--glow); }
+
+  .field { margin-bottom: 18px; }
+  .field-label { font-size: 11px; letter-spacing: 1.3px; color: var(--ash-dim); text-transform: uppercase; margin-bottom: 8px;
+    display: flex; justify-content: space-between; align-items: center; }
+  .field input, .field textarea, .field select { width: 100%; background: var(--surface-2);
+    border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 13px 15px; color: var(--bone);
+    font-size: 14px; font-family: 'Inter', sans-serif; transition: border-color 0.25s var(--ease), box-shadow 0.25s var(--ease); }
+  .field input:focus, .field textarea:focus, .field select:focus { outline: none; border-color: var(--glow-line);
+    box-shadow: 0 0 18px -8px var(--glow); }
+  .field textarea { resize: vertical; min-height: 80px; }
+  .mini-select { background: var(--surface-2); border: 1px solid rgba(255,255,255,0.08); border-radius: 7px;
+    padding: 6px 10px; font-size: 10.5px; color: var(--ash); text-transform: uppercase; letter-spacing: 0.5px; }
+  .upload-btn { width: 100%; background: transparent; border: 1px dashed rgba(255,255,255,0.15); border-radius: 10px;
+    padding: 16px; text-align: center; color: var(--ash-dim); font-family: 'Oswald', sans-serif; font-weight: 600;
+    font-size: 12px; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; }
+
+  .btn { background: linear-gradient(160deg, #18151F, #100E15); border: 1px solid var(--glow-line);
+    color: var(--bone); border-radius: 10px; padding: 14px 26px; font-family: 'Oswald', sans-serif;
+    font-weight: 600; font-size: 12.5px; letter-spacing: 1.2px; text-transform: uppercase; cursor: pointer;
+    box-shadow: 0 10px 26px -8px var(--glow); transition: transform 0.2s var(--ease); display: inline-block; }
+  .btn:active { transform: scale(0.97); }
+  .btn-outline { background: transparent; border: 1px solid rgba(255,255,255,0.1); color: var(--ash);
+    box-shadow: none; }
+
+  /* plan card */
+  .plan-progress-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  .plan-remaining { font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 12px; letter-spacing: 0.8px;
+    color: var(--bone); text-transform: uppercase; }
+  .plan-bar-track { height: 4px; background: var(--surface-2); border-radius: 3px; margin-bottom: 22px; overflow: hidden; }
+  .plan-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #E8389E, #FF4FC4); border-radius: 3px;
+    box-shadow: 0 0 8px var(--glow); }
+  .plan-row { display: flex; justify-content: space-between; padding: 13px 0; border-top: 1px solid rgba(255,255,255,0.05);
+    font-size: 14px; }
+  .plan-row span:last-child { font-weight: 600; text-align: right; max-width: 60%; }
+
+  .plan-history-item { padding: 18px 0; border-top: 1px solid rgba(255,255,255,0.06); }
+  .plan-history-item:first-child { border-top: none; }
+  .plan-history-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .plan-history-name { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 15px; text-transform: uppercase; }
+  .plan-history-dates { font-size: 12px; color: var(--ash-dim); margin-bottom: 10px; }
+  .active-badge { background: var(--surface-2); border: 1px solid var(--glow-line); border-radius: 7px;
+    padding: 5px 11px; font-family: 'Oswald', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 1px;
+    color: var(--bone); box-shadow: 0 0 12px -4px var(--glow); }
+  .plan-meta-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; font-size: 13px; margin-bottom: 10px; }
+  .plan-meta-label { font-size: 10px; letter-spacing: 1px; color: var(--ash-dim); text-transform: uppercase; margin-bottom: 3px; }
+
+  /* billing */
+  .sub-name { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 17px; text-transform: uppercase; margin-bottom: 10px; }
+  .status-badge { display: inline-block; border-radius: 7px; padding: 6px 14px; font-family: 'Oswald', sans-serif;
+    font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 18px; }
+  .status-badge.active { background: rgba(74,153,104,0.1); border: 1px solid var(--green-line); color: var(--green);
+    box-shadow: 0 0 14px -6px var(--green-glow); }
+  .billing-hint { font-size: 12.5px; color: var(--ash-dim); margin-top: 12px; }
+
+  /* settings */
+  .setting-row { display: flex; justify-content: space-between; align-items: center; padding: 14px 0;
+    border-top: 1px solid rgba(255,255,255,0.05); font-size: 14.5px; }
+  .setting-row:first-child { border-top: none; }
+  .switch { width: 44px; height: 25px; border-radius: 13px; background: var(--surface-2);
+    border: 1px solid rgba(255,255,255,0.1); position: relative; cursor: pointer; }
+  .switch.on { background: linear-gradient(160deg, #E8389E, #C92B85); border-color: var(--glow-line);
+    box-shadow: 0 0 12px -2px var(--glow); }
+  .switch-knob { width: 19px; height: 19px; border-radius: 50%; background: var(--bone); position: absolute;
+    top: 2px; left: 2px; transition: transform 0.25s var(--ease); }
+  .switch.on .switch-knob { transform: translateX(19px); }
+
+  .day-row { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  .day-pill { padding: 11px 16px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); background: var(--surface-2);
+    font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 12px; letter-spacing: 0.8px; color: var(--ash); cursor: pointer; }
+  .day-pill.active { background: linear-gradient(160deg, #1A1722, #100E15); color: var(--bone);
+    border-color: var(--glow-line); box-shadow: 0 0 14px -4px var(--glow); }
+  .setting-hint { font-size: 12.5px; color: var(--ash-dim); font-style: italic; margin-top: 12px; }
+
+  .unit-toggle { display: flex; gap: 8px; margin-top: 14px; }
+  .unit-opt { flex: 1; text-align: center; padding: 13px; border-radius: 9px; border: 1px solid rgba(255,255,255,0.08);
+    background: var(--surface-2); font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 13px; color: var(--ash); cursor: pointer; }
+  .unit-opt.active { background: linear-gradient(160deg, #1A1722, #100E15); color: var(--bone);
+    border-color: var(--glow-line); box-shadow: 0 0 16px -4px var(--glow); }
+
+  .link-row { display: flex; justify-content: space-between; align-items: center; padding: 15px 0;
+    border-top: 1px solid rgba(255,255,255,0.05); font-size: 14.5px; cursor: pointer; }
+  .link-row:first-child { border-top: none; }
+  .link-row .arrow { color: var(--ash-dim); }
+
+  /* danger zone — deliberate exception, red survives */
+  .danger-card { background: linear-gradient(160deg, #1A0F0E, #120A09); border: 1px solid var(--red-line);
+    border-radius: 16px; padding: 24px; box-shadow: 0 0 24px -12px var(--red-glow); }
+  .danger-title { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 1.5px;
+    color: #E05A4A; text-transform: uppercase; margin-bottom: 10px; }
+  .danger-text { font-size: 13.5px; color: var(--ash); margin-bottom: 18px; line-height: 1.5; }
+  .btn-danger { background: linear-gradient(160deg, #6B1F18, #4A140F); border: 1px solid var(--red-line);
+    color: #F0D5D0; border-radius: 10px; padding: 14px 24px; font-family: 'Oswald', sans-serif; font-weight: 700;
+    font-size: 12.5px; letter-spacing: 1.2px; text-transform: uppercase; cursor: pointer; box-shadow: 0 8px 20px -8px var(--red-glow); }
+
+  /* FAQ */
+  .faq-cat { font-size: 11px; letter-spacing: 1.5px; color: var(--ash-dim); text-transform: uppercase;
+    margin: 22px 0 8px; }
+  .faq-cat:first-child { margin-top: 0; }
+  .faq-row { display: flex; justify-content: space-between; align-items: center; padding: 15px 0;
+    border-top: 1px solid rgba(255,255,255,0.05); font-size: 14.5px; cursor: pointer; }
+  .faq-row .plus { color: var(--ash-dim); transition: transform 0.25s var(--ease); }
+  .faq-contact { text-align: center; font-size: 13px; color: var(--ash-dim); margin-top: 20px; padding-top: 16px;
+    border-top: 1px solid rgba(255,255,255,0.06); }
+  .faq-contact a { color: var(--bone); }
+
+  @media (max-width: 600px) { .plan-meta-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="ambient"></div>
+<nav><div class="brand">PLUS 4 PERFORMANCE</div><div class="nav-right"><span>Admin</span><span>Sign Out</span></div></nav>
+<div class="content">
+  <div class="tabs">
+    <div class="tab">Today</div><div class="tab">Plan</div><div class="tab">Nutrition</div>
+    <div class="tab">Progress</div><div class="tab">Achievements</div><div class="tab">Logbook</div>
+    <div class="tab">Community</div><div class="tab">Shop</div><div class="tab active">Account</div>
+  </div>
+
+  <!-- PROFILE -->
+  <div class="card">
+    <div class="card-title">Profile</div>
+    <div class="profile-row">
+      <div class="avatar">CH</div>
+      <div><div class="profile-name">Cameron Hearne</div><div class="profile-email">cameronhearne@gmail.com</div></div>
+    </div>
+    <div class="tag-row"><div class="tag">Lean Bulk</div><div class="tag">Advanced</div><div class="tag">Commercial Gym</div></div>
+
+    <div class="field">
+      <div class="field-label">Profile Photo <span class="mini-select">Friends Only</span></div>
+      <div class="upload-btn">Upload Photo</div>
+    </div>
+    <div class="field"><div class="field-label">Display Name</div><input value="Cameron"></div>
+    <div class="field"><div class="field-label">Username — Optional</div><input value="cameron_h4408"></div>
+    <div class="field">
+      <div class="field-label">Bio — Optional (0/200) <span class="mini-select">Friends Only</span></div>
+      <textarea placeholder="A short description about you and your training..."></textarea>
+    </div>
+    <div class="field"><div class="field-label">Walkout Song — Optional</div><input placeholder="e.g. Lose Yourself — Eminem"></div>
+    <div class="field"><div class="field-label">Email</div><input value="cameronhearne@gmail.com"></div>
+
+    <div class="card-title" style="font-size:14px; margin-top:6px;">Data Privacy</div>
+    <div class="field"><div class="field-label">1RM records</div><select><option>Friends Only</option></select></div>
+    <div class="field"><div class="field-label">Weight logs</div><select><option>Friends Only</option></select></div>
+    <button class="btn">Save Changes</button>
+  </div>
+
+  <!-- NUTRITION PREFERENCES -->
+  <div class="card">
+    <div class="card-title">Nutrition Preferences</div>
+    <div class="field"><div class="field-label">Dietary Preference</div><select><option>Vegan</option></select></div>
+    <div class="field"><div class="field-label">Meal Plan Type</div><select><option>Macros and targets only</option></select></div>
+    <div class="field"><div class="field-label">Meals Per Day</div><input value="5"></div>
+    <div class="field"><div class="field-label">Foods You Will Not Eat</div><textarea placeholder="e.g. mushrooms, shellfish, nuts"></textarea></div>
+    <div class="field"><div class="field-label">Supplement Preference</div><select><option>Include supplement recommendations</option></select></div>
+    <button class="btn">Save Preferences</button>
+  </div>
+
+  <!-- MY PLAN -->
+  <div class="card">
+    <div class="card-title">My Plan</div>
+    <div class="plan-progress-row"><span class="field-label" style="margin:0;">Progress — Week 0 of 12</span><span class="plan-remaining">12 Weeks Remaining</span></div>
+    <div class="plan-bar-track"><div class="plan-bar-fill" style="width:2%"></div></div>
+    <div class="plan-row"><span>Started</span><span>25 June 2026</span></div>
+    <div class="plan-row"><span>Ends</span><span>17 September 2026</span></div>
+    <div class="plan-row"><span>Training Days</span><span>6 days / week</span></div>
+    <div class="plan-row"><span>Split</span><span>PPL — Push A / Pull A / Legs A / Push B / Pull B (5-day rolling)</span></div>
+    <div class="plan-row"><span>Session Length</span><span>90 min</span></div>
+    <div style="margin-top:18px;">
+      <button class="btn btn-outline">Generate New Plan</button>
+      <div class="setting-hint" style="margin-top:8px;">Available after Week 12</div>
+    </div>
+  </div>
+
+  <!-- MY PLANS HISTORY -->
+  <div class="card">
+    <div class="card-title">My Plans</div>
+    <div class="plan-history-item">
+      <div class="plan-history-head"><div class="plan-history-name">Plan 3</div><div class="active-badge">Active</div></div>
+      <div class="plan-history-dates">18 Jun 2026 – 10 Sept 2026</div>
+      <div class="plan-meta-grid">
+        <div><div class="plan-meta-label">Goal</div>Lean Bulk</div>
+        <div><div class="plan-meta-label">Split</div>PPL (5-day rolling)</div>
+        <div><div class="plan-meta-label">Days/Week</div>5</div>
+      </div>
+    </div>
+    <div class="plan-history-item">
+      <div class="plan-history-head"><div class="plan-history-name">Plan 2</div></div>
+      <div class="plan-history-dates">17 Jun 2026 – 9 Sept 2026</div>
+      <div class="plan-meta-grid">
+        <div><div class="plan-meta-label">Goal</div>Lean Bulk</div>
+        <div><div class="plan-meta-label">Split</div>PPL — Push A/Pull A/Legs A/Push B/Pull B</div>
+        <div><div class="plan-meta-label">Days/Week</div>5</div>
+      </div>
+      <button class="btn btn-outline" style="margin-top:8px; font-size:11px; padding:10px 18px;">Make Active</button>
+    </div>
+    <div class="plan-history-item">
+      <div class="plan-history-head"><div class="plan-history-name">Plan 1</div></div>
+      <div class="plan-history-dates">16 Jun 2026 – 8 Sept 2026</div>
+      <div class="plan-meta-grid">
+        <div><div class="plan-meta-label">Goal</div>Fat Loss</div>
+        <div><div class="plan-meta-label">Split</div>Upper / Lower 4-day</div>
+        <div><div class="plan-meta-label">Days/Week</div>4</div>
+      </div>
+      <button class="btn btn-outline" style="margin-top:8px; font-size:11px; padding:10px 18px;">Make Active</button>
+    </div>
+    <div class="setting-hint" style="margin-top:14px;">Switching takes effect immediately across Today, Plan, and Nutrition tabs.</div>
+  </div>
+
+  <!-- BILLING -->
+  <div class="card">
+    <div class="card-title">Subscription &amp; Billing</div>
+    <div class="sub-name">Monthly Subscriber</div>
+    <div class="status-badge active">Active</div><br>
+    <button class="btn btn-outline">Manage Billing →</button>
+    <div class="billing-hint">To cancel your subscription, use the Manage Billing link above.</div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="card">
+    <div class="card-title">Settings</div>
+    <div class="field-label" style="margin-bottom:0;">Notifications</div>
+    <div class="setting-row"><span>Session reminders</span><div class="switch on" onclick="toggleSwitch(this)"><div class="switch-knob"></div></div></div>
+    <div class="setting-row"><span>Daily weigh-in reminder</span><div class="switch on" onclick="toggleSwitch(this)"><div class="switch-knob"></div></div></div>
+    <div class="setting-row"><span>Weekly progress summary email</span><div class="switch on" onclick="toggleSwitch(this)"><div class="switch-knob"></div></div></div>
+
+    <div class="field-label" style="margin-top:22px; margin-bottom:0;">Weekly Check-in Day</div>
+    <div class="day-row">
+      <div class="day-pill">Mon</div><div class="day-pill">Tue</div><div class="day-pill">Wed</div>
+      <div class="day-pill">Thu</div><div class="day-pill">Fri</div><div class="day-pill">Sat</div>
+      <div class="day-pill active">Sun</div>
+    </div>
+    <div class="setting-hint">This is the day your AI coaching check-in and weekly progress summary will appear. You can change this any time.</div>
+
+    <div class="field-label" style="margin-top:22px; margin-bottom:0;">Weight Units</div>
+    <div class="unit-toggle"><div class="unit-opt active">KG</div><div class="unit-opt">LBS</div></div>
+
+    <div class="field-label" style="margin-top:22px; margin-bottom:0;">Support &amp; Legal</div>
+    <div class="link-row"><span>Privacy Policy</span><span class="arrow">→</span></div>
+    <div class="link-row"><span>Terms of Service</span><span class="arrow">→</span></div>
+    <div class="link-row"><span>Contact Support</span><span class="arrow">→</span></div>
+  </div>
+
+  <!-- DANGER ZONE -->
+  <div class="danger-card">
+    <div class="danger-title">Danger Zone</div>
+    <div class="danger-text">Permanently delete your account and all associated data. This cannot be undone.</div>
+    <button class="btn-danger">Delete Account</button>
+  </div>
+
+  <!-- FAQ -->
+  <div class="card" style="margin-top:22px;">
+    <div class="card-title">Help &amp; FAQ</div>
+    <div class="faq-cat">Billing &amp; Subscription</div>
+    <div class="faq-row"><span>How do I cancel my subscription?</span><span class="plus">+</span></div>
+    <div class="faq-row"><span>Can I get a refund?</span><span class="plus">+</span></div>
+    <div class="faq-row"><span>What happens if my payment fails?</span><span class="plus">+</span></div>
+
+    <div class="faq-cat">Training &amp; Plans</div>
+    <div class="faq-row"><span>Can I change my goal partway through my plan?</span><span class="plus">+</span></div>
+    <div class="faq-row"><span>Can I swap out an exercise I don't like or can't do?</span><span class="plus">+</span></div>
+
+    <div class="faq-cat">Account &amp; Technical</div>
+    <div class="faq-row"><span>How do I delete my account and my data?</span><span class="plus">+</span></div>
+    <div class="faq-row"><span>Is my data safe and private?</span><span class="plus">+</span></div>
+
+    <div class="faq-contact">Still have a question? <a href="#">hello@plus4performance.com</a></div>
+  </div>
+</div>
+<script>
+  function toggleSwitch(el) { el.classList.toggle('on'); }
+  document.querySelectorAll('.day-pill').forEach(p => p.addEventListener('click', () => {
+    document.querySelectorAll('.day-pill').forEach(x => x.classList.remove('active'));
+    p.classList.add('active');
+  }));
+  document.querySelectorAll('.unit-opt').forEach(p => p.addEventListener('click', () => {
+    document.querySelectorAll('.unit-opt').forEach(x => x.classList.remove('active'));
+    p.classList.add('active');
+  }));
+</script>
+</body>
+</html>

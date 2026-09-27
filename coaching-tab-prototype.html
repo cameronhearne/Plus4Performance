@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coaching Tab — Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&family=Roboto+Mono:wght@600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#08070A; --surface:#131119; --surface-2:#0C0A0F;
+    --bone:#F3F1ED; --ash:#ABA9B0; --ash-dim:#7A7880;
+    --glow:rgba(255,79,196,0.5); --glow-line:rgba(255,79,196,0.25); --glow-border:rgba(255,79,196,0.42);
+    --purple:#9B2FE0; --purple-glow:rgba(155,47,224,0.45); --purple-line:rgba(155,47,224,0.3);
+    --green:#4A9968; --green-line:rgba(74,153,104,0.35);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--ink);color:var(--bone);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;padding:28px 20px 60px;
+    background-image:radial-gradient(46% 30% at 50% 0%, rgba(255,79,196,0.07) 0%, rgba(0,0,0,0) 70%);}
+  .wrap{max-width:760px;margin:0 auto;}
+
+  .card{background:linear-gradient(160deg,var(--surface),var(--surface-2));border:1px solid var(--glow-line);border-radius:16px;padding:26px;margin-bottom:18px;
+    box-shadow:0 12px 30px -16px rgba(0,0,0,0.55);}
+
+  /* header */
+  .page-eyebrow{font-family:'Oswald',sans-serif;font-weight:500;letter-spacing:0.32em;font-size:11px;text-transform:uppercase;color:var(--ash-dim);}
+  .page-title{font-family:'Oswald',sans-serif;font-weight:700;font-size:34px;text-transform:uppercase;color:var(--bone);margin-top:6px;line-height:1;}
+  .coach-line{font-size:14px;color:var(--ash);margin-top:10px;}
+  .coach-line b{color:var(--bone);font-weight:600;}
+  .status-dot{display:inline-block;width:7px;height:7px;border-radius:99px;background:var(--green);box-shadow:0 0 8px var(--green);margin-right:7px;vertical-align:middle;}
+
+  .card-label{font-family:'Oswald',sans-serif;font-weight:600;letter-spacing:0.2em;font-size:11px;text-transform:uppercase;color:var(--ash-dim);margin-bottom:16px;}
+
+  /* this week's check-in */
+  .checkin-card{border-color:var(--glow-border);box-shadow:0 12px 30px -16px rgba(0,0,0,0.55),0 0 26px -14px var(--glow);}
+  .ci-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;}
+  .ci-title{font-family:'Oswald',sans-serif;font-weight:700;font-size:22px;text-transform:uppercase;}
+  .ci-sub{font-size:14px;color:var(--ash);margin-top:6px;line-height:1.5;}
+  .pill{font-family:'Roboto Mono',monospace;font-weight:600;font-size:11px;padding:6px 12px;border-radius:99px;border:1px solid var(--glow-line);color:var(--ash);white-space:nowrap;}
+  .pill.due{border-color:var(--glow-border);color:var(--bone);box-shadow:0 0 14px -6px var(--glow);}
+  .pill.done{border-color:var(--green-line);color:var(--green);}
+  .btn{display:inline-block;margin-top:20px;padding:16px 26px;border-radius:11px;background:linear-gradient(160deg,#18151F,#100E15);
+    border:1px solid var(--glow-border);color:var(--bone);font-family:'Oswald',sans-serif;font-weight:700;font-size:13px;letter-spacing:0.18em;text-transform:uppercase;
+    cursor:pointer;box-shadow:0 10px 26px -10px var(--glow);transition:transform .1s,filter .18s;}
+  .btn:hover{filter:brightness(1.08);}
+  .btn:active{transform:scale(0.97);}
+
+  /* coach response */
+  .resp-head{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
+  .avatar{width:38px;height:38px;border-radius:99px;background:linear-gradient(160deg,#1B1622,#120E18);border:1px solid var(--glow-border);
+    display:flex;align-items:center;justify-content:center;font-family:'Oswald',sans-serif;font-weight:700;color:var(--bone);font-size:15px;box-shadow:0 0 14px -6px var(--glow);}
+  .resp-who{font-family:'Oswald',sans-serif;font-weight:600;font-size:15px;text-transform:uppercase;letter-spacing:0.04em;}
+  .resp-when{font-size:12px;color:var(--ash-dim);margin-top:2px;}
+  .resp-body{font-size:15px;line-height:1.65;color:var(--bone);}
+  .resp-body p{margin-bottom:12px;}
+  .resp-body p:last-child{margin-bottom:0;}
+
+  /* at a glance */
+  .glance-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:18px;}
+  @media(max-width:560px){.glance-grid{grid-template-columns:1fr;}}
+  .mini{background:var(--surface-2);border:1px solid var(--glow-line);border-radius:12px;padding:18px;}
+  .mini-label{font-family:'Oswald',sans-serif;font-weight:600;letter-spacing:0.16em;font-size:10px;text-transform:uppercase;color:var(--ash-dim);margin-bottom:10px;}
+  .weight-now{font-family:'Roboto Mono',monospace;font-weight:600;font-size:26px;color:var(--bone);}
+  .weight-delta{font-size:12px;color:var(--green);font-family:'Roboto Mono',monospace;margin-left:8px;}
+  .photos{display:flex;gap:8px;}
+  .thumb{flex:1;aspect-ratio:3/4;border-radius:8px;background:linear-gradient(160deg,#1B1622,#120E18);border:1px solid var(--glow-line);
+    display:flex;align-items:center;justify-content:center;color:var(--ash-dim);font-size:10px;font-family:'Oswald',sans-serif;letter-spacing:0.1em;}
+
+  /* history */
+  .hist-item{border-top:1px solid rgba(255,255,255,0.05);padding:16px 0;cursor:pointer;}
+  .hist-item:first-child{border-top:none;}
+  .hist-row{display:flex;justify-content:space-between;align-items:center;gap:12px;}
+  .hist-week{font-family:'Inter',sans-serif;font-weight:600;font-size:15px;color:var(--bone);}
+  .hist-meta{font-size:12px;color:var(--ash-dim);margin-top:3px;}
+  .hist-caret{color:var(--ash-dim);font-size:13px;transition:transform .2s;}
+  .hist-item.open .hist-caret{transform:rotate(90deg);}
+  .hist-detail{display:none;margin-top:14px;padding:16px;background:var(--surface-2);border-radius:10px;border:1px solid var(--glow-line);font-size:14px;line-height:1.6;color:var(--ash);}
+  .hist-item.open .hist-detail{display:block;animation:fade .25s ease;}
+  .hist-detail .lbl{color:var(--ash-dim);font-family:'Oswald',sans-serif;letter-spacing:0.12em;font-size:10px;text-transform:uppercase;display:block;margin:12px 0 4px;}
+  .hist-detail .lbl:first-child{margin-top:0;}
+  .hist-detail .resp-text{color:var(--bone);}
+  @keyframes fade{from{opacity:0;}to{opacity:1;}}
+  .status-badge{font-family:'Roboto Mono',monospace;font-size:10px;padding:3px 8px;border-radius:99px;border:1px solid var(--green-line);color:var(--green);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- header -->
+  <div class="page-eyebrow">1-1 Coaching</div>
+  <div class="page-title">Coaching</div>
+  <div class="coach-line"><span class="status-dot"></span>Coached by <b>Ethan Shaw</b> · Weekly check-ins</div>
+
+  <!-- this week's check-in -->
+  <div class="card checkin-card" style="margin-top:22px">
+    <div class="ci-head">
+      <div>
+        <div class="ci-title">This Week's Check-in</div>
+        <div class="ci-sub">Due Sunday. Takes about 5 minutes — the more honest, the better your coaching.</div>
+      </div>
+      <span class="pill due">DUE IN 2 DAYS</span>
+    </div>
+    <button class="btn">Start Check-in &rarr;</button>
+  </div>
+
+  <!-- coach's latest response -->
+  <div class="card">
+    <div class="card-label">Latest Response From Your Coach</div>
+    <div class="resp-head">
+      <div class="avatar">ES</div>
+      <div>
+        <div class="resp-who">Ethan Shaw</div>
+        <div class="resp-when">Responded to your Week 6 check-in · 2 days ago</div>
+      </div>
+    </div>
+    <div class="resp-body">
+      <p>Strong week, mate. Weight's tracking exactly where we want it and the training scores are up — that tells me the extra rest day is doing its job.</p>
+      <p>Two things: push the steps back up to 9k, they slipped this week. And I've bumped your Friday session — new numbers are in your Plan tab. Keep the food tight over the weekend and we'll reassess Monday.</p>
+    </div>
+  </div>
+
+  <!-- at a glance -->
+  <div class="card">
+    <div class="card-label">At A Glance</div>
+    <div class="glance-grid">
+      <div class="mini">
+        <div class="mini-label">Weight — Last 6 Weeks</div>
+        <svg viewBox="0 0 300 90" width="100%" height="90" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="pg" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="var(--purple)" stop-opacity="0.35"/>
+              <stop offset="100%" stop-color="var(--purple)" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <polyline points="0,60 60,54 120,48 180,44 240,34 300,30" fill="none" stroke="var(--purple)" stroke-width="2.5" style="filter:drop-shadow(0 0 6px var(--purple-glow))"/>
+          <polygon points="0,60 60,54 120,48 180,44 240,34 300,30 300,90 0,90" fill="url(#pg)"/>
+        </svg>
+        <div style="margin-top:12px"><span class="weight-now">82.4<span style="font-size:14px;color:var(--ash-dim)">kg</span></span><span class="weight-delta">+1.8 kg</span></div>
+      </div>
+      <div class="mini">
+        <div class="mini-label">Latest Photos · Week 6</div>
+        <div class="photos">
+          <div class="thumb">FRONT</div>
+          <div class="thumb">SIDE</div>
+          <div class="thumb">BACK</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- history -->
+  <div class="card">
+    <div class="card-label">Check-in History</div>
+
+    <div class="hist-item open" onclick="this.classList.toggle('open')">
+      <div class="hist-row">
+        <div>
+          <div class="hist-week">Week 6 <span class="status-badge">Responded</span></div>
+          <div class="hist-meta">Submitted 2 days ago · Training 8/10 · 82.4kg</div>
+        </div>
+        <span class="hist-caret">&#9654;</span>
+      </div>
+      <div class="hist-detail">
+        <span class="lbl">Your check-in</span>
+        Training felt strong, hit a PB on incline press. Food was 6/7 days on plan — slipped Saturday at a birthday. Sleep good, energy 8. Steps averaged 7.2k. Biggest win: finally benching bodyweight for reps.
+        <span class="lbl">Ethan's response</span>
+        <span class="resp-text">Strong week, mate. Weight's tracking exactly where we want it… push steps back to 9k, Friday session bumped.</span>
+      </div>
+    </div>
+
+    <div class="hist-item" onclick="this.classList.toggle('open')">
+      <div class="hist-row">
+        <div>
+          <div class="hist-week">Week 5 <span class="status-badge">Responded</span></div>
+          <div class="hist-meta">Submitted 9 days ago · Training 7/10 · 81.6kg</div>
+        </div>
+        <span class="hist-caret">&#9654;</span>
+      </div>
+      <div class="hist-detail">
+        <span class="lbl">Your check-in</span>
+        Bit of a flat week, energy was down midweek. On plan with food though.
+        <span class="lbl">Ethan's response</span>
+        <span class="resp-text">Flat weeks happen — let's add a rest day this week and see if energy comes back up.</span>
+      </div>
+    </div>
+
+    <div class="hist-item" onclick="this.classList.toggle('open')">
+      <div class="hist-row">
+        <div>
+          <div class="hist-week">Week 4 <span class="status-badge">Responded</span></div>
+          <div class="hist-meta">Submitted 16 days ago · Training 9/10 · 81.1kg</div>
+        </div>
+        <span class="hist-caret">&#9654;</span>
+      </div>
+      <div class="hist-detail">
+        <span class="lbl">Your check-in</span>
+        Best week yet, everything clicking.
+        <span class="lbl">Ethan's response</span>
+        <span class="resp-text">Love to see it. Keep everything exactly as is.</span>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+</body>
+</html>

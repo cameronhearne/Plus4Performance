@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Community Screen Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&family=Roboto+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #08070A; --surface: #131119; --surface-2: #0C0A0F;
+    --bone: #F3F1ED; --ash: #ABA9B0; --ash-dim: #7A7880;
+    --glow: rgba(255, 79, 196, 0.5); --glow-line: rgba(255, 79, 196, 0.25);
+    --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--ink); color: var(--bone); font-family: 'Inter', sans-serif; padding-bottom: 60px; }
+  .ambient { position: fixed; top: -180px; left: -120px; width: 480px; height: 480px;
+    background: radial-gradient(circle, var(--glow) 0%, transparent 65%); opacity: 0.45; pointer-events: none; z-index: 0; }
+
+  nav { position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: center;
+    padding: 20px 32px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .brand { font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 14px; letter-spacing: 2.5px; }
+  .nav-right { display: flex; gap: 22px; font-size: 12px; color: var(--ash); }
+
+  .content { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding: 28px 24px; }
+
+  .tabs { display: flex; gap: 4px; background: var(--surface); border-radius: 10px; padding: 5px;
+    margin-bottom: 36px; overflow-x: auto; }
+  .tab { padding: 10px 16px; border-radius: 7px; font-family: 'Oswald', sans-serif; font-size: 12px;
+    font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--ash); white-space: nowrap; cursor: pointer; }
+  .tab.active { background: linear-gradient(160deg, #1A1722, #100E15); color: var(--bone);
+    box-shadow: 0 0 16px -4px var(--glow), 0 1px 0 rgba(255,255,255,0.04) inset; }
+
+  .eyebrow-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px;
+    opacity: 0; animation: fadeUp 0.6s var(--ease) forwards; }
+  .eyebrow-line { width: 28px; height: 1px; background: var(--glow-line); }
+  .eyebrow-text { font-size: 11px; letter-spacing: 2px; color: var(--ash-dim); text-transform: uppercase; }
+
+  h1 { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 38px; text-transform: uppercase;
+    margin-bottom: 26px; opacity: 0; animation: fadeUp 0.6s var(--ease) 0.05s forwards; }
+
+  .subtabs { display: inline-flex; gap: 4px; background: var(--surface); border-radius: 10px; padding: 5px;
+    margin-bottom: 28px; opacity: 0; animation: fadeUp 0.6s var(--ease) 0.1s forwards; }
+  .subtab { padding: 11px 22px; border-radius: 7px; font-family: 'Oswald', sans-serif; font-size: 12.5px;
+    font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--ash); cursor: pointer; }
+  .subtab.active { background: linear-gradient(160deg, #1A1722, #100E15); color: var(--bone);
+    box-shadow: 0 0 16px -4px var(--glow), 0 1px 0 rgba(255,255,255,0.04) inset; }
+
+  .card { background: linear-gradient(160deg, var(--surface) 0%, var(--surface-2) 100%);
+    border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 24px;
+    box-shadow: 0 12px 30px -16px rgba(0,0,0,0.55); margin-bottom: 18px;
+    opacity: 0; animation: fadeUp 0.6s var(--ease) 0.16s forwards; }
+  .card-title { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 16px; text-transform: uppercase; margin-bottom: 16px; }
+
+  .search-input { width: 100%; background: var(--surface-2); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px; padding: 14px 16px; color: var(--bone); font-size: 14px; margin-bottom: 10px;
+    transition: border-color 0.25s var(--ease), box-shadow 0.25s var(--ease); }
+  .search-input:focus { outline: none; border-color: var(--glow-line); box-shadow: 0 0 18px -8px var(--glow); }
+  .search-hint { font-size: 12.5px; color: var(--ash-dim); }
+
+  .empty-state { text-align: center; padding: 18px 10px; }
+  .empty-state-icon { font-size: 12.5px; color: var(--ash-dim); margin-bottom: 4px; }
+
+  .friends-count { color: var(--ash-dim); font-weight: 500; margin-left: 6px; }
+
+  /* leaderboard filters */
+  .lift-pills { display: flex; gap: 8px; background: var(--surface); border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px; padding: 10px; margin-bottom: 16px; overflow-x: auto;
+    opacity: 0; animation: fadeUp 0.6s var(--ease) 0.16s forwards; }
+  .lift-pill { padding: 10px 18px; border-radius: 8px; font-family: 'Oswald', sans-serif; font-weight: 600;
+    font-size: 12.5px; letter-spacing: 0.8px; text-transform: uppercase; color: var(--ash); cursor: pointer;
+    white-space: nowrap; transition: all 0.25s var(--ease); }
+  .lift-pill.active { background: linear-gradient(160deg, #1A1722, #100E15); color: var(--bone);
+    box-shadow: 0 0 16px -4px var(--glow), 0 1px 0 rgba(255,255,255,0.04) inset; }
+
+  .toggle-row { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;
+    opacity: 0; animation: fadeUp 0.6s var(--ease) 0.2s forwards; }
+  .toggle-group { display: flex; gap: 4px; background: var(--surface); border-radius: 9px; padding: 4px; }
+  .toggle-opt { padding: 9px 16px; border-radius: 6px; font-family: 'Oswald', sans-serif; font-weight: 600;
+    font-size: 11.5px; letter-spacing: 0.8px; text-transform: uppercase; color: var(--ash); cursor: pointer; }
+  .toggle-opt.active { background: linear-gradient(160deg, #1A1722, #100E15); color: var(--bone);
+    box-shadow: 0 0 12px -4px var(--glow); }
+
+  .leaderboard-empty { background: linear-gradient(160deg, var(--surface) 0%, var(--surface-2) 100%);
+    border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 50px 24px; text-align: center;
+    box-shadow: 0 12px 30px -16px rgba(0,0,0,0.55);
+    opacity: 0; animation: fadeUp 0.6s var(--ease) 0.26s forwards; }
+  .leaderboard-empty-title { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 18px;
+    text-transform: uppercase; margin-bottom: 10px; color: var(--bone); }
+  .leaderboard-empty-sub { font-size: 14px; color: var(--ash); }
+
+  @keyframes fadeUp { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+
+<div class="ambient"></div>
+
+<nav>
+  <div class="brand">PLUS 4 PERFORMANCE</div>
+  <div class="nav-right"><span>Admin</span><span>Sign Out</span></div>
+</nav>
+
+<div class="content">
+  <div class="tabs">
+    <div class="tab">Today</div><div class="tab">Plan</div><div class="tab">Nutrition</div>
+    <div class="tab">Progress</div><div class="tab">Achievements</div><div class="tab">Logbook</div>
+    <div class="tab active">Community</div><div class="tab">Shop</div><div class="tab">Account</div>
+  </div>
+
+  <div class="eyebrow-row"><div class="eyebrow-line"></div><div class="eyebrow-text">Community</div><div class="eyebrow-line"></div></div>
+  <h1 id="pageTitle">Friends</h1>
+
+  <div class="subtabs">
+    <div class="subtab active" onclick="showFriends()">Friends</div>
+    <div class="subtab" onclick="showLeaderboard()">Leaderboard</div>
+  </div>
+
+  <div id="friendsView">
+    <div class="card">
+      <div class="card-title">Find Members</div>
+      <input class="search-input" placeholder="Search by username...">
+      <div class="search-hint">Enter a username to find other Plus 4 members.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">My Friends <span class="friends-count">0</span></div>
+      <div class="empty-state">
+        <div class="search-hint">No friends yet. Search for other members above to get started.</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="leaderboardView" style="display:none;">
+    <div class="lift-pills">
+      <div class="lift-pill active" onclick="selectPill(this)">Bench</div>
+      <div class="lift-pill" onclick="selectPill(this)">Squat</div>
+      <div class="lift-pill" onclick="selectPill(this)">Deadlift</div>
+      <div class="lift-pill" onclick="selectPill(this)">OHP</div>
+      <div class="lift-pill" onclick="selectPill(this)">Combined</div>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle-group"><div class="toggle-opt active">All-Time</div><div class="toggle-opt">This Week</div></div>
+      <div class="toggle-group"><div class="toggle-opt active">Global</div><div class="toggle-opt">Friends</div></div>
+    </div>
+    <div class="leaderboard-empty">
+      <div class="leaderboard-empty-title">Not Enough Entries Yet</div>
+      <div class="leaderboard-empty-sub">Be one of the first to log a Bench 1RM and claim your spot.</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function showFriends() {
+    document.getElementById('pageTitle').textContent = 'Friends';
+    document.getElementById('friendsView').style.display = 'block';
+    document.getElementById('leaderboardView').style.display = 'none';
+    document.querySelectorAll('.subtab')[0].classList.add('active');
+    document.querySelectorAll('.subtab')[1].classList.remove('active');
+  }
+  function showLeaderboard() {
+    document.getElementById('pageTitle').textContent = 'Leaderboard';
+    document.getElementById('friendsView').style.display = 'none';
+    document.getElementById('leaderboardView').style.display = 'block';
+    document.querySelectorAll('.subtab')[0].classList.remove('active');
+    document.querySelectorAll('.subtab')[1].classList.add('active');
+  }
+  function selectPill(pill) {
+    document.querySelectorAll('.lift-pill').forEach(p => p.classList.remove('active'));
+    pill.classList.add('active');
+  }
+  document.querySelectorAll('.toggle-group').forEach(group => {
+    group.querySelectorAll('.toggle-opt').forEach(opt => {
+      opt.addEventListener('click', () => {
+        group.querySelectorAll('.toggle-opt').forEach(o => o.classList.remove('active'));
+        opt.classList.add('active');
+      });
+    });
+  });
+</script>
+
+</body>
+</html>

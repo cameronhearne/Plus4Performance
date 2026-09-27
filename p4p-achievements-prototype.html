@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Achievements Screen Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&family=Roboto+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #08070A; --surface: #131119; --surface-2: #0C0A0F;
+    --bone: #F3F1ED; --ash: #ABA9B0; --ash-dim: #7A7880;
+    --pink: rgba(255, 79, 196, 0.5); --pink-line: rgba(255, 79, 196, 0.3);
+    --purple: rgba(155, 47, 224, 0.5); --purple-line: rgba(155, 47, 224, 0.35);
+    --green: rgba(74, 153, 104, 0.45); --green-line: rgba(74, 153, 104, 0.35);
+    --gold: #D4A537; --gold-bright: #F0C75E; --gold-glow: rgba(212, 165, 55, 0.5);
+    --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--ink); color: var(--bone); font-family: 'Inter', sans-serif; padding-bottom: 60px; }
+  .ambient { position: fixed; top: -180px; left: -120px; width: 480px; height: 480px;
+    background: radial-gradient(circle, var(--pink) 0%, transparent 65%); opacity: 0.45; pointer-events: none; z-index: 0; }
+
+  nav { position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: center;
+    padding: 20px 32px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .brand { font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 14px; letter-spacing: 2.5px; }
+  .nav-right { display: flex; gap: 22px; font-size: 12px; color: var(--ash); }
+
+  .content { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding: 28px 24px; }
+
+  .tabs { display: flex; gap: 4px; background: var(--surface); border-radius: 10px; padding: 5px;
+    margin-bottom: 36px; overflow-x: auto; }
+  .tab { padding: 10px 16px; border-radius: 7px; font-family: 'Oswald', sans-serif; font-size: 12px;
+    font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--ash); white-space: nowrap; cursor: pointer; }
+  .tab.active { background: linear-gradient(160deg, #1A1722, #100E15); color: var(--bone);
+    box-shadow: 0 0 16px -4px var(--pink), 0 1px 0 rgba(255,255,255,0.04) inset; }
+
+  /* level hex */
+  .level-wrap { text-align: center; margin-bottom: 36px; opacity: 0; animation: fadeUp 0.6s var(--ease) forwards; }
+  .level-hex { width: 160px; height: 160px; margin: 0 auto 14px; position: relative;
+    display: flex; align-items: center; justify-content: center; }
+  .level-hex svg { position: absolute; width: 100%; height: 100%; filter: drop-shadow(0 0 20px var(--pink)); }
+  .level-hex-num { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 48px; color: var(--bone); z-index: 1; }
+  .level-name { font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 16px; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--bone); margin-bottom: 22px; }
+
+  .xp-bar-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--ash-dim);
+    margin-bottom: 8px; max-width: 600px; margin-left: auto; margin-right: auto; }
+  .xp-track { height: 4px; background: var(--surface); border-radius: 3px; max-width: 600px; margin: 0 auto 26px;
+    overflow: hidden; }
+  .xp-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #E8389E, #FF4FC4); border-radius: 3px;
+    box-shadow: 0 0 8px var(--pink); transition: width 1.2s var(--ease); }
+
+  .level-pips { display: flex; justify-content: center; gap: 18px; }
+  .pip { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .pip-hex { width: 46px; height: 46px; }
+  .pip-hex svg { width: 100%; height: 100%; }
+  .pip-label { font-size: 10px; letter-spacing: 1px; color: var(--ash-dim); text-transform: uppercase; }
+  .pip.active .pip-label { color: var(--bone); }
+
+  /* category section */
+  .cat-header { display: flex; align-items: center; gap: 14px; margin: 44px 0 22px; }
+  .cat-header.first { margin-top: 8px; }
+  .cat-title { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 2px;
+    text-transform: uppercase; white-space: nowrap; }
+  .cat-line { flex: 1; height: 1px; opacity: 0.3; }
+  .cat-count { font-size: 12px; color: var(--ash-dim); white-space: nowrap; }
+
+  .cat-header.training .cat-title { color: var(--bone); }
+  .cat-header.training .cat-line { background: var(--pink-line); }
+  .cat-header.nutrition .cat-title { color: var(--bone); }
+  .cat-header.nutrition .cat-line { background: var(--green-line); }
+  .cat-header.progress .cat-title { color: var(--bone); }
+  .cat-header.progress .cat-line { background: var(--purple-line); }
+  .cat-header.legacy .cat-title { color: var(--gold-bright); }
+  .cat-header.legacy .cat-line { background: rgba(212,165,55,0.3); }
+
+  .badge-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-bottom: 10px; }
+  .badge { text-align: center; }
+  .badge-hex { width: 90px; height: 90px; margin: 0 auto 10px; position: relative;
+    display: flex; align-items: center; justify-content: center; }
+  .badge-hex svg.bg { position: absolute; width: 100%; height: 100%; }
+  .badge-hex .icon { width: 32px; height: 32px; z-index: 1; color: var(--ash-dim); }
+  .badge-name { font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 12px; letter-spacing: 0.5px;
+    text-transform: uppercase; color: var(--ash); margin-bottom: 3px; }
+  .badge-xp { font-size: 10.5px; color: var(--ash-dim); }
+
+  /* locked vs unlocked states */
+  .badge.locked .badge-hex svg.bg .hexfill { fill: var(--surface); stroke: rgba(255,255,255,0.07); }
+  .badge.training.locked .badge-hex svg.bg .hexfill { stroke: var(--pink-line); }
+  .badge.nutrition.locked .badge-hex svg.bg .hexfill { stroke: var(--green-line); }
+  .badge.progress.locked .badge-hex svg.bg .hexfill { stroke: var(--purple-line); }
+  .badge.legacy.locked .badge-hex svg.bg .hexfill { stroke: rgba(212,165,55,0.25); }
+
+  .badge.unlocked .badge-hex svg.bg .hexfill { fill: linear-gradient(160deg, #2A2010, #1A1408); stroke: var(--gold); stroke-width: 2; }
+  .badge.unlocked .badge-hex { filter: drop-shadow(0 0 18px var(--gold-glow)); }
+  .badge.unlocked .badge-hex .icon { color: var(--gold-bright); }
+  .badge.unlocked .badge-name { color: var(--bone); font-weight: 700; }
+
+  /* xp guide */
+  .xp-guide-title { font-size: 11px; letter-spacing: 2px; color: var(--ash-dim); text-transform: uppercase;
+    margin: 50px 0 16px; }
+  .xp-guide-card { background: linear-gradient(160deg, var(--surface) 0%, var(--surface-2) 100%);
+    border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 6px 24px;
+    box-shadow: 0 12px 30px -16px rgba(0,0,0,0.55); }
+  .xp-guide-grid { display: grid; grid-template-columns: 1fr 1fr; }
+  .xp-row { display: flex; justify-content: space-between; padding: 16px 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 14px; }
+  .xp-row span:last-child { font-family: 'Roboto Mono', monospace; font-weight: 600; color: var(--bone); font-size: 13px; }
+
+  @keyframes fadeUp { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
+  @media (max-width: 700px) { .badge-grid { grid-template-columns: repeat(2, 1fr); } .xp-guide-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<div class="ambient"></div>
+
+<nav>
+  <div class="brand">PLUS 4 PERFORMANCE</div>
+  <div class="nav-right"><span>Admin</span><span>Sign Out</span></div>
+</nav>
+
+<div class="content">
+  <div class="tabs">
+    <div class="tab">Today</div><div class="tab">Plan</div><div class="tab">Nutrition</div>
+    <div class="tab">Progress</div><div class="tab active">Achievements</div><div class="tab">Logbook</div>
+    <div class="tab">Community</div><div class="tab">Shop</div><div class="tab">Account</div>
+  </div>
+
+  <div class="level-wrap">
+    <div class="level-hex">
+      <svg viewBox="0 0 100 100"><polygon points="50,3 93,26 93,74 50,97 7,74 7,26" fill="#18151F" stroke="#E8389E" stroke-width="2.5"/></svg>
+      <div class="level-hex-num">3</div>
+    </div>
+    <div class="level-name">Committed</div>
+    <div class="xp-bar-row"><span>7,900 XP</span><span>12,000 XP</span></div>
+    <div class="xp-track"><div class="xp-fill" id="xpFill"></div></div>
+    <div class="level-pips">
+      <div class="pip"><div class="pip-hex"><svg viewBox="0 0 100 100"><polygon points="50,3 93,26 93,74 50,97 7,74 7,26" fill="#131119" stroke="#E8389E" stroke-width="2"/></svg></div><div class="pip-label">Recruit</div></div>
+      <div class="pip"><div class="pip-hex"><svg viewBox="0 0 100 100"><polygon points="50,3 93,26 93,74 50,97 7,74 7,26" fill="#131119" stroke="#E8389E" stroke-width="2"/></svg></div><div class="pip-label">Consistent</div></div>
+      <div class="pip active"><div class="pip-hex"><svg viewBox="0 0 100 100"><polygon points="50,3 93,26 93,74 50,97 7,74 7,26" fill="#18151F" stroke="#FF4FC4" stroke-width="2.5"/></svg></div><div class="pip-label">Committed</div></div>
+      <div class="pip"><div class="pip-hex"><svg viewBox="0 0 100 100"><polygon points="50,3 93,26 93,74 50,97 7,74 7,26" fill="#0C0A0F" stroke="rgba(255,255,255,0.1)" stroke-width="2"/></svg></div><div class="pip-label">Athlete</div></div>
+      <div class="pip"><div class="pip-hex"><svg viewBox="0 0 100 100"><polygon points="50,3 93,26 93,74 50,97 7,74 7,26" fill="#0C0A0F" stroke="rgba(255,255,255,0.1)" stroke-width="2"/></svg></div><div class="pip-label">Elite</div></div>
+      <div class="pip"><div class="pip-hex"><svg viewBox="0 0 100 100"><polygon points="50,3 93,26 93,74 50,97 7,74 7,26" fill="#0C0A0F" stroke="rgba(255,255,255,0.1)" stroke-width="2"/></svg></div><div class="pip-label">Plus</div></div>
+    </div>
+  </div>
+
+  <div class="cat-header training first"><div class="cat-title">Training</div><div class="cat-line"></div><div class="cat-count">0/12</div></div>
+  <div class="badge-grid">
+    <div class="badge training locked"><div class="badge-hex"><svg class="bg" viewBox="0 0 100 100"><polygon class="hexfill" points="50,3 93,26 93,74 50,97 7,74 7,26" stroke-width="1.5"/></svg></div><div class="badge-name">First Rep</div><div class="badge-xp">100 XP</div></div>
+    <div class="badge training locked"><div class="badge-hex"><svg class="bg" viewBox="0 0 100 100"><polygon class="hexfill" points="50,3 93,26 93,74 50,97 7,74 7,26" stroke-width="1.5"/></svg></div><div class="badge-name">Week 1 Warrior</div><div class="badge-xp">150 XP</div></div>
+    <div class="badge training locked"><div class="badge-hex"><svg class="bg" viewBox="0 0 100 100"><polygon class="hexfill" points="50,3 93,26 93,74 50,97 7,74 7,26" stroke-width="1.5"/></svg></div><div class="badge-name">Halfway</div><div class="badge-xp">200 XP</div></div>
+    <div class="badge training locked"><div class="badge-hex"><svg class="bg" viewBox="0 0 100 100"><polygon class="hexfill" points="50,3 93,26 93,74 50,97 7,74 7,26" stroke-width="1.5"/></svg></div><div class="badge-name">Full Campaign</div><div class="badge-xp">500 XP</div></div>
+  </div>
+
+  <div class="cat-header nutrition"><div class="cat-title">Nutrition</div><div class="cat-line"></div><div class="cat-count">0/5</div></div>
+  <div class="badge-grid">
+    <div class="badge nutrition locked"><div class="badge-hex"><svg class="bg" viewBox="0 0 100 100"><polygon class="hexfill" points="50,3 93,26 93,74 50,97 7,74 7,26" stroke-width="1.5"/></svg></div><div class="badge-name">Protein King</div><div class="badge-xp">100 XP</div></div>
+    <div class="badge nutrition locked"><div class="badge-hex"><svg class="bg" viewBox="0 0 100 100"><polygon class="hexfill" points="50,3 93,26 93,74 50,97 7,74 7,26" stroke-width="1.5"/></svg></div><div class="badge-name">Perfect Week</div><div class="badge-xp">200 XP</div></div>
+    <div class="badge nutrition locked"><div class="badge-hex"><svg class="bg" viewBox="0 0 100 100"><polygon class="hexfill" points="50,3 93,26 93,74 50,97 7,74 7,26" stroke-width="1.5"/></svg></div><div class="badge-name">Meal Prepper</div><div class="badge-xp">50 XP</div></div>
+    <div class="badge nutrition locked"><div class="badge-hex"><svg class="bg" viewBox="0 0 100 100"><polygon class="hexfill" points="50,3 93,26 93,74 50,97 7,74 7,26" stroke-width="1.5"/></svg></div><div class="badge-name">Dialled In</div><div class="badge-xp">300 XP</div></div>
+  </div>
+
+  <div class="cat-header progress"><div class="cat-title">Progress</div><div class="cat-line"></div><div class="cat-count">0/8</div></div>
+  <div class="badge-grid">
+    <div class="badge progress locked"><div class="badge-hex"><svg class="bg" viewBox="0 0 100 100"><polygon class="hexfill" points="50,3 93,26 93,74 50,97 7,74 7,26" stroke-width="1.5"/></svg></div><div class="badge-name">First Check-In</div><div class="badge-xp">10 XP</div></div>
+    <div class="badge progress locked"><div class="badge-hex"><svg class="bg" viewBox="0 0 100 100"><polygon class="hexfill" points="50,3 93,26 93,74 50,97 7,74 7,26" stroke-width="1.5"/></svg></div><div class="badge-name">Moving Needle</div><div class="badge-xp">100 XP</div></div>
+    <div class="badge progress locked"><div class="badge-hex"><svg class="bg" viewBox="0 0 100 100"><polygon class="hexfill" points="50,3 93,26 93,74 50,97 7,74 7,26" stroke-width="1.5"/></svg></div><div class="badge-name">Halfway Home</div><div class="badge-xp">200 XP</div></div>
+    <div class="badge progress locked"><div class="badge-hex"><svg class="bg" viewBox="0 0 100 100"><polygon class="hexfill" points="50,3 93,26 93,74 50,97 7,74 7,26" stroke-width="1.5"/></svg></div><div class="badge-name">Goal Achieved</div><div class="badge-xp">500 XP</div></div>
+  </div>
+
+  <div class="cat-header legacy"><div class="cat-title">Legacy</div><div class="cat-line"></div><div class="cat-count">1/4</div></div>
+  <div class="badge-grid">
+    <div class="badge legacy locked"><div class="badge-hex"><svg class="bg" viewBox="0 0 100 100"><polygon class="hexfill" points="50,3 93,26 93,74 50,97 7,74 7,26" stroke-width="1.5"/></svg></div><div class="badge-name">The P4</div><div class="badge-xp">1000 XP</div></div>
+    <div class="badge legacy locked"><div class="badge-hex"><svg class="bg" viewBox="0 0 100 100"><polygon class="hexfill" points="50,3 93,26 93,74 50,97 7,74 7,26" stroke-width="1.5"/></svg></div><div class="badge-name">Coach's Pick</div><div class="badge-xp">500 XP</div></div>
+    <div class="badge legacy unlocked"><div class="badge-hex"><svg class="bg" viewBox="0 0 100 100"><polygon class="hexfill" points="50,3 93,26 93,74 50,97 7,74 7,26" stroke-width="1.5"/></svg></div><div class="badge-name">Founding Member</div><div class="badge-xp">500 XP</div></div>
+    <div class="badge legacy locked"><div class="badge-hex"><svg class="bg" viewBox="0 0 100 100"><polygon class="hexfill" points="50,3 93,26 93,74 50,97 7,74 7,26" stroke-width="1.5"/></svg></div><div class="badge-name">Refer a Friend</div><div class="badge-xp">200 XP</div></div>
+  </div>
+
+  <div class="xp-guide-title">XP Guide</div>
+  <div class="xp-guide-card">
+    <div class="xp-guide-grid">
+      <div>
+        <div class="xp-row"><span>Complete a session</span><span>+50 XP</span></div>
+        <div class="xp-row"><span>Log weight</span><span>+10 XP</span></div>
+        <div class="xp-row"><span>Complete a full week</span><span>+150 XP</span></div>
+      </div>
+      <div>
+        <div class="xp-row"><span>Hit protein target</span><span>+20 XP</span></div>
+        <div class="xp-row"><span>Unlock an achievement</span><span>+100 XP</span></div>
+        <div class="xp-row"><span>Log a personal record</span><span>+200 XP</span></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  setTimeout(() => { document.getElementById('xpFill').style.width = ((7900/12000)*100) + '%'; }, 300);
+</script>
+
+</body>
+</html>

@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Homepage Desktop — Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&family=Roboto+Mono:wght@600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#08070A;--surface:#131119;--surface-2:#0C0A0F;
+    --bone:#F3F1ED;--ash:#ABA9B0;--ash-dim:#7A7880;
+    --glow:rgba(255,79,196,0.5);--glow-line:rgba(255,79,196,0.25);--glow-border:rgba(255,79,196,0.42);
+    --pink-grad:linear-gradient(90deg,#E8389E,#FF4FC4,#FF8FE0);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--ink);color:var(--bone);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden;}
+  .container{max-width:1200px;margin:0 auto;padding:0 40px;}
+  h1,h2,h3{font-family:'Oswald',sans-serif;text-transform:uppercase;}
+  .eyebrow{font-family:'Oswald',sans-serif;font-weight:500;letter-spacing:0.3em;font-size:12px;text-transform:uppercase;color:var(--ash-dim);}
+  .btn-primary{display:inline-block;padding:17px 34px;border-radius:11px;background:linear-gradient(160deg,#18151F,#100E15);
+    border:1px solid var(--glow-border);color:var(--bone);font-family:'Oswald',sans-serif;font-weight:700;font-size:14px;letter-spacing:0.16em;
+    text-transform:uppercase;cursor:pointer;text-decoration:none;box-shadow:0 10px 28px -10px var(--glow);transition:transform .1s,filter .18s;}
+  .btn-primary:hover{filter:brightness(1.09);}
+  .btn-primary:active{transform:scale(0.98);}
+  .btn-ghost{display:inline-block;padding:15px 30px;border-radius:11px;background:transparent;border:1px solid var(--glow-line);
+    color:var(--ash);font-family:'Oswald',sans-serif;font-weight:600;font-size:13px;letter-spacing:0.14em;text-transform:uppercase;text-decoration:none;transition:border-color .18s,color .18s;}
+  .btn-ghost:hover{border-color:var(--glow-border);color:var(--bone);}
+
+  /* header */
+  header{position:sticky;top:0;z-index:20;background:rgba(8,7,10,0.82);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,0.05);}
+  .nav{display:flex;align-items:center;justify-content:space-between;height:76px;}
+  .logo{display:flex;align-items:center;gap:12px;}
+  .logo-mark{width:38px;height:38px;border-radius:9px;background:linear-gradient(160deg,#1B1622,#100E15);border:1px solid var(--glow-border);
+    display:flex;align-items:center;justify-content:center;font-family:'Oswald',sans-serif;font-weight:700;font-size:17px;box-shadow:0 0 16px -6px var(--glow);}
+  .logo-text{font-family:'Oswald',sans-serif;font-weight:700;letter-spacing:0.14em;font-size:16px;}
+  .nav-right{display:flex;align-items:center;gap:34px;}
+  .nav-right a{color:var(--ash);text-decoration:none;font-size:14px;font-weight:500;transition:color .15s;}
+  .nav-right a:hover{color:var(--bone);}
+
+  /* scrolling marquee banner (restored) */
+  .marquee{background:linear-gradient(90deg,rgba(232,56,158,0.10),rgba(255,79,196,0.06));border-top:1px solid var(--glow-line);border-bottom:1px solid var(--glow-line);overflow:hidden;padding:11px 0;}
+  .marquee-track{display:flex;gap:52px;white-space:nowrap;animation:scroll 26s linear infinite;width:max-content;}
+  .marquee-track span{font-family:'Oswald',sans-serif;font-weight:600;letter-spacing:0.16em;font-size:12px;text-transform:uppercase;color:var(--ash);display:inline-flex;align-items:center;gap:52px;}
+  .marquee-track span::after{content:"✦";color:#FF4FC4;}
+  @keyframes scroll{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+
+  /* HERO — two column on desktop */
+  .hero{position:relative;padding:80px 0 90px;background-image:radial-gradient(40% 55% at 15% 20%,rgba(255,79,196,0.14),rgba(0,0,0,0) 60%);}
+  .hero-grid{display:grid;grid-template-columns:1.05fr 0.95fr;gap:64px;align-items:center;}
+  .hero h1{font-weight:700;font-size:66px;line-height:0.98;margin:18px 0 22px;}
+  .hero .lead{font-size:19px;line-height:1.6;color:var(--ash);max-width:30em;margin-bottom:16px;}
+  .hero .lead b{color:var(--bone);font-weight:600;}
+  .hero-ctas{display:flex;gap:14px;align-items:center;margin-top:30px;flex-wrap:wrap;}
+  .hero-note{font-size:13px;color:var(--ash-dim);margin-top:16px;}
+
+  /* calculator card — lives in hero right column */
+  .calc{background:linear-gradient(160deg,var(--surface),var(--surface-2));border:1px solid var(--glow-line);border-radius:18px;padding:30px;
+    box-shadow:0 20px 50px -24px rgba(0,0,0,0.7),0 0 30px -18px var(--glow);}
+  .calc-label{text-align:center;font-family:'Oswald',sans-serif;letter-spacing:0.2em;font-size:11px;color:var(--ash-dim);text-transform:uppercase;margin-bottom:20px;}
+  .calc-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
+  .field label{display:block;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ash-dim);margin-bottom:6px;font-family:'Oswald',sans-serif;}
+  .field input,.field select{width:100%;background:var(--surface-2);border:1px solid var(--glow-line);border-radius:9px;padding:12px 13px;color:var(--bone);font-family:'Inter',sans-serif;font-size:15px;outline:none;}
+  .calc-results{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:18px 0;}
+  .result{background:var(--surface-2);border:1px solid var(--glow-line);border-radius:11px;padding:16px;text-align:center;}
+  .result .n{font-family:'Roboto Mono',monospace;font-weight:600;font-size:30px;}
+  .result .l{font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ash-dim);margin-top:4px;font-family:'Oswald',sans-serif;}
+  .calc .btn-primary{width:100%;text-align:center;}
+  .calc-foot{font-size:12px;color:var(--ash-dim);text-align:center;margin-top:12px;line-height:1.5;}
+
+  section{padding:80px 0;}
+  .section-eyebrow{text-align:center;display:block;margin-bottom:12px;}
+  .section-title{text-align:center;font-weight:700;font-size:40px;margin-bottom:46px;}
+
+  /* proof */
+  .reviews{display:grid;grid-template-columns:1fr 1fr;gap:22px;}
+  .review{background:linear-gradient(160deg,var(--surface),var(--surface-2));border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:28px;}
+  .stars{color:#FF4FC4;letter-spacing:3px;font-size:15px;margin-bottom:14px;}
+  .review p{font-size:16px;line-height:1.6;color:var(--bone);margin-bottom:16px;}
+  .review .who{font-size:13px;color:var(--ash);} .review .who b{color:var(--bone);}
+
+  /* how it works */
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;}
+  .step{background:linear-gradient(160deg,var(--surface),var(--surface-2));border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:30px;}
+  .step .num{font-family:'Roboto Mono',monospace;font-weight:600;color:var(--ash-dim);font-size:14px;margin-bottom:16px;}
+  .step h3{font-weight:700;font-size:20px;margin-bottom:12px;}
+  .step p{font-size:15px;line-height:1.6;color:var(--ash);}
+
+  /* £1 OFFER — the hero offer, promoted */
+  .offer-wrap{background-image:radial-gradient(50% 90% at 50% 50%,rgba(255,79,196,0.10),rgba(0,0,0,0) 70%);}
+  .offer{max-width:720px;margin:0 auto;background:linear-gradient(160deg,var(--surface),var(--surface-2));border:1px solid var(--glow-border);border-radius:22px;
+    padding:48px;text-align:center;box-shadow:0 24px 60px -28px rgba(0,0,0,0.7),0 0 44px -18px var(--glow);}
+  .offer-badge{display:inline-block;font-family:'Oswald',sans-serif;font-weight:600;letter-spacing:0.18em;font-size:11px;text-transform:uppercase;
+    border:1px solid var(--glow-border);border-radius:99px;padding:7px 16px;color:var(--bone);box-shadow:0 0 16px -6px var(--glow);margin-bottom:22px;}
+  .offer h2{font-weight:700;font-size:52px;line-height:1;margin-bottom:16px;}
+  .offer h2 .small{font-size:26px;color:var(--ash);}
+  .offer p{font-size:17px;color:var(--ash);line-height:1.6;max-width:34em;margin:0 auto 30px;}
+  .offer .btn-primary{font-size:16px;padding:19px 44px;}
+  .offer-sub{font-size:13px;color:var(--ash-dim);margin-top:16px;}
+
+  /* elite coaching */
+  .elite{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center;}
+  .elite h2{font-weight:700;font-size:38px;margin:12px 0 20px;}
+  .elite p{font-size:17px;line-height:1.65;color:var(--ash);margin-bottom:14px;}
+  .apply{background:linear-gradient(160deg,var(--surface),var(--surface-2));border:1px solid var(--glow-line);border-radius:18px;padding:32px;box-shadow:0 20px 50px -26px rgba(0,0,0,0.7);}
+  .apply-label{font-family:'Oswald',sans-serif;letter-spacing:0.16em;font-size:11px;text-transform:uppercase;color:var(--ash-dim);margin-bottom:18px;}
+  .apply input,.apply textarea{width:100%;background:var(--surface-2);border:1px solid var(--glow-line);border-radius:10px;padding:14px;color:var(--bone);font-family:'Inter',sans-serif;font-size:15px;margin-bottom:12px;outline:none;}
+  .apply textarea{min-height:96px;resize:vertical;}
+  .apply .btn-primary{width:100%;text-align:center;}
+
+  footer{border-top:1px solid rgba(255,255,255,0.06);padding:40px 0;}
+  .foot{display:flex;justify-content:space-between;align-items:center;}
+  .foot .logo-text{color:var(--ash-dim);}
+  .foot-links{display:flex;gap:26px;} .foot-links a{color:var(--ash-dim);text-decoration:none;font-size:14px;} .foot-links a:hover{color:var(--bone);}
+
+  /* responsive: collapse to the mobile single-column it already was */
+  @media(max-width:900px){
+    .hero-grid,.elite{grid-template-columns:1fr;gap:40px;}
+    .reviews,.steps{grid-template-columns:1fr;}
+    .hero h1{font-size:46px;} .offer h2{font-size:40px;}
+    .container{padding:0 22px;}
+    .nav-right{gap:18px;} .nav-right a.hide-sm{display:none;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container nav">
+    <div class="logo">
+      <div class="logo-mark">P4</div>
+      <span class="logo-text">Plus 4 Performance</span>
+    </div>
+    <nav class="nav-right">
+      <a href="#" class="hide-sm">Coaching</a>
+      <a href="#" class="hide-sm">Pricing</a>
+      <a href="#" class="btn-ghost" style="padding:11px 22px;">Log in</a>
+    </nav>
+  </div>
+</header>
+
+<!-- restored scrolling banner -->
+<div class="marquee">
+  <div class="marquee-track">
+    <span>Personalised training</span><span>Nutrition built around you</span><span>Weekly coaching check-ins</span><span>Progressive overload tracking</span><span>Real meal plans</span>
+    <span>Personalised training</span><span>Nutrition built around you</span><span>Weekly coaching check-ins</span><span>Progressive overload tracking</span><span>Real meal plans</span>
+  </div>
+</div>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="container hero-grid">
+    <div>
+      <span class="eyebrow">Training · Nutrition · Coaching — personalised to you</span>
+      <h1>Your Coach<br>In Your Pocket.</h1>
+      <p class="lead">Your <b>real</b> personalised 12-week training and nutrition plan — built around your goal, your numbers, your training days. <b>Just £1 for your first month.</b></p>
+      <div class="hero-ctas">
+        <a href="#offer" class="btn-primary">Start for £1 &rarr;</a>
+      </div>
+      <p class="hero-note">£1 first month, then £9.99/mo · Cancel anytime</p>
+    </div>
+
+    <!-- calculator -->
+    <div class="calc" id="calc">
+      <div class="calc-label">Free Tool — Your Maintenance Calories</div>
+      <div class="calc-row">
+        <div class="field"><label>Sex</label><select><option>Male</option><option>Female</option></select></div>
+        <div class="field"><label>Age</label><input value="28"></div>
+      </div>
+      <div class="calc-row">
+        <div class="field"><label>Height (cm)</label><input value="178"></div>
+        <div class="field"><label>Weight (kg)</label><input value="80"></div>
+      </div>
+      <div class="field" style="margin-bottom:6px"><label>Activity level</label><select><option>Moderate — 3–5 sessions/week</option></select></div>
+      <div class="calc-results">
+        <div class="result"><div class="n">1778</div><div class="l">BMR kcal</div></div>
+        <div class="result"><div class="n">2755</div><div class="l">TDEE kcal</div></div>
+      </div>
+      <a href="#offer" class="btn-primary">Want a plan built around this? Start for £1 &rarr;</a>
+      <p class="calc-foot">Just a quick maintenance estimate to play with. Your real plan is built properly around your goal after you start.</p>
+    </div>
+  </div>
+</section>
+
+<!-- PROOF -->
+<section>
+  <div class="container">
+    <span class="eyebrow section-eyebrow">What early users are saying</span>
+    <div class="reviews">
+      <div class="review"><div class="stars">★★★★★</div><p>"Tried this ahead of the official launch and it's genuinely solid — the plan felt properly tailored, not a generic template. Two weeks in and I'm progressing on every lift."</p><div class="who"><b>Verified review</b> · Trustpilot</div></div>
+      <div class="review"><div class="stars">★★★★★</div><p>"Finally a plan built around me — my calories, my training days, my goal. The meal plan alone saves so much time figuring out what to eat."</p><div class="who"><b>Verified review</b> · Trustpilot</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section>
+  <div class="container">
+    <h2 class="section-title">How It Works</h2>
+    <div class="steps">
+      <div class="step"><div class="num">01</div><h3>Start for £1</h3><p>Tell us about you, your goal and how you train. Takes a few minutes — your first month is just £1.</p></div>
+      <div class="step"><div class="num">02</div><h3>Your Plan</h3><p>Get your full 12-week training and nutrition plan, built specifically around your numbers — not a generic template.</p></div>
+      <div class="step"><div class="num">03</div><h3>Stay On Track</h3><p>Weekly check-ins, progress tracking and plan updates every 12 weeks — coaching that adapts with you.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- £1 OFFER (hero offer) -->
+<section class="offer-wrap" id="offer">
+  <div class="container">
+    <div class="offer">
+      <span class="offer-badge">Limited Offer</span>
+      <h2>Your First Month <span class="small">—</span> £1</h2>
+      <p>Full access to your real personalised 12-week programme, progressive overload tracking, nutrition targets and a complete meal plan. Then £9.99/month. Cancel anytime.</p>
+      <a href="#" class="btn-primary">Start for £1 &rarr;</a>
+      <p class="offer-sub">£1 for your first month, then £9.99/month · Cancel anytime</p>
+    </div>
+  </div>
+</section>
+
+<!-- ELITE COACHING -->
+<section>
+  <div class="container elite">
+    <div>
+      <span class="eyebrow">Want a real coach behind it?</span>
+      <h2>1-to-1 Elite Coaching</h2>
+      <p>For people who want direct access to a coach — weekly check-ins, form review, and a programme built and adjusted by hand.</p>
+      <p style="color:var(--ash-dim);font-size:15px;">Limited spots, by application.</p>
+    </div>
+    <div class="apply">
+      <div class="apply-label">Apply for coaching</div>
+      <input placeholder="Your name">
+      <input placeholder="Email">
+      <textarea placeholder="Tell us a bit about your goals"></textarea>
+      <a href="#" class="btn-primary">Send application &rarr;</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container foot">
+    <span class="logo-text">Plus 4 Performance</span>
+    <div class="foot-links"><a href="#">Privacy</a><a href="#">Terms</a><a href="#">FAQ</a></div>
+  </div>
+</footer>
+
+</body>
+</html>
