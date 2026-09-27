@@ -25,18 +25,14 @@
       '</nav>' +
       '<div class="site-header-actions">' +
         '<a href="' + TIDYCAL + '" target="_blank" rel="noopener" class="btn-ghost btn-sm nav-cta">Book a Call</a>' +
-        '<button type="button" class="hamburger" aria-expanded="false" aria-controls="mobile-menu" aria-label="Open menu">' +
-          '<span></span><span></span><span></span>' +
-        '</button>' +
       '</div>' +
     '</div>' +
-    '<div id="mobile-menu" class="mobile-menu">' +
-      '<a href="/"' + (current('/') ? ' aria-current="page"' : '') + '>Home</a>' +
-      '<a href="/online-coaching"' + (current('/online-coaching') ? ' aria-current="page"' : '') + '>Online Coaching</a>' +
-      '<a href="/guaranteed-coaching"' + (current('/guaranteed-coaching') ? ' aria-current="page"' : '') + '>Guaranteed Coaching</a>' +
-      '<a href="/shop"' + (current('/shop') ? ' aria-current="page"' : '') + '>Shop</a>' +
-      '<a href="' + TIDYCAL + '" target="_blank" rel="noopener" class="btn-filled">Book a Call</a>' +
-    '</div>';
+    '<nav class="mobile-tabs" aria-label="Primary mobile">' +
+      '<a href="/" class="mobile-tab"' + (current('/') ? ' aria-current="page"' : '') + '>Home</a>' +
+      '<a href="/online-coaching" class="mobile-tab"' + (current('/online-coaching') ? ' aria-current="page"' : '') + '>Online Coaching</a>' +
+      '<a href="/guaranteed-coaching" class="mobile-tab"' + (current('/guaranteed-coaching') ? ' aria-current="page"' : '') + '>Guaranteed</a>' +
+      '<a href="/shop" class="mobile-tab"' + (current('/shop') ? ' aria-current="page"' : '') + '>Shop<span class="mobile-tab-badge">New</span></a>' +
+    '</nav>';
 
   var footerHTML =
     '<div class="wrap">' +
@@ -82,14 +78,9 @@
     var footerMount = document.getElementById('site-footer');
     if(headerMount){
       headerMount.innerHTML = headerHTML;
-      var menu = document.getElementById('mobile-menu');
-      var toggle = headerMount.querySelector('.hamburger');
-      if(toggle && menu){
-        toggle.addEventListener('click', function(){
-          var open = menu.classList.toggle('is-open');
-          toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-          toggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
-        });
+      var activeTab = headerMount.querySelector('.mobile-tab[aria-current="page"]');
+      if(activeTab){
+        activeTab.scrollIntoView({ block: 'nearest', inline: 'center' });
       }
     }
     if(footerMount){
