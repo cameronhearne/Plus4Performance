@@ -5,13 +5,15 @@
     cd client && npm ci && npm run build &&
     cp ../index.html dist/index.html &&
     cp -r ../public/. dist/ &&
-    # ^ everything under root public/ (e.g. public/images/) ships automatically —
-    # drop new static assets there instead of adding a cp line here.
-    cp ../logo-mark.png dist/logo-mark.png &&
+    # ^ everything under root public/ (e.g. public/images/, site.webmanifest) ships
+    # automatically — drop new static assets there instead of adding a cp line here.
+    cp ../public/images/logo/favicon.ico dist/favicon.ico &&
+    # ^ some browsers look for /favicon.ico at the site root by default.
     cp ../calculator.html dist/calculator.html &&
     cp ../privacy.html dist/privacy.html &&
     cp ../terms.html dist/terms.html &&
     cp ../guaranteed-coaching.html dist/guaranteed-coaching.html &&
+    cp ../online-coaching.html dist/online-coaching.html &&
     cp ../shop.html dist/shop.html &&
     mkdir -p dist/shop && cp -r ../shop/. dist/shop/ &&
     cp ../about.html dist/about.html &&
@@ -59,6 +61,11 @@
 [[redirects]]
   from = "/guaranteed-coaching"
   to = "/guaranteed-coaching.html"
+  status = 200
+
+[[redirects]]
+  from = "/online-coaching"
+  to = "/online-coaching.html"
   status = 200
 
 [[redirects]]

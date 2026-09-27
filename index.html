@@ -9,14 +9,14 @@
 <meta property="og:description" content="1:1 online coaching with a results guarantee, and gym clothing from Cameron and Ethan at Plus 4 Performance.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://plus4performance.com/">
-<meta property="og:image" content="https://plus4performance.com/images/hero.jpg">
+<meta property="og:image" content="https://plus4performance.com/images/logo/icon-512.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://plus4performance.com/">
-<link rel="icon" type="image/x-icon" href="/images/favicon.ico">
-<link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
-<link rel="icon" type="image/png" sizes="192x192" href="/images/favicon-192x192.png">
-<link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
+<link rel="icon" href="/images/logo/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/images/logo/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/images/logo/favicon-16x16.png">
+<link rel="apple-touch-icon" href="/images/logo/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/site.css">
@@ -61,24 +61,29 @@
     z-index:1;
   }
 
-  /* COACHING BLOCK */
-  .coaching-block{
+  /* COACHING CARDS */
+  .coaching-cards{
     display:grid;
     grid-template-columns:1fr 1fr;
-    gap:56px;
-    align-items:center;
+    gap:32px;
+    align-items:stretch;
   }
-  .coaching-block-media{
+  .coaching-card{
+    display:flex;
+    flex-direction:column;
+    height:100%;
+    border:1px solid var(--pebble);
     border-radius:var(--radius);
     overflow:hidden;
-    border:1px solid var(--pebble);
-    aspect-ratio:4/3;
+    background:var(--card-bg);
   }
-  .coaching-block-media img{width:100%;height:100%;object-fit:cover;}
-  .coaching-block-body h2{font-size:36px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin-bottom:20px;}
-  .coaching-block-body p{font-size:17px;color:var(--ash);line-height:1.61;margin-bottom:24px;max-width:520px;}
-  .coaching-block-price{font-size:16px;font-weight:700;color:#fff;margin-bottom:24px;}
-  .coaching-block-ctas{display:flex;gap:16px;flex-wrap:wrap;}
+  .coaching-card-media{aspect-ratio:4/3;overflow:hidden;}
+  .coaching-card-media img{width:100%;height:100%;object-fit:cover;}
+  .coaching-card-body{display:flex;flex-direction:column;flex:1;padding:32px;}
+  .coaching-card-body h2{font-size:28px;font-weight:800;letter-spacing:-0.02em;line-height:1.15;margin-bottom:14px;}
+  .coaching-card-body p{font-size:16px;color:var(--ash);line-height:1.6;margin-bottom:20px;flex:1;}
+  .coaching-card-price{font-size:16px;font-weight:700;color:#fff;margin-bottom:24px;}
+  .coaching-card-ctas{display:flex;gap:12px;flex-wrap:wrap;}
 
   /* WHY PLUS 4 */
   .simple-head{text-align:center;max-width:640px;margin:0 auto 56px;}
@@ -110,6 +115,7 @@
   }
   .flip-card:focus-visible{outline:2px solid var(--ember-bright);outline-offset:4px;border-radius:var(--radius);}
   .flip-inner{
+    display:block;
     position:relative;
     width:100%;
     aspect-ratio:3/4;
@@ -194,7 +200,7 @@
     .hero-image::before{background:linear-gradient(180deg, rgba(15,15,20,0) 60%, var(--midnight) 100%);}
     .hero-copy{padding:48px 20px 56px;max-width:100%;}
     .hero h1{font-size:38px;}
-    .coaching-block{grid-template-columns:1fr;gap:24px;}
+    .coaching-cards{grid-template-columns:1fr;gap:24px;}
     .steps-grid{grid-template-columns:1fr;gap:32px;}
     .results-grid{grid-template-columns:1fr;}
     .flip-inner{min-height:0;}
@@ -210,8 +216,8 @@
   <div class="hero-inner">
     <div class="hero-copy">
       <span class="eyebrow reveal is-visible">Online Coaching</span>
-      <h1 class="reveal is-visible">1:1 online coaching.<br><span class="accent">Results guaranteed.</span></h1>
-      <p class="sub reveal is-visible">Coached by Cameron and Ethan. Hit your goal in 16 weeks or get your money back.</p>
+      <h1 class="reveal is-visible">1:1 online coaching.<br><span class="accent">Built around you.</span></h1>
+      <p class="sub reveal is-visible">Coached by Cameron and Ethan. Monthly coaching, or our 16-week programme with a results guarantee.</p>
       <div class="hero-ctas reveal is-visible">
         <a href="https://tidycal.com/cameronhearne/30-minute-meeting" target="_blank" rel="noopener" class="btn-filled">Book a Call</a>
         <a href="#results" class="btn-ghost">See Our Results</a>
@@ -225,18 +231,38 @@
 
 <section>
   <div class="wrap">
-    <div class="coaching-block reveal">
-      <div class="coaching-block-media">
-        <img src="/images/coaching-card.jpg" alt="Coaching client training">
+    <div class="simple-head reveal">
+      <h2>Two ways to work with us.</h2>
+    </div>
+    <div class="coaching-cards reveal-stagger">
+      <div class="coaching-card">
+        <div class="coaching-card-media">
+          <img src="/images/coaching-card.jpg" alt="Coaching client training">
+        </div>
+        <div class="coaching-card-body">
+          <span class="eyebrow">1:1 Online Coaching</span>
+          <h2>Coaching, month by month.</h2>
+          <p>Custom training and nutrition, weekly check-ins, and replies from us within 24 hours in the app.</p>
+          <div class="coaching-card-price">From &pound;80 a month</div>
+          <div class="coaching-card-ctas">
+            <a href="/online-coaching" class="btn-ghost">Find out more</a>
+            <a href="https://tidycal.com/cameronhearne/30-minute-meeting" target="_blank" rel="noopener" class="btn-filled">Book a Call</a>
+          </div>
+        </div>
       </div>
-      <div class="coaching-block-body">
-        <span class="eyebrow">16-Week Guaranteed Coaching</span>
-        <h2>Hit your goal or your money back.</h2>
-        <p>Every session you log gets checked. Your form gets reviewed on video. We check in with you twice a week. Do your part, and if you don't hit your goal, you get a full refund.</p>
-        <div class="coaching-block-price">Price on application</div>
-        <div class="coaching-block-ctas">
-          <a href="https://tidycal.com/cameronhearne/30-minute-meeting" target="_blank" rel="noopener" class="btn-filled">Book a Call</a>
-          <a href="/guaranteed-coaching" class="btn-ghost">How the guarantee works</a>
+      <div class="coaching-card">
+        <div class="coaching-card-media">
+          <img src="/images/guarantee.jpg" alt="Guaranteed coaching client training">
+        </div>
+        <div class="coaching-card-body">
+          <span class="eyebrow">16-Week Guaranteed Coaching</span>
+          <h2>Hit your goal or your money back.</h2>
+          <p>Every session checked, form reviewed on video, check-ins twice a week. Do your part, and if you don't hit your goal, you get a full refund.</p>
+          <div class="coaching-card-price">Price on application</div>
+          <div class="coaching-card-ctas">
+            <a href="/guaranteed-coaching" class="btn-ghost">Find out more</a>
+            <a href="https://tidycal.com/cameronhearne/30-minute-meeting" target="_blank" rel="noopener" class="btn-filled">Book a Call</a>
+          </div>
         </div>
       </div>
     </div>
@@ -297,12 +323,10 @@
       <div>
         <div class="coach-photo"><img src="/images/cameron-coach.jpg" alt="Cameron"></div>
         <div class="coach-name">Cameron</div>
-        <div class="coach-line">[ONE-LINE BIO PLACEHOLDER]</div>
       </div>
       <div>
         <div class="coach-photo"><img src="/images/ethan-coach.jpg" alt="Ethan"></div>
         <div class="coach-name">Ethan</div>
-        <div class="coach-line">[ONE-LINE BIO PLACEHOLDER]</div>
       </div>
     </div>
   </div>

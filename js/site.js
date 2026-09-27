@@ -14,12 +14,12 @@
 
   var headerHTML =
     '<div class="wrap site-header-inner">' +
-      '<a href="/" class="brand" aria-label="Plus 4 Performance home">' +
-        '<img src="/logo-mark.png" alt="" class="brand-mark" width="26" height="39">' +
-        '<span class="brand-word">PLUS<span class="accent">4</span>PERFORMANCE</span>' +
+      '<a href="/" class="brand" aria-label="Plus 4 Performance">' +
+        '<span class="brand-word">PLUS<img src="/images/logo/p4-logo-mark.png" alt="" class="brand-mark">PERFORMANCE</span>' +
       '</a>' +
       '<nav class="site-nav" aria-label="Primary">' +
         '<a href="/"' + (current('/') ? ' aria-current="page"' : '') + '>Home</a>' +
+        '<a href="/online-coaching"' + (current('/online-coaching') ? ' aria-current="page"' : '') + '>Online Coaching</a>' +
         '<a href="/guaranteed-coaching"' + (current('/guaranteed-coaching') ? ' aria-current="page"' : '') + '>Guaranteed Coaching</a>' +
         '<a href="/shop"' + (current('/shop') ? ' aria-current="page"' : '') + '>Shop</a>' +
       '</nav>' +
@@ -32,6 +32,7 @@
     '</div>' +
     '<div id="mobile-menu" class="mobile-menu">' +
       '<a href="/"' + (current('/') ? ' aria-current="page"' : '') + '>Home</a>' +
+      '<a href="/online-coaching"' + (current('/online-coaching') ? ' aria-current="page"' : '') + '>Online Coaching</a>' +
       '<a href="/guaranteed-coaching"' + (current('/guaranteed-coaching') ? ' aria-current="page"' : '') + '>Guaranteed Coaching</a>' +
       '<a href="/shop"' + (current('/shop') ? ' aria-current="page"' : '') + '>Shop</a>' +
       '<a href="' + TIDYCAL + '" target="_blank" rel="noopener" class="btn-filled">Book a Call</a>' +
@@ -41,12 +42,13 @@
     '<div class="wrap">' +
       '<div class="footer-top">' +
         '<div>' +
-          '<div class="footer-mark">PLUS<span>4</span>PERFORMANCE</div>' +
+          '<img src="/images/logo/p4-logo-full.png" alt="Plus 4 Performance" class="footer-logo">' +
           '<div class="footer-tag">Average to Elite.</div>' +
         '</div>' +
         '<div class="footer-links">' +
           '<div class="footer-col">' +
             '<h5>Coaching</h5>' +
+            '<a href="/online-coaching">Online Coaching</a>' +
             '<a href="/guaranteed-coaching">Guaranteed Coaching</a>' +
             '<a href="' + TIDYCAL + '" target="_blank" rel="noopener">Book a Call</a>' +
             '<a href="/guarantee-terms">Guarantee Terms</a>' +

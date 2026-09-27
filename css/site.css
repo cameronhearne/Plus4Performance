@@ -137,12 +137,10 @@ section{padding:var(--gap) 0;}
 .brand{
   display:flex;
   align-items:center;
-  gap:10px;
   min-height:44px;
 }
-.brand-mark{width:26px;height:auto;}
 .brand-word{font-weight:800;font-size:20px;letter-spacing:-0.01em;color:#fff;white-space:nowrap;}
-.brand-word .accent{color:var(--ember-bright);text-shadow:0 0 20px rgba(91,141,239,0.5);}
+.brand-mark{display:inline-block;height:0.85em;width:auto;vertical-align:baseline;margin:0 0.05em;}
 .site-nav{display:flex;gap:32px;font-size:15px;color:rgba(255,255,255,0.75);}
 .site-nav a{position:relative;padding:4px 0;}
 .site-nav a:hover{color:#fff;}
@@ -199,6 +197,10 @@ section{padding:var(--gap) 0;}
   .hamburger{display:flex;}
 }
 
+@media(max-width:420px){
+  .brand-word{font-size:17px;}
+}
+
 /* FOOTER */
 footer.site-footer{
   background:var(--ink);
@@ -215,9 +217,8 @@ footer.site-footer{
   padding-bottom:40px;
   border-bottom:1px solid rgba(255,255,255,0.12);
 }
-.footer-mark{font-size:28px;font-weight:800;letter-spacing:-0.02em;}
-.footer-mark span{color:var(--ember-bright);text-shadow:0 0 20px rgba(91,141,239,0.4);}
-.footer-tag{color:rgba(255,255,255,0.5);font-size:14px;margin-top:8px;}
+.footer-logo{height:90px;width:auto;display:block;}
+.footer-tag{color:rgba(255,255,255,0.5);font-size:14px;margin-top:12px;}
 .footer-links{display:flex;gap:48px;flex-wrap:wrap;}
 .footer-col h5{font-size:13px;text-transform:uppercase;letter-spacing:0.1em;color:rgba(255,255,255,0.4);margin-bottom:14px;}
 .footer-col a{display:block;font-size:15px;color:rgba(255,255,255,0.75);margin-bottom:10px;}

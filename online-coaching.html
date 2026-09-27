@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Online Coaching | Plus 4 Performance</title>
+<meta name="description" content="1:1 online coaching from Cameron and Ethan at Plus 4 Performance. Custom training, nutrition and weekly check-ins from £80 a month.">
+<meta property="og:title" content="Online Coaching | Plus 4 Performance">
+<meta property="og:description" content="1:1 online coaching from Cameron and Ethan at Plus 4 Performance. Custom training, nutrition and weekly check-ins from £80 a month.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://plus4performance.com/online-coaching">
+<meta property="og:image" content="https://plus4performance.com/images/logo/icon-512.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://plus4performance.com/online-coaching">
+<link rel="icon" href="/images/logo/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/images/logo/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/images/logo/favicon-16x16.png">
+<link rel="apple-touch-icon" href="/images/logo/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/site.css">
+<style>
+  /* HERO */
+  .hero{background:var(--midnight);position:relative;overflow:hidden;}
+  .hero-inner{display:grid;grid-template-columns:1.05fr 0.95fr;align-items:stretch;min-height:640px;}
+  .hero-copy{display:flex;flex-direction:column;justify-content:center;padding:80px 64px 80px 24px;max-width:640px;}
+  .hero h1{font-size:56px;font-weight:800;letter-spacing:-0.03em;line-height:1.04;margin-bottom:24px;}
+  .hero h1 .accent{color:var(--ember-bright);}
+  .hero p.sub{font-size:19px;color:rgba(255,255,255,0.72);line-height:1.6;max-width:480px;margin-bottom:20px;}
+  .hero-price{font-size:16px;font-weight:700;color:#fff;margin-bottom:32px;}
+  .hero-ctas{display:flex;gap:16px;align-items:center;flex-wrap:wrap;}
+  .hero-image{position:relative;min-height:320px;}
+  .hero-image img{width:100%;height:100%;object-fit:cover;object-position:center 25%;}
+  .hero-image::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg, var(--midnight) 0%, rgba(15,15,20,0) 18%);z-index:1;}
+
+  /* WHAT'S INCLUDED */
+  .simple-head{text-align:center;max-width:640px;margin:0 auto 56px;}
+  .simple-head h2{font-size:38px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;}
+  .included-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;}
+  .included-card{border:1px solid var(--pebble);background:var(--card-bg);border-radius:var(--radius);padding:28px;}
+  .included-card h3{font-size:19px;font-weight:700;margin-bottom:10px;letter-spacing:-0.01em;}
+  .included-card p{font-size:15px;color:var(--ash);line-height:1.6;}
+
+  /* HOW IT WORKS */
+  .steps-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:40px;}
+  .step{text-align:center;padding:0 12px;}
+  .step-num{font-size:36px;font-weight:800;color:var(--ember-bright);letter-spacing:-0.02em;margin-bottom:14px;}
+  .step h3{font-size:19px;font-weight:700;margin-bottom:10px;}
+  .step p{font-size:15px;color:var(--ash);line-height:1.6;}
+  .steps-cta{text-align:center;margin-top:48px;}
+
+  /* COMPARISON */
+  .compare-section{background:var(--charcoal);}
+  .table-scroll{overflow-x:auto;border:1px solid var(--pebble);border-radius:var(--radius);}
+  .compare-table{width:100%;min-width:640px;border-collapse:collapse;}
+  .compare-table th,.compare-table td{padding:18px 24px;text-align:left;font-size:15px;border-top:1px solid var(--pebble);}
+  .compare-table thead th{border-top:none;font-size:14px;font-weight:800;letter-spacing:0.02em;color:#fff;background:#151519;}
+  .compare-table tbody th{font-weight:600;color:var(--ash);white-space:nowrap;}
+  .compare-table td{color:#fff;}
+  .compare-table td.no{color:var(--ash);}
+  .compare-ctas{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:32px;}
+  .compare-cta-col{text-align:center;}
+  .compare-cta-col .btn-filled,.compare-cta-col .btn-ghost{width:100%;}
+
+  /* FAQ */
+  .faq-item{border-top:1px solid var(--pebble);padding:26px 0;}
+  .faq-item:last-child{border-bottom:1px solid var(--pebble);}
+  .faq-item h4{font-size:19px;font-weight:700;margin-bottom:10px;}
+  .faq-item p{font-size:16px;color:var(--ash);line-height:1.61;max-width:640px;}
+
+  /* FINAL CTA */
+  .final-cta{text-align:center;}
+  .final-cta h2{font-size:36px;font-weight:800;letter-spacing:-0.02em;margin-bottom:28px;}
+
+  @media(max-width:1024px){
+    .included-grid{grid-template-columns:1fr 1fr;}
+  }
+
+  @media(max-width:860px){
+    .hero-inner{grid-template-columns:1fr;min-height:auto;}
+    .hero-image{height:56vh;order:-1;}
+    .hero-image::before{background:linear-gradient(180deg, rgba(15,15,20,0) 60%, var(--midnight) 100%);}
+    .hero-copy{padding:48px 20px 56px;max-width:100%;}
+    .hero h1{font-size:38px;}
+    .included-grid{grid-template-columns:1fr;}
+    .steps-grid{grid-template-columns:1fr;gap:32px;}
+    .compare-ctas{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+<div class="ambient-glow"></div>
+<div id="site-header" class="site-header"></div>
+
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-copy">
+      <span class="eyebrow reveal is-visible">1:1 Online Coaching</span>
+      <h1 class="reveal is-visible">Online coaching.<br><span class="accent">Built around you.</span></h1>
+      <p class="sub reveal is-visible">Your training, food and check-ins, all done 1:1 with Cameron or Ethan through the Plus 4 Performance app.</p>
+      <div class="hero-price reveal is-visible">From &pound;80 a month</div>
+      <div class="hero-ctas reveal is-visible">
+        <a href="https://tidycal.com/cameronhearne/30-minute-meeting" target="_blank" rel="noopener" class="btn-filled">Book a Call</a>
+        <a href="#included" class="btn-ghost">See What's Included</a>
+      </div>
+    </div>
+    <div class="hero-image">
+      <img src="/images/coaching-card.jpg" alt="Online coaching client training">
+    </div>
+  </div>
+</section>
+
+<section id="included">
+  <div class="wrap">
+    <div class="simple-head reveal">
+      <h2>What's included.</h2>
+    </div>
+    <div class="included-grid reveal-stagger">
+      <div class="included-card">
+        <h3>Custom training plan</h3>
+        <p>Built for your goal, your schedule and the kit you've got.</p>
+      </div>
+      <div class="included-card">
+        <h3>Custom nutrition plan</h3>
+        <p>Food that fits your life, not a diet you'll quit in a week.</p>
+      </div>
+      <div class="included-card">
+        <h3>Weekly check-ins</h3>
+        <p>We review your progress and adjust your plan every week.</p>
+      </div>
+      <div class="included-card">
+        <h3>Replies within 24 hours</h3>
+        <p>Message us in the app whenever you need us.</p>
+      </div>
+      <div class="included-card">
+        <h3>Exercise video library</h3>
+        <p>A demo for every exercise in your plan.</p>
+      </div>
+      <div class="included-card">
+        <h3>Progress tracking</h3>
+        <p>Weight, measurements and photos, all logged in the app.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="simple-head reveal">
+      <h2>How it works.</h2>
+    </div>
+    <div class="steps-grid reveal-stagger">
+      <div class="step">
+        <div class="step-num">01</div>
+        <h3>Book a call.</h3>
+        <p>We talk about where you're at and what you want to change.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <h3>We build your plan.</h3>
+        <p>Training and food, built around your life.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <h3>We check in every week.</h3>
+        <p>Your sessions reviewed and your plan adjusted until you hit your goal.</p>
+      </div>
+    </div>
+    <div class="steps-cta reveal">
+      <a href="https://tidycal.com/cameronhearne/30-minute-meeting" target="_blank" rel="noopener" class="btn-filled">Book a Call</a>
+    </div>
+  </div>
+</section>
+
+<section class="compare-section">
+  <div class="wrap">
+    <div class="simple-head reveal">
+      <h2>Which one's for you?</h2>
+    </div>
+    <div class="table-scroll reveal">
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th scope="col"></th>
+            <th scope="col">Online Coaching</th>
+            <th scope="col">Guaranteed Coaching</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Length</th>
+            <td>Monthly, cancel anytime</td>
+            <td>16 weeks</td>
+          </tr>
+          <tr>
+            <th scope="row">Price</th>
+            <td>From &pound;80 a month</td>
+            <td>Price on application</td>
+          </tr>
+          <tr>
+            <th scope="row">Custom training and nutrition</th>
+            <td>Yes</td>
+            <td>Yes</td>
+          </tr>
+          <tr>
+            <th scope="row">Check-ins</th>
+            <td>Weekly</td>
+            <td>Twice a week</td>
+          </tr>
+          <tr>
+            <th scope="row">Replies within 24 hours</th>
+            <td>Yes</td>
+            <td>Yes</td>
+          </tr>
+          <tr>
+            <th scope="row">Video form reviews</th>
+            <td class="no">No</td>
+            <td>Yes</td>
+          </tr>
+          <tr>
+            <th scope="row">Results guarantee</th>
+            <td class="no">No</td>
+            <td>Full refund if you don't hit your goal</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="compare-ctas reveal">
+      <div class="compare-cta-col">
+        <a href="https://tidycal.com/cameronhearne/30-minute-meeting" target="_blank" rel="noopener" class="btn-filled">Book a Call</a>
+      </div>
+      <div class="compare-cta-col">
+        <a href="/guaranteed-coaching" class="btn-ghost">See Guaranteed Coaching</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div>
+        <span class="kicker">FAQ</span>
+        <h2>Before you book.</h2>
+      </div>
+      <p></p>
+    </div>
+    <div class="faq-item reveal">
+      <h4>How do check-ins work?</h4>
+      <p><span class="placeholder-note">Placeholder: Cameron to fill in</span><br>[ANSWER PLACEHOLDER]</p>
+    </div>
+    <div class="faq-item reveal">
+      <h4>Can I cancel anytime?</h4>
+      <p><span class="placeholder-note">Placeholder: Cameron to fill in</span><br>[ANSWER PLACEHOLDER]</p>
+    </div>
+    <div class="faq-item reveal">
+      <h4>Do I need a gym membership?</h4>
+      <p><span class="placeholder-note">Placeholder: Cameron to fill in</span><br>[ANSWER PLACEHOLDER]</p>
+    </div>
+    <div class="faq-item reveal">
+      <h4>What if I'm a beginner?</h4>
+      <p><span class="placeholder-note">Placeholder: Cameron to fill in</span><br>[ANSWER PLACEHOLDER]</p>
+    </div>
+    <div class="faq-item reveal">
+      <h4>What's the difference between this and Guaranteed Coaching?</h4>
+      <p><span class="placeholder-note">Placeholder: Cameron to fill in</span><br>[ANSWER PLACEHOLDER]</p>
+    </div>
+  </div>
+</section>
+
+<section class="final-cta">
+  <div class="wrap reveal">
+    <h2>Ready to start?</h2>
+    <a href="https://tidycal.com/cameronhearne/30-minute-meeting" target="_blank" rel="noopener" class="btn-filled">Book a Call</a>
+  </div>
+</section>
+
+<div id="site-footer"></div>
+
+<script src="/js/site.js" defer></script>
+</body>
+</html>
