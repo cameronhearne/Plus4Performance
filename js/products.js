@@ -42,7 +42,42 @@ window.P4P_PRODUCTS = [
     description: 'Heavyweight oversized hoodie. PLUS FOUR on the chest, full Plus 4 print on the back.',
     sizes: ['S', 'M', 'L', 'XL', 'XXL'],
     colours: [
-      { name: 'Black', swatch: '#111111', images: ['/images/shop/logo-hoodie-black-front.jpg', '/images/shop/logo-hoodie-black-back.jpg'] }
+      { name: 'Black', swatch: '#111111', images: ['/images/shop/hoodie-black-front.jpg', '/images/shop/hoodie-black-back.jpg'] },
+      { name: 'Navy', swatch: '#26344a', images: ['/images/shop/hoodie-navy-front.jpg', '/images/shop/hoodie-navy-back.jpg'] },
+      { name: 'Eden Green', swatch: '#1f5c3f', images: ['/images/shop/hoodie-eden-green-front.jpg', '/images/shop/hoodie-eden-green-back.jpg'] },
+      { name: 'Plum', swatch: '#4a2238', images: ['/images/shop/hoodie-plum-front.jpg', '/images/shop/hoodie-plum-back.jpg'] },
+      { name: 'Dark Brown', swatch: '#5a4a40', images: ['/images/shop/hoodie-dark-brown-front.jpg', '/images/shop/hoodie-dark-brown-back.jpg'] },
+      { name: 'Grey Coffee', swatch: '#8a8670', images: ['/images/shop/hoodie-grey-coffee-front.jpg', '/images/shop/hoodie-grey-coffee-back.jpg'] },
+      { name: 'Oat', swatch: '#ece8dc', light: true, images: ['/images/shop/hoodie-oat-front.jpg', '/images/shop/hoodie-oat-back.jpg'] },
+      { name: 'Grey Marl', swatch: '#c9c9c9', light: true, images: ['/images/shop/hoodie-grey-marl-front.jpg', '/images/shop/hoodie-grey-marl-back.jpg'] }
+    ],
+    stripePaymentLink: 'REPLACE_WITH_LINK'
+  },
+  {
+    name: 'Plus Four Zip Hoodie',
+    slug: 'plus-four-zip-hoodie',
+    category: 'hoodies',
+    price: 40,
+    description: 'Oversized zip hoodie with a double-ended zip. Vertical PLUS FOUR print on the chest.',
+    sizes: ['S', 'M', 'L', 'XL', 'XXL'],
+    colours: [
+      { name: 'Black', swatch: '#111111', images: ['/images/shop/zip-hoodie-black-front.jpg', '/images/shop/zip-hoodie-black-back.jpg'] },
+      { name: 'Navy', swatch: '#26344a', images: ['/images/shop/zip-hoodie-navy-front.jpg', '/images/shop/zip-hoodie-navy-back.jpg'] },
+      { name: 'Oat', swatch: '#ece8dc', light: true, images: ['/images/shop/zip-hoodie-oat-front.jpg', '/images/shop/zip-hoodie-oat-back.jpg'] },
+      { name: 'Grey Marl', swatch: '#c9c9c9', light: true, images: ['/images/shop/zip-hoodie-grey-marl-front.jpg', '/images/shop/zip-hoodie-grey-marl-back.jpg'] }
+    ],
+    stripePaymentLink: 'REPLACE_WITH_LINK'
+  },
+  {
+    name: 'Plus Four Crewneck',
+    slug: 'plus-four-crewneck',
+    category: 'crewnecks',
+    price: 30,
+    description: 'Boxy, cropped fleece crewneck. PLUS FOUR on the chest.',
+    sizes: ['S', 'M', 'L', 'XL', 'XXL'],
+    colours: [
+      { name: 'Black', swatch: '#111111', images: ['/images/shop/crewneck-black-front.jpg', '/images/shop/crewneck-black-back.jpg'] },
+      { name: 'Grey Marl', swatch: '#c9c9c9', light: true, images: ['/images/shop/crewneck-grey-marl-front.jpg', '/images/shop/crewneck-grey-marl-back.jpg'] }
     ],
     stripePaymentLink: 'REPLACE_WITH_LINK'
   },
@@ -78,7 +113,7 @@ window.P4P_PRODUCTS = [
     description: 'Relaxed barrel-leg joggers in tree camo.',
     sizes: ['S', 'M', 'L', 'XL', 'XXL'],
     colours: [
-      { name: 'Tree Camo', swatch: '#5c5a3f', images: ['/images/shop/camo-joggers-front.jpg'] }
+      { name: 'Tree Camo', swatch: '#5c5a3f', images: ['/images/shop/camo-joggers-front.jpg', '/images/shop/camo-joggers-back.jpg'] }
     ],
     stripePaymentLink: 'REPLACE_WITH_LINK'
   }

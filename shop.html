@@ -63,7 +63,7 @@
   .shop-card-name-link:hover{color:var(--ember-bright);}
   .shop-card-price{font-size:15px;color:var(--ash);margin-bottom:10px;}
 
-  .shop-card-swatches{display:flex;gap:4px;}
+  .shop-card-swatches{display:flex;flex-wrap:wrap;gap:4px 6px;}
   .swatch-btn{
     width:24px;height:24px;
     display:flex;align-items:center;justify-content:center;
@@ -78,6 +78,7 @@
     border:1px solid rgba(255,255,255,0.3);
     display:block;
   }
+  .swatch-dot.is-light{border:1px solid rgba(0,0,0,0.35);}
   .swatch-btn[aria-pressed="true"] .swatch-dot{
     box-shadow:0 0 0 2px var(--ink), 0 0 0 4px var(--ember-bright);
   }
@@ -102,6 +103,7 @@
       <button type="button" class="filter-tab" data-filter="all" aria-pressed="true">All</button>
       <button type="button" class="filter-tab" data-filter="tees" aria-pressed="false">Tees</button>
       <button type="button" class="filter-tab" data-filter="hoodies" aria-pressed="false">Hoodies</button>
+      <button type="button" class="filter-tab" data-filter="crewnecks" aria-pressed="false">Crewnecks</button>
       <button type="button" class="filter-tab" data-filter="joggers" aria-pressed="false">Joggers</button>
     </div>
     <div class="shop-grid reveal-stagger" id="shop-grid"></div>
@@ -140,7 +142,7 @@
           p.colours.map(function(c, i){
             return '<button type="button" class="swatch-btn" data-colour-index="' + i + '" ' +
               'aria-pressed="' + (i === 0 ? 'true' : 'false') + '" aria-label="Show in ' + c.name + '">' +
-              '<span class="swatch-dot" style="background:' + c.swatch + '"></span>' +
+              '<span class="swatch-dot' + (c.light ? ' is-light' : '') + '" style="background:' + c.swatch + '"></span>' +
             '</button>';
           }).join('') +
         '</div>' +

@@ -56,6 +56,7 @@
     cursor:pointer;
   }
   .colour-swatch-btn[aria-pressed="true"]{box-shadow:0 0 0 2px var(--ink), 0 0 0 4px var(--ember-bright);}
+  .colour-swatch-btn.is-light{border:1px solid rgba(0,0,0,0.35);}
   .colour-name{font-size:14px;color:rgba(255,255,255,0.85);font-weight:600;}
 
   .size-list{display:flex;flex-wrap:wrap;gap:10px;}
@@ -200,7 +201,7 @@
     }).join('') + '</div>';
 
     var swatchesHTML = '<div class="colour-row" role="group" aria-label="Colour">' + product.colours.map(function(c, i){
-      return '<button type="button" class="colour-swatch-btn" style="background:' + c.swatch + '" ' +
+      return '<button type="button" class="colour-swatch-btn' + (c.light ? ' is-light' : '') + '" style="background:' + c.swatch + '" ' +
         'aria-pressed="' + (i === initialColourIndex ? 'true' : 'false') + '" aria-label="Colour ' + c.name + '" data-colour-index="' + i + '"></button>';
     }).join('') + '<span class="colour-name" id="colour-name">' + product.colours[initialColourIndex].name + '</span></div>';
 
