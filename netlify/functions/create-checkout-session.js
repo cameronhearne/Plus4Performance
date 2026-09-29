@@ -9,11 +9,25 @@
    shop page, which the front end reads and passes through as
    body.preview so the site owner can run a real low-value test order
    before flipping SHOP_LIVE on. */
+const crypto = require('crypto');
 const Stripe = require('stripe');
 const PRODUCTS = require('../../js/products.js');
 
 const MAX_QTY = 10;
 const MAX_LINES = 50;
+
+// Excludes 0/O and 1/I so a customer or staff member reading it back
+// off an email or a screen can't confuse characters.
+const ORDER_REF_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+function generateOrderRef() {
+  const bytes = crypto.randomBytes(8);
+  let ref = '';
+  for (let i = 0; i < 8; i++) {
+    ref += ORDER_REF_CHARS[bytes[i] % ORDER_REF_CHARS.length];
+  }
+  return ref;
+}
 
 function json(statusCode, body) {
   return {
@@ -106,11 +120,17 @@ exports.handler = async (event) => {
   }
 
   const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+  const orderRef = generateOrderRef();
 
   try {
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       line_items: lineItems,
+      metadata: { order_ref: orderRef },
+      payment_intent_data: {
+        description: `Order #${orderRef}`,
+        metadata: { order_ref: orderRef }
+      },
       shipping_address_collection: { allowed_countries: ['GB'] },
       phone_number_collection: { enabled: true },
       shipping_options: [

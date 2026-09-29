@@ -146,7 +146,10 @@ exports.handler = async (event) => {
   });
 
   const total = (session.amount_total || 0) / 100;
-  const orderRef = session.id.slice(-8).toUpperCase();
+  // Fixed random ref set at creation (create-checkout-session.js), not
+  // derived from the session id, so it's the exact same ref the customer
+  // already saw on the Stripe payment description and order-confirmed page.
+  const orderRef = (session.metadata && session.metadata.order_ref) || session.id.slice(-8).toUpperCase();
   const customerDetails = session.customer_details || {};
   const customerName = customerDetails.name || '';
   const customerEmail = customerDetails.email || '';
