@@ -36,6 +36,25 @@
   .filter-tab:hover{color:#fff;border-color:rgba(255,255,255,0.4);}
   .filter-tab[aria-pressed="true"]{background:var(--ember);color:#fff;border-color:var(--ember);}
 
+  .shop-hero-banner{
+    position:relative;
+    aspect-ratio:2.4/1;
+    border-radius:var(--radius);
+    overflow:hidden;
+    margin-bottom:40px;
+  }
+  .shop-hero-banner img{
+    position:absolute;inset:0;
+    width:100%;height:100%;
+    object-fit:cover;
+    object-position:center 40%;
+  }
+  @media(max-width:768px){
+    .shop-hero-banner{aspect-ratio:auto;min-height:220px;}
+  }
+
+  .shop-delivery-note{font-size:14px;color:var(--ash);margin:-8px 0 32px;}
+
   .shop-grid{
     display:grid;
     grid-template-columns:repeat(3,1fr);
@@ -47,7 +66,7 @@
     aspect-ratio:1/1;
     border-radius:var(--radius);
     overflow:hidden;
-    background:#ffffff;
+    background:#f4f4f4;
     margin-bottom:16px;
   }
   .shop-card-media img{
@@ -65,10 +84,12 @@
 
   .shop-card-swatches{display:flex;flex-wrap:wrap;gap:4px 6px;}
   .swatch-btn{
+    position:relative;
     width:24px;height:24px;
     display:flex;align-items:center;justify-content:center;
     background:none;
     border:none;
+    border-radius:50%;
     padding:0;
     cursor:pointer;
   }
@@ -81,6 +102,32 @@
   .swatch-dot.is-light{border:1px solid rgba(0,0,0,0.35);}
   .swatch-btn[aria-pressed="true"] .swatch-dot{
     box-shadow:0 0 0 2px var(--ink), 0 0 0 4px var(--ember-bright);
+  }
+  .swatch-btn:focus-visible{
+    outline:2px solid var(--ember-bright);
+    outline-offset:3px;
+  }
+  .swatch-tooltip{
+    position:absolute;
+    bottom:100%;
+    left:50%;
+    transform:translate(-50%,-6px);
+    background:var(--ink);
+    color:#fff;
+    font-size:11px;
+    font-weight:600;
+    line-height:1;
+    white-space:nowrap;
+    padding:5px 8px;
+    border-radius:6px;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity 0.15s ease;
+    z-index:2;
+  }
+  .swatch-btn:hover .swatch-tooltip,
+  .swatch-btn:focus-visible .swatch-tooltip{
+    opacity:1;
   }
   @media(max-width:860px){
     .shop-grid{grid-template-columns:repeat(2,1fr);gap:20px;}
@@ -99,6 +146,9 @@
 
 <section>
   <div class="wrap">
+    <div class="shop-hero-banner">
+      <img src="/images/guaranteed/gc-standard.jpg" alt="The coaches training in Plus Four kit" loading="eager">
+    </div>
     <div class="shop-filters" role="group" aria-label="Filter products">
       <button type="button" class="filter-tab" data-filter="all" aria-pressed="true">All</button>
       <button type="button" class="filter-tab" data-filter="tees" aria-pressed="false">Tees</button>
@@ -106,6 +156,7 @@
       <button type="button" class="filter-tab" data-filter="crewnecks" aria-pressed="false">Crewnecks</button>
       <button type="button" class="filter-tab" data-filter="joggers" aria-pressed="false">Joggers</button>
     </div>
+    <p class="shop-delivery-note">Made to order. Dispatched in 7 to 10 working days. UK only.</p>
     <div class="shop-grid reveal-stagger" id="shop-grid"></div>
   </div>
 </section>
@@ -141,8 +192,9 @@
         '<div class="shop-card-swatches" role="group" aria-label="Colour">' +
           p.colours.map(function(c, i){
             return '<button type="button" class="swatch-btn" data-colour-index="' + i + '" ' +
-              'aria-pressed="' + (i === 0 ? 'true' : 'false') + '" aria-label="Show in ' + c.name + '">' +
+              'aria-pressed="' + (i === 0 ? 'true' : 'false') + '" aria-label="' + c.name + '">' +
               '<span class="swatch-dot' + (c.light ? ' is-light' : '') + '" style="background:' + c.swatch + '"></span>' +
+              '<span class="swatch-tooltip" aria-hidden="true">' + c.name + '</span>' +
             '</button>';
           }).join('') +
         '</div>' +
