@@ -12,6 +12,20 @@
     return path.indexOf(href) === 0 ? 'page' : null;
   }
 
+  var basketIconSVG =
+    '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+      'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+      '<path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"></path>' +
+      '<path d="M3 6h18"></path>' +
+      '<path d="M16 10a4 4 0 0 1-8 0"></path>' +
+    '</svg>';
+
+  var basketButtonHTML =
+    '<button type="button" class="basket-toggle" data-basket-toggle aria-label="Open basket">' +
+      basketIconSVG +
+      '<span class="basket-badge" data-basket-count hidden>0</span>' +
+    '</button>';
+
   var headerHTML =
     '<div class="wrap site-header-inner">' +
       '<a href="/" class="brand" aria-label="Plus 4 Performance">' +
@@ -25,14 +39,18 @@
       '</nav>' +
       '<div class="site-header-actions">' +
         '<a href="' + TIDYCAL + '" target="_blank" rel="noopener" class="btn-ghost btn-sm nav-cta">Book a Call</a>' +
+        basketButtonHTML +
       '</div>' +
     '</div>' +
-    '<nav class="mobile-tabs" aria-label="Primary mobile">' +
-      '<a href="/" class="mobile-tab"' + (current('/') ? ' aria-current="page"' : '') + '>Home</a>' +
-      '<a href="/online-coaching" class="mobile-tab"' + (current('/online-coaching') ? ' aria-current="page"' : '') + '>Online Coaching</a>' +
-      '<a href="/guaranteed-coaching" class="mobile-tab"' + (current('/guaranteed-coaching') ? ' aria-current="page"' : '') + '>Guaranteed</a>' +
-      '<a href="/shop" class="mobile-tab"' + (current('/shop') ? ' aria-current="page"' : '') + '>Shop<span class="mobile-tab-badge">New</span></a>' +
-    '</nav>';
+    '<div class="mobile-tabs-row">' +
+      '<nav class="mobile-tabs" aria-label="Primary mobile">' +
+        '<a href="/" class="mobile-tab"' + (current('/') ? ' aria-current="page"' : '') + '>Home</a>' +
+        '<a href="/online-coaching" class="mobile-tab"' + (current('/online-coaching') ? ' aria-current="page"' : '') + '>Online Coaching</a>' +
+        '<a href="/guaranteed-coaching" class="mobile-tab"' + (current('/guaranteed-coaching') ? ' aria-current="page"' : '') + '>Guaranteed</a>' +
+        '<a href="/shop" class="mobile-tab"' + (current('/shop') ? ' aria-current="page"' : '') + '>Shop<span class="mobile-tab-badge">New</span></a>' +
+      '</nav>' +
+      basketButtonHTML +
+    '</div>';
 
   var footerHTML =
     '<div class="wrap">' +

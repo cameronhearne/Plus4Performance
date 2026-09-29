@@ -20,6 +20,7 @@
     cp ../guarantee-terms.html dist/guarantee-terms.html &&
     cp ../shipping-returns.html dist/shipping-returns.html &&
     cp ../size-guide.html dist/size-guide.html &&
+    cp ../order-confirmed.html dist/order-confirmed.html &&
     cp ../sitemap.xml dist/sitemap.xml &&
     cp ../robots.txt dist/robots.txt &&
     cp -r ../css dist/css &&
@@ -29,6 +30,10 @@
 
 [build.environment]
   NODE_VERSION = "20"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
 
 # ─── SECURITY HEADERS ────────────────────────────────────────────────────────
 # Applied to all routes on plus4performance.com
@@ -91,6 +96,11 @@
 [[redirects]]
   from = "/size-guide"
   to = "/size-guide.html"
+  status = 200
+
+[[redirects]]
+  from = "/order-confirmed"
+  to = "/order-confirmed.html"
   status = 200
 
 [[redirects]]

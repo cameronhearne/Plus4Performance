@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Order Confirmed | Plus 4 Performance</title>
+<meta name="description" content="Your Plus 4 Performance order is confirmed.">
+<meta name="robots" content="noindex">
+<link rel="canonical" href="https://plus4performance.com/order-confirmed">
+<link rel="icon" href="/images/logo/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/images/logo/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/images/logo/favicon-16x16.png">
+<link rel="apple-touch-icon" href="/images/logo/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/site.css">
+<style>
+  .confirm-icon{
+    width:64px;height:64px;
+    border-radius:50%;
+    background:rgba(91,141,239,0.14);
+    color:var(--ember-bright);
+    display:flex;align-items:center;justify-content:center;
+    margin-bottom:24px;
+  }
+  .order-ref{font-size:14px;color:var(--ash);margin-top:4px;}
+  .order-ref strong{color:#fff;font-weight:700;}
+  .order-table{width:100%;border-collapse:collapse;margin-top:8px;}
+  .order-table td{padding:16px 0;border-bottom:1px solid var(--pebble);font-size:15px;vertical-align:top;}
+  .order-item-name{font-weight:700;color:#fff;margin-bottom:4px;}
+  .order-item-meta{color:var(--ash);font-size:13px;}
+  .order-item-price{text-align:right;white-space:nowrap;color:#fff;font-weight:700;}
+  .order-total-row td{border-bottom:none;padding-top:20px;font-size:17px;font-weight:800;}
+  .order-note{font-size:14px;color:var(--ash);line-height:1.7;margin-top:24px;}
+  .order-note strong{color:#fff;}
+  .confirm-state{padding:24px 0;color:var(--ash);}
+</style>
+</head>
+<body>
+<div id="site-header" class="site-header"></div>
+
+<section class="page-hero">
+  <div class="wrap">
+    <span class="eyebrow">Shop</span>
+    <div class="confirm-icon" aria-hidden="true">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+    </div>
+    <h1 id="confirm-heading">Order confirmed</h1>
+    <p id="confirm-sub">Thanks, we're getting your order ready.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap" style="max-width:640px;">
+    <div id="order-root" class="content-block reveal">
+      <p class="confirm-state">Loading your order&hellip;</p>
+    </div>
+  </div>
+</section>
+
+<div id="site-footer"></div>
+
+<script src="/js/site.js" defer></script>
+<script src="/js/basket.js" defer></script>
+<script>
+(function(){
+  function money(n){ return '£' + Number(n).toFixed(2).replace(/\.00$/, ''); }
+
+  function escapeHTML(s){
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+    });
+  }
+
+  function renderError(){
+    var icon = document.querySelector('.confirm-icon');
+    if(icon) icon.hidden = true;
+    document.getElementById('confirm-heading').textContent = "We couldn't find that order";
+    document.getElementById('confirm-sub').textContent = 'If you just paid, refresh this page in a moment.';
+    document.getElementById('order-root').innerHTML =
+      '<p class="confirm-state">Otherwise, head back to the shop and we\'ll sort it out.</p>' +
+      '<a href="/shop" class="btn-filled" style="margin-top:16px;">Back to Shop</a>';
+  }
+
+  function renderOrder(data){
+    var firstName = data.firstName ? escapeHTML(data.firstName) + ', your' : 'Your';
+    document.getElementById('confirm-sub').textContent = firstName + ' order is confirmed.';
+
+    var itemsHTML = (data.items || []).map(function(item){
+      return (
+        '<tr>' +
+          '<td>' +
+            '<div class="order-item-name">' + escapeHTML(item.name) + '</div>' +
+            '<div class="order-item-meta">' + escapeHTML(item.colour) + ' &middot; ' + escapeHTML(item.size) + ' &middot; Qty ' + escapeHTML(item.qty) + '</div>' +
+          '</td>' +
+          '<td class="order-item-price">' + money(item.price * item.qty) + '</td>' +
+        '</tr>'
+      );
+    }).join('');
+
+    document.getElementById('order-root').innerHTML =
+      '<div class="order-ref">Order reference <strong>#' + escapeHTML(data.orderRef) + '</strong></div>' +
+      '<table class="order-table">' +
+        '<tbody>' +
+          itemsHTML +
+          '<tr class="order-total-row"><td>Total</td><td class="order-item-price">' + money(data.total) + '</td></tr>' +
+        '</tbody>' +
+      '</table>' +
+      '<p class="order-note"><strong>Confirmation email on its way.</strong><br>' +
+        'Made to order. Usually arrives in 2 to 3 weeks.</p>';
+
+    try { window.P4PBasket && window.P4PBasket.clear(); } catch(e){}
+  }
+
+  function init(){
+    var sessionId = new URLSearchParams(window.location.search).get('session_id');
+    if(!sessionId){ renderError(); return; }
+
+    fetch('/.netlify/functions/get-session?session_id=' + encodeURIComponent(sessionId))
+      .then(function(res){
+        if(!res.ok) throw new Error('not ok');
+        return res.json();
+      })
+      .then(renderOrder)
+      .catch(renderError);
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+})();
+</script>
+</body>
+</html>

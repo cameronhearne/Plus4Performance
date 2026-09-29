@@ -79,6 +79,9 @@
   .buy-note{font-size:13px;color:var(--ash);margin-bottom:12px;}
   .btn-filled:disabled{opacity:0.45;cursor:not-allowed;}
   .btn-filled:disabled:hover{background:var(--ember);}
+  .qty-stepper{display:inline-flex;align-items:center;gap:14px;}
+  #add-to-basket-btn{margin-top:4px;}
+  .add-to-basket-msg{font-size:13px;color:var(--ember-bright);margin-top:10px;}
 
   .product-links{display:flex;gap:20px;margin-top:24px;font-size:14px;}
   .product-links a{color:rgba(255,255,255,0.6);text-decoration:underline;}
@@ -119,6 +122,7 @@
 
 <script src="/js/products.js"></script>
 <script src="/js/site.js" defer></script>
+<script src="/js/basket.js" defer></script>
 <script>
 (function(){
   function getSlug(){
@@ -143,11 +147,11 @@
   }
 
   function isComingSoon(p){
-    return p.price === null || p.price === undefined || !p.stripePaymentLink || p.stripePaymentLink === 'REPLACE_WITH_LINK';
+    return p.price === null || p.price === undefined;
   }
 
   function priceHTML(p){
-    return isComingSoon(p) && (p.price === null || p.price === undefined)
+    return isComingSoon(p)
       ? '<span class="product-price is-muted">Coming soon</span>'
       : '<span class="product-price">&pound;' + p.price + '</span>';
   }
@@ -205,11 +209,22 @@
         'aria-pressed="' + (i === initialColourIndex ? 'true' : 'false') + '" aria-label="Colour ' + c.name + '" data-colour-index="' + i + '"></button>';
     }).join('') + '<span class="colour-name" id="colour-name">' + product.colours[initialColourIndex].name + '</span></div>';
 
+    var qtyHTML =
+      '<div class="product-section">' +
+        '<h2>Quantity</h2>' +
+        '<div class="qty-stepper" role="group" aria-label="Quantity">' +
+          '<button type="button" class="qty-btn" id="qty-dec" aria-label="Decrease quantity">&minus;</button>' +
+          '<span class="qty-value" id="qty-value">1</span>' +
+          '<button type="button" class="qty-btn" id="qty-inc" aria-label="Increase quantity">&plus;</button>' +
+        '</div>' +
+      '</div>';
+
     var ctaHTML = comingSoon
       ? '<button type="button" class="btn-filled" disabled>Coming soon</button>'
       : (
-          '<p class="buy-note">You\'ll confirm your colour and size at checkout.</p>' +
-          '<button type="button" class="btn-filled" id="buy-now-btn" disabled aria-disabled="true">Buy Now</button>'
+          qtyHTML +
+          '<button type="button" class="btn-filled" id="add-to-basket-btn" disabled aria-disabled="true">Add to Basket</button>' +
+          '<div class="add-to-basket-msg" id="add-to-basket-msg" hidden>Select a size first.</div>'
         );
 
     var others = otherProducts(all, product);
@@ -255,6 +270,8 @@
 
     var selectedColourIndex = initialColourIndex;
     var selectedSize = null;
+    var selectedQty = 1;
+    var MAX_QTY = (window.P4PBasket && window.P4PBasket.MAX_QTY) || 10;
 
     function renderGallery(){
       var colour = product.colours[selectedColourIndex];
@@ -280,13 +297,23 @@
       });
     }
 
-    function updateBuyButton(){
+    function updateAddToBasketButton(){
       if(comingSoon) return;
-      var btn = document.getElementById('buy-now-btn');
+      var btn = document.getElementById('add-to-basket-btn');
       if(!btn) return;
       var ready = !!selectedSize;
       btn.disabled = !ready;
       btn.setAttribute('aria-disabled', ready ? 'false' : 'true');
+    }
+
+    function updateQtyDisplay(){
+      var val = document.getElementById('qty-value');
+      var decBtn = document.getElementById('qty-dec');
+      var incBtn = document.getElementById('qty-inc');
+      if(!val) return;
+      val.textContent = selectedQty;
+      decBtn.disabled = selectedQty <= 1;
+      incBtn.disabled = selectedQty >= MAX_QTY;
     }
 
     document.querySelectorAll('.colour-swatch-btn').forEach(function(btn){
@@ -304,15 +331,38 @@
         document.querySelectorAll('.size-pill').forEach(function(b){ b.setAttribute('aria-pressed', 'false'); });
         btn.setAttribute('aria-pressed', 'true');
         selectedSize = btn.textContent.trim();
-        updateBuyButton();
+        var msg = document.getElementById('add-to-basket-msg');
+        if(msg) msg.hidden = true;
+        updateAddToBasketButton();
       });
     });
 
     if(!comingSoon){
-      var buyBtn = document.getElementById('buy-now-btn');
-      buyBtn.addEventListener('click', function(){
-        if(buyBtn.disabled) return;
-        window.open(product.stripePaymentLink, '_blank', 'noopener');
+      document.getElementById('qty-dec').addEventListener('click', function(){
+        if(selectedQty > 1){ selectedQty--; updateQtyDisplay(); }
+      });
+      document.getElementById('qty-inc').addEventListener('click', function(){
+        if(selectedQty < MAX_QTY){ selectedQty++; updateQtyDisplay(); }
+      });
+      updateQtyDisplay();
+
+      var addBtn = document.getElementById('add-to-basket-btn');
+      addBtn.addEventListener('click', function(){
+        if(!selectedSize){
+          var msg = document.getElementById('add-to-basket-msg');
+          if(msg) msg.hidden = false;
+          return;
+        }
+        var colour = product.colours[selectedColourIndex];
+        window.P4PBasket.add({
+          productId: product.slug,
+          name: product.name,
+          colour: colour.name,
+          size: selectedSize,
+          image: colour.images[0],
+          price: product.price,
+          qty: selectedQty
+        });
       });
     }
 

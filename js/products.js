@@ -1,10 +1,12 @@
 /* Plus 4 Performance — shop product data.
-   Single source of truth for /shop (grid) and /shop/product.html (detail template).
-   price: null means "Coming soon" instead of a price on the grid and product page.
-   stripePaymentLink: "REPLACE_WITH_LINK" is a placeholder, swap in the real
-   Stripe Payment Link per product before launch. Until it's swapped, the product
-   page shows a disabled "Coming soon" button instead of "Buy Now". */
-window.P4P_PRODUCTS = [
+   Single source of truth for the browser (/shop grid, /shop/product.html,
+   basket) AND for server-side price/catalogue validation in
+   netlify/functions/create-checkout-session.js. Loaded as a plain <script>
+   in the browser (assigns window.P4P_PRODUCTS) and via require() in
+   Netlify Functions (module.exports) — same array either way.
+   price: null means "Coming soon" instead of a price on the grid and product page. */
+(function(){
+var P4P_PRODUCTS = [
   {
     name: 'Plus Four Tee',
     slug: 'plus-four-tee',
@@ -118,3 +120,10 @@ window.P4P_PRODUCTS = [
     stripePaymentLink: 'REPLACE_WITH_LINK'
   }
 ];
+if(typeof module !== 'undefined' && module.exports){
+  module.exports = P4P_PRODUCTS;
+}
+if(typeof window !== 'undefined'){
+  window.P4P_PRODUCTS = P4P_PRODUCTS;
+}
+})();
