@@ -67,8 +67,8 @@
   .process-copy p{font-size:17px;color:rgba(255,255,255,0.7);line-height:1.61;}
 
   /* PLATE DIVIDER */
-  .plate-divider{height:200px;overflow:hidden;position:relative;}
-  .plate-divider img{width:100%;height:100%;object-fit:cover;object-position:center 30%;filter:brightness(0.6);}
+  .plate-divider{aspect-ratio:2.4/1;overflow:hidden;position:relative;}
+  .plate-divider img{width:100%;height:100%;object-fit:cover;object-position:center top;filter:brightness(0.55);}
   .plate-divider-text{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;font-weight:700;letter-spacing:0.02em;text-align:center;padding:0 24px;}
 
   /* GUARANTEE */
@@ -138,6 +138,7 @@
 
   @media(max-width:768px){
     .sub-nav{top:116px;}
+    .plate-divider{aspect-ratio:auto;min-height:320px;}
   }
 </style>
 </head>
@@ -225,7 +226,7 @@
 </section>
 
 <div class="plate-divider">
-  <img src="/images/guaranteed/gc-banner.jpg" alt="Coach training on the lat pulldown" width="1290" height="640" loading="lazy">
+  <img src="/images/guaranteed/gc-banner.jpg" alt="Cameron coaching Ethan through a set" width="2287" height="1290" loading="lazy">
   <div class="plate-divider-text">16 WEEKS. YOUR RESULT. GUARANTEED.</div>
 </div>
 
