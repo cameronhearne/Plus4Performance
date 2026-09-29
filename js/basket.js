@@ -11,9 +11,27 @@
    snapshot here is display-only and never trusted for money. */
 (function(){
   var STORAGE_KEY = 'p4p_basket_v1';
+  var PREVIEW_KEY = 'p4p_preview_v1';
   var MAX_QTY = 10;
   var memoryFallback = [];
   var storageOK = true;
+
+  /* ?preview=1 lets the site owner run a real checkout while SHOP_LIVE is
+     off. Persist that as a sessionStorage flag (not just the current
+     page's URL) so it survives navigating from /shop?preview=1 to a
+     product page that has no query string of its own. ?preview=0 clears
+     it explicitly. Runs immediately, before DOMContentLoaded, so it's
+     captured on every page load. */
+  (function syncPreviewFlag(){
+    try {
+      var preview = new URLSearchParams(window.location.search).get('preview');
+      if(preview === '1'){
+        window.sessionStorage.setItem(PREVIEW_KEY, '1');
+      } else if(preview === '0'){
+        window.sessionStorage.removeItem(PREVIEW_KEY);
+      }
+    } catch(e) { /* sessionStorage unavailable, ignore */ }
+  })();
 
   function readBasket(){
     try {
@@ -245,9 +263,16 @@
 
   function isPreview(){
     try {
-      return new URLSearchParams(window.location.search).get('preview') === '1';
+      var current = new URLSearchParams(window.location.search).get('preview');
+      if(current === '1') return true;
+      if(current === '0') return false;
+      return window.sessionStorage.getItem(PREVIEW_KEY) === '1';
     } catch(e) {
-      return false;
+      try {
+        return new URLSearchParams(window.location.search).get('preview') === '1';
+      } catch(e2) {
+        return false;
+      }
     }
   }
 
