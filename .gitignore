@@ -1,6 +1,9 @@
 # macOS
 .DS_Store
 
+# Stray root-level duplicate of public/images/ (assets live under public/)
+/images/
+
 # Dependencies
 node_modules/
 netlify/functions/node_modules/
