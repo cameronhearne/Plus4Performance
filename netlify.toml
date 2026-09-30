@@ -19,6 +19,7 @@
     cp ../about.html dist/about.html &&
     cp ../guarantee-terms.html dist/guarantee-terms.html &&
     cp ../shipping-returns.html dist/shipping-returns.html &&
+    cp ../terms-of-sale.html dist/terms-of-sale.html &&
     cp ../size-guide.html dist/size-guide.html &&
     cp ../order-confirmed.html dist/order-confirmed.html &&
     cp ../sitemap.xml dist/sitemap.xml &&
@@ -106,6 +107,11 @@
 [[redirects]]
   from = "/terms"
   to = "/terms.html"
+  status = 200
+
+[[redirects]]
+  from = "/terms-of-sale"
+  to = "/terms-of-sale.html"
   status = 200
 
 [[redirects]]

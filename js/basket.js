@@ -200,7 +200,7 @@
         '<div class="basket-summary-row basket-summary-muted"><span>Free UK delivery</span><span>&pound;0</span></div>' +
         checkoutHTML +
         '<p class="basket-fineprint">Made to order. Usually arrives in 2 to 3 weeks. ' +
-          '<a href="/shipping-returns">Shipping &amp; Returns</a> &middot; <a href="/terms">Terms</a></p>' +
+          'By checking out you agree to our <a href="/terms-of-sale">Terms of Sale</a>.</p>' +
       '</div>';
 
     drawerEl.querySelector('.basket-close').addEventListener('click', close);

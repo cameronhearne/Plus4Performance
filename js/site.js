@@ -72,6 +72,7 @@
             '<a href="/shop">Clothing</a>' +
             '<a href="/size-guide">Size Guide</a>' +
             '<a href="/shipping-returns">Shipping &amp; Returns</a>' +
+            '<a href="mailto:cameron@plus4performance.com">Contact</a>' +
           '</div>' +
           '<div class="footer-col">' +
             '<h5>Company</h5>' +
@@ -83,6 +84,7 @@
             '<h5>Legal</h5>' +
             '<a href="/privacy.html">Privacy Policy</a>' +
             '<a href="/terms.html">Terms</a>' +
+            '<a href="/terms-of-sale">Terms of Sale</a>' +
           '</div>' +
         '</div>' +
       '</div>' +
