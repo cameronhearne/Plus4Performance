@@ -81,6 +81,7 @@
         size: item.size,
         image: item.image,
         price: item.price,
+        isTee: !!item.isTee,
         qty: Math.min(MAX_QTY, Math.max(1, item.qty))
       });
     }
@@ -112,6 +113,23 @@
 
   function subtotal(){
     return getLines().reduce(function(sum, l){ return sum + (l.price * l.qty); }, 0);
+  }
+
+  /* Display-only mirror of the delivery rules charged server-side in
+     create-checkout-session.js (calculateDelivery there) — never trusted
+     for the actual checkout amount, just shown here as a courtesy so the
+     customer isn't surprised at checkout. Keep the two in sync by hand. */
+  var FREE_DELIVERY_THRESHOLD = 50;
+  var SINGLE_TEE_DELIVERY = 2.99;
+  var STANDARD_DELIVERY = 3.99;
+
+  function calculateDelivery(lines){
+    if(!lines.length) return 0;
+    var sub = lines.reduce(function(sum, l){ return sum + (l.price * l.qty); }, 0);
+    if(sub >= FREE_DELIVERY_THRESHOLD) return 0;
+    var totalQty = lines.reduce(function(sum, l){ return sum + l.qty; }, 0);
+    if(lines.length === 1 && totalQty === 1 && lines[0].isTee) return SINGLE_TEE_DELIVERY;
+    return STANDARD_DELIVERY;
   }
 
   function money(n){
@@ -189,6 +207,18 @@
         '<div class="basket-checkout-msg" id="basket-checkout-msg" hidden></div>'
       : '<button type="button" class="btn-filled basket-checkout-btn" disabled>Checkout</button>';
 
+    var sub = subtotal();
+    var delivery = calculateDelivery(lines);
+    var remaining = FREE_DELIVERY_THRESHOLD - sub;
+    var deliveryRowHTML = '<div class="basket-summary-row basket-summary-muted"><span>Delivery</span><span>' +
+      (delivery === 0 ? 'Free' : money(delivery)) + '</span></div>';
+    var hintHTML = (lines.length && delivery > 0 && remaining > 0)
+      ? '<p class="basket-delivery-hint">Spend ' + money(remaining) + ' more for free delivery.</p>'
+      : '';
+    var totalRowHTML = lines.length
+      ? '<div class="basket-summary-row"><span>Total</span><span>' + money(sub + delivery) + '</span></div>'
+      : '';
+
     drawerEl.innerHTML =
       '<div class="basket-drawer-head">' +
         '<h2>Your Basket</h2>' +
@@ -196,10 +226,13 @@
       '</div>' +
       '<div class="basket-drawer-body">' + bodyHTML + '</div>' +
       '<div class="basket-drawer-foot">' +
-        '<div class="basket-summary-row"><span>Subtotal</span><span>' + money(subtotal()) + '</span></div>' +
-        '<div class="basket-summary-row basket-summary-muted"><span>Free UK delivery</span><span>&pound;0</span></div>' +
+        '<div class="basket-summary-row"><span>Subtotal</span><span>' + money(sub) + '</span></div>' +
+        deliveryRowHTML +
+        totalRowHTML +
+        hintHTML +
         checkoutHTML +
-        '<p class="basket-fineprint">Made to order. Usually arrives in 2 to 3 weeks. ' +
+        '<p class="basket-fineprint">UK delivery: £2.99 for a single tee, £3.99 for everything else. Free over £50.<br>' +
+          'Made to order. Allow 2 to 4 days for production. Once shipped, around 60% of orders arrive within a week and 95% within 13 days.<br>' +
           'By checking out you agree to our <a href="/terms-of-sale">Terms of Sale</a>.</p>' +
       '</div>';
 

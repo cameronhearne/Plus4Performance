@@ -497,6 +497,11 @@ body.basket-drawer-open{overflow:hidden;}
   color:var(--ash);
   margin-bottom:18px;
 }
+.basket-delivery-hint{
+  font-size:12px;
+  color:var(--ember-bright);
+  margin:-6px 0 14px;
+}
 .basket-checkout-btn{width:100%;}
 .basket-checkout-msg{
   margin-top:10px;

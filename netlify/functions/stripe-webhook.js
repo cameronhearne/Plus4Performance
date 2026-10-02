@@ -18,7 +18,7 @@ function formatAddress(address) {
     .join(', ');
 }
 
-function buildAlertText({ orderRef, orderDate, customerName, customerEmail, customerPhone, addressText, items, total }) {
+function buildAlertText({ orderRef, orderDate, customerName, customerEmail, customerPhone, addressText, items, deliveryAmount, total }) {
   const itemLines = items
     .map((it) => `- ${it.name} / ${it.colour} / ${it.size} x${it.qty} - ${formatMoney(it.price * it.qty)}`)
     .join('\n');
@@ -35,13 +35,14 @@ function buildAlertText({ orderRef, orderDate, customerName, customerEmail, cust
     'Items:',
     itemLines,
     '',
+    `Delivery: ${deliveryAmount === 0 ? 'Free' : formatMoney(deliveryAmount)}`,
     `Total paid: ${formatMoney(total)}`,
     '',
     'Place this on Tapstitch today (Special Line)'
   ].join('\n');
 }
 
-function buildCustomerHTML({ siteUrl, orderRef, items, total, addressText }) {
+function buildCustomerHTML({ siteUrl, orderRef, items, deliveryAmount, total, addressText }) {
   const rows = items
     .map(
       (it) => `
@@ -70,6 +71,10 @@ function buildCustomerHTML({ siteUrl, orderRef, items, total, addressText }) {
           <tbody>
             ${rows}
             <tr>
+              <td style="padding:14px 0 0;color:#9a9aa2;font-size:13px;font-family:Arial,Helvetica,sans-serif;">Delivery</td>
+              <td style="padding:14px 0 0;color:#9a9aa2;font-size:13px;font-family:Arial,Helvetica,sans-serif;text-align:right;">${deliveryAmount === 0 ? 'Free' : formatMoney(deliveryAmount)}</td>
+            </tr>
+            <tr>
               <td style="padding:18px 0 0;color:#ffffff;font-size:16px;font-weight:800;">Total</td>
               <td style="padding:18px 0 0;color:#ffffff;font-size:16px;font-weight:800;text-align:right;">${formatMoney(total)}</td>
             </tr>
@@ -79,7 +84,7 @@ function buildCustomerHTML({ siteUrl, orderRef, items, total, addressText }) {
           Shipping to<br>${addressText || ''}
         </p>
         <p style="color:#ffffff;font-size:14px;line-height:1.7;margin:24px 0 0;">
-          Made to order. Usually arrives in 2 to 3 weeks.
+          Made to order. Allow 2 to 4 days for production. Once shipped, around 60% of orders arrive within a week and 95% within 13 days.
         </p>
         <p style="color:#9a9aa2;font-size:13px;line-height:1.7;margin:24px 0 0;">
           Reply to this email with any questions.
@@ -146,6 +151,7 @@ exports.handler = async (event) => {
   });
 
   const total = (session.amount_total || 0) / 100;
+  const deliveryAmount = ((session.shipping_cost && session.shipping_cost.amount_total) || 0) / 100;
   // Fixed random ref set at creation (create-checkout-session.js), not
   // derived from the session id, so it's the exact same ref the customer
   // already saw on the Stripe payment description and order-confirmed page.
@@ -173,7 +179,7 @@ exports.handler = async (event) => {
           from: fromEmail,
           to: alertEmails,
           subject: `NEW ORDER #${orderRef} - ${formatMoney(total)}`,
-          text: buildAlertText({ orderRef, orderDate, customerName, customerEmail, customerPhone, addressText, items, total })
+          text: buildAlertText({ orderRef, orderDate, customerName, customerEmail, customerPhone, addressText, items, deliveryAmount, total })
         },
         { idempotencyKey: `${session.id}:alert` }
       );
@@ -191,7 +197,7 @@ exports.handler = async (event) => {
           to: customerEmail,
           reply_to: process.env.REPLY_TO_EMAIL,
           subject: `Order confirmed - #${orderRef}`,
-          html: buildCustomerHTML({ siteUrl, orderRef, items, total, addressText })
+          html: buildCustomerHTML({ siteUrl, orderRef, items, deliveryAmount, total, addressText })
         },
         { idempotencyKey: `${session.id}:customer` }
       );

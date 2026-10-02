@@ -42,15 +42,65 @@
     border-radius:var(--radius);
     overflow:hidden;
     margin-bottom:40px;
-  }
-  .shop-hero-banner img{
-    position:absolute;inset:0;
-    width:100%;height:100%;
-    object-fit:cover;
-    object-position:center 40%;
+    touch-action:pan-y;
   }
   @media(max-width:768px){
     .shop-hero-banner{aspect-ratio:auto;min-height:220px;}
+  }
+
+  .hero-slides{position:absolute;inset:0;}
+  .hero-slide{
+    position:absolute;inset:0;
+    opacity:0;
+    transition:opacity 0.6s ease;
+  }
+  .hero-slide.is-active{opacity:1;z-index:1;}
+  .hero-slide img{
+    position:absolute;inset:0;
+    width:100%;height:100%;
+    object-fit:cover;
+    object-position:center 30%;
+  }
+  .hero-arrow{
+    position:absolute;top:50%;
+    transform:translateY(-50%);
+    width:40px;height:40px;
+    border-radius:50%;
+    border:none;
+    background:rgba(10,10,12,0.5);
+    color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    z-index:2;
+    font-size:16px;
+    line-height:1;
+    transition:background 0.2s ease;
+  }
+  .hero-arrow:hover{background:rgba(10,10,12,0.75);}
+  .hero-arrow-prev{left:16px;}
+  .hero-arrow-next{right:16px;}
+  .hero-dots{
+    position:absolute;bottom:16px;left:50%;
+    transform:translateX(-50%);
+    display:flex;gap:8px;
+    z-index:2;
+  }
+  .hero-dot{
+    width:8px;height:8px;
+    border-radius:50%;
+    border:none;
+    background:rgba(255,255,255,0.45);
+    padding:0;
+    cursor:pointer;
+    transition:background 0.2s ease, transform 0.2s ease;
+  }
+  .hero-dot.is-active{background:#fff;transform:scale(1.3);}
+  .hero-dot:focus-visible, .hero-arrow:focus-visible{
+    outline:2px solid var(--ember-bright);
+    outline-offset:2px;
+  }
+  @media(prefers-reduced-motion:reduce){
+    .hero-slide{transition:none;}
   }
 
   .shop-delivery-note{font-size:14px;color:var(--ash);margin:-8px 0 32px;}
@@ -146,8 +196,33 @@
 
 <section>
   <div class="wrap">
-    <div class="shop-hero-banner">
-      <img src="/images/guaranteed/gc-standard.jpg" alt="The coaches training in Plus Four kit" loading="eager">
+    <div class="shop-hero-banner" id="hero-slider" aria-roledescription="carousel" aria-label="Shop highlights">
+      <div class="hero-slides">
+        <div class="hero-slide is-active" data-index="0">
+          <img src="/images/shop/hero/hero-1-hoodie-back.jpg" alt="Plus Four black hoodie, back print" loading="eager">
+        </div>
+        <div class="hero-slide" data-index="1">
+          <img src="/images/shop/hero/hero-2-grey-tee-back.jpg" alt="Plus Four grey tee, back print" loading="lazy">
+        </div>
+        <div class="hero-slide" data-index="2">
+          <img src="/images/shop/hero/hero-3-grey-tee-front.jpg" alt="Plus Four grey tee, front" loading="lazy">
+        </div>
+        <div class="hero-slide" data-index="3">
+          <img src="/images/shop/hero/hero-4-red-tee-back.jpg" alt="Plus Four red tee, back print" loading="lazy">
+        </div>
+        <div class="hero-slide" data-index="4">
+          <img src="/images/shop/hero/hero-5-joggers.jpg" alt="Plus Four piped joggers" loading="lazy">
+        </div>
+      </div>
+      <button type="button" class="hero-arrow hero-arrow-prev" aria-label="Previous slide">&#10094;</button>
+      <button type="button" class="hero-arrow hero-arrow-next" aria-label="Next slide">&#10095;</button>
+      <div class="hero-dots" role="tablist" aria-label="Slide navigation">
+        <button type="button" class="hero-dot is-active" data-index="0" role="tab" aria-selected="true" aria-label="Slide 1"></button>
+        <button type="button" class="hero-dot" data-index="1" role="tab" aria-selected="false" aria-label="Slide 2"></button>
+        <button type="button" class="hero-dot" data-index="2" role="tab" aria-selected="false" aria-label="Slide 3"></button>
+        <button type="button" class="hero-dot" data-index="3" role="tab" aria-selected="false" aria-label="Slide 4"></button>
+        <button type="button" class="hero-dot" data-index="4" role="tab" aria-selected="false" aria-label="Slide 5"></button>
+      </div>
     </div>
     <div class="shop-filters" role="group" aria-label="Filter products">
       <button type="button" class="filter-tab" data-filter="all" aria-pressed="true">All</button>
@@ -155,8 +230,9 @@
       <button type="button" class="filter-tab" data-filter="hoodies" aria-pressed="false">Hoodies</button>
       <button type="button" class="filter-tab" data-filter="crewnecks" aria-pressed="false">Crewnecks</button>
       <button type="button" class="filter-tab" data-filter="joggers" aria-pressed="false">Joggers</button>
+      <button type="button" class="filter-tab" data-filter="shorts" aria-pressed="false">Shorts</button>
     </div>
-    <p class="shop-delivery-note">Made to order. Usually arrives in 2 to 3 weeks. UK only.</p>
+    <p class="shop-delivery-note">Made to order. Allow 2 to 4 days for production. Once shipped, around 60% of orders arrive within a week and 95% within 13 days. UK only.<br>UK delivery: £2.99 for a single tee, £3.99 for everything else. Free over £50.</p>
     <div class="shop-grid reveal-stagger" id="shop-grid"></div>
   </div>
 </section>
@@ -256,9 +332,81 @@
     });
   }
 
+  function initHeroSlider(){
+    var root = document.getElementById('hero-slider');
+    if(!root) return;
+    var slides = Array.prototype.slice.call(root.querySelectorAll('.hero-slide'));
+    var dots = Array.prototype.slice.call(root.querySelectorAll('.hero-dot'));
+    var prevBtn = root.querySelector('.hero-arrow-prev');
+    var nextBtn = root.querySelector('.hero-arrow-next');
+    if(slides.length < 2) return;
+
+    var AUTOPLAY_MS = 5000;
+    var SWIPE_THRESHOLD = 40;
+    var current = 0;
+    var timer = null;
+    var reducedMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+    function show(index){
+      index = (index + slides.length) % slides.length;
+      if(index === current) return;
+      slides[current].classList.remove('is-active');
+      dots[current].setAttribute('aria-selected', 'false');
+      dots[current].classList.remove('is-active');
+      current = index;
+      slides[current].classList.add('is-active');
+      dots[current].setAttribute('aria-selected', 'true');
+      dots[current].classList.add('is-active');
+    }
+
+    function next(){ show(current + 1); }
+    function prev(){ show(current - 1); }
+
+    function stopAutoplay(){
+      if(timer){ window.clearInterval(timer); timer = null; }
+    }
+
+    function startAutoplay(){
+      stopAutoplay();
+      if(reducedMotion || document.hidden) return;
+      timer = window.setInterval(next, AUTOPLAY_MS);
+    }
+
+    prevBtn.addEventListener('click', function(){ prev(); startAutoplay(); });
+    nextBtn.addEventListener('click', function(){ next(); startAutoplay(); });
+    dots.forEach(function(dot, i){
+      dot.addEventListener('click', function(){ show(i); startAutoplay(); });
+    });
+
+    root.addEventListener('mouseenter', stopAutoplay);
+    root.addEventListener('mouseleave', startAutoplay);
+
+    document.addEventListener('visibilitychange', function(){
+      if(document.hidden){ stopAutoplay(); } else { startAutoplay(); }
+    });
+
+    var touchStartX = null;
+    root.addEventListener('touchstart', function(e){
+      touchStartX = e.touches[0].clientX;
+      stopAutoplay();
+    }, { passive: true });
+    root.addEventListener('touchend', function(e){
+      if(touchStartX === null) return;
+      var dx = e.changedTouches[0].clientX - touchStartX;
+      touchStartX = null;
+      if(Math.abs(dx) > SWIPE_THRESHOLD){
+        if(dx < 0){ next(); } else { prev(); }
+      }
+      startAutoplay();
+    }, { passive: true });
+
+    startAutoplay();
+  }
+
   document.addEventListener('DOMContentLoaded', function(){
     render();
     initFilters();
+    initHeroSlider();
   });
 })();
 </script>

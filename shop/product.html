@@ -257,7 +257,8 @@
               '<h2>Size</h2>' +
               sizesHTML +
             '</div>' +
-            '<p class="product-ship">Made to order. Usually arrives in 2 to 3 weeks.</p>' +
+            '<p class="product-ship">Made to order. Allow 2 to 4 days for production. Once shipped, around 60% of orders arrive within a week and 95% within 13 days.<br>' +
+              'UK delivery: £2.99 for a single tee, £3.99 for everything else. Free over £50.</p>' +
             ctaHTML +
             '<div class="product-links">' +
               '<a href="/size-guide">Size Guide</a>' +
@@ -361,6 +362,7 @@
           size: selectedSize,
           image: colour.images[0],
           price: product.price,
+          isTee: !!product.isTee,
           qty: selectedQty
         });
       });

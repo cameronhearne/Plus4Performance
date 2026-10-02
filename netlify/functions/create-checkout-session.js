@@ -2,6 +2,8 @@
    Receives only { productId, colour, size, quantity } per line from the
    browser — every line is re-validated against js/products.js here, and
    price always comes from that server-side catalogue, never the browser.
+   Delivery is likewise computed here from the validated basket (see
+   calculateDelivery below) and never trusts a browser-supplied amount.
 
    Gated by SHOP_LIVE: unless SHOP_LIVE=true, checkout is refused with
    { error: 'shop_not_live' } so the front end can show "Checkout launching
@@ -15,6 +17,22 @@ const PRODUCTS = require('../../js/products.js');
 
 const MAX_QTY = 10;
 const MAX_LINES = 50;
+
+// Delivery rules — mirrored (not shared) in js/basket.js for the client-side
+// display hint, which is cosmetic only. This copy is the one that's charged.
+const FREE_DELIVERY_THRESHOLD = 50;
+const SINGLE_TEE_DELIVERY = 2.99;
+const STANDARD_DELIVERY = 3.99;
+
+/* items: [{ price, qty, isTee }], built from the server-validated basket
+   below — never from anything the browser sent directly. */
+function calculateDelivery(items) {
+  const subtotal = items.reduce((sum, it) => sum + it.price * it.qty, 0);
+  if (subtotal >= FREE_DELIVERY_THRESHOLD) return 0;
+  const totalQty = items.reduce((sum, it) => sum + it.qty, 0);
+  if (items.length === 1 && totalQty === 1 && items[0].isTee) return SINGLE_TEE_DELIVERY;
+  return STANDARD_DELIVERY;
+}
 
 // Excludes 0/O and 1/I so a customer or staff member reading it back
 // off an email or a screen can't confuse characters.
@@ -74,6 +92,7 @@ exports.handler = async (event) => {
   }
 
   const lineItems = [];
+  const deliveryItems = [];
   for (const raw of rawItems) {
     const productId = raw && raw.productId;
     const colour = raw && raw.colour;
@@ -100,6 +119,8 @@ exports.handler = async (event) => {
 
     const image = colourObj.images && colourObj.images[0];
 
+    deliveryItems.push({ price: product.price, qty: quantity, isTee: !!product.isTee });
+
     lineItems.push({
       quantity,
       price_data: {
@@ -121,6 +142,7 @@ exports.handler = async (event) => {
 
   const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
   const orderRef = generateOrderRef();
+  const deliveryAmount = calculateDelivery(deliveryItems);
 
   try {
     const session = await stripe.checkout.sessions.create({
@@ -137,11 +159,11 @@ exports.handler = async (event) => {
         {
           shipping_rate_data: {
             type: 'fixed_amount',
-            fixed_amount: { amount: 0, currency: 'gbp' },
-            display_name: 'Free UK delivery',
+            fixed_amount: { amount: Math.round(deliveryAmount * 100), currency: 'gbp' },
+            display_name: deliveryAmount === 0 ? 'Free UK Delivery' : 'Standard UK Delivery',
             delivery_estimate: {
-              minimum: { unit: 'business_day', value: 10 },
-              maximum: { unit: 'business_day', value: 21 }
+              minimum: { unit: 'business_day', value: 3 },
+              maximum: { unit: 'business_day', value: 17 }
             }
           }
         }

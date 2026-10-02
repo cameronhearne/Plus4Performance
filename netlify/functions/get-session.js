@@ -58,11 +58,12 @@ exports.handler = async (event) => {
   });
 
   const total = (session.amount_total || 0) / 100;
+  const delivery = ((session.shipping_cost && session.shipping_cost.amount_total) || 0) / 100;
   // Fixed random ref set at creation (create-checkout-session.js), not
   // derived from the session id, so it's short and stable everywhere
   // it's shown. Falls back to the old derivation only for a session
   // created before this existed.
   const orderRef = (session.metadata && session.metadata.order_ref) || session.id.slice(-8).toUpperCase();
 
-  return json(200, { firstName, items, total, orderRef });
+  return json(200, { firstName, items, delivery, total, orderRef });
 };
