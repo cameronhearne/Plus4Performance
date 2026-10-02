@@ -42,25 +42,48 @@
     border-radius:var(--radius);
     overflow:hidden;
     margin-bottom:40px;
+    background:var(--ink);
     touch-action:pan-y;
   }
   @media(max-width:768px){
     .shop-hero-banner{aspect-ratio:auto;min-height:220px;}
   }
 
-  .hero-slides{position:absolute;inset:0;}
-  .hero-slide{
-    position:absolute;inset:0;
-    opacity:0;
-    transition:opacity 0.6s ease;
+  /* Panels are positioned + clip-pathed entirely from JS (initHeroSlider in
+     the script below) — geometry depends on measured container size and
+     current panel count, which CSS alone can't express. These rules are
+     just the visual defaults each panel/img gets once JS sets left/width/
+     clip-path inline. */
+  .hero-panels{position:absolute;inset:0;}
+  .hero-panel{
+    position:absolute;
+    top:0;height:100%;
+    left:0;width:100%;
+    clip-path:none;
+    display:none;
+    overflow:hidden;
   }
-  .hero-slide.is-active{opacity:1;z-index:1;}
-  .hero-slide img{
+  /* Pre-JS fallback: just show panel 0 full-bleed (same look as the single-
+     panel mobile case) until initHeroSlider() measures the container and
+     sets real left/width/clip-path on each panel. */
+  .hero-panel[data-panel="0"]{display:block;}
+  .hero-img{
     position:absolute;inset:0;
     width:100%;height:100%;
     object-fit:cover;
-    object-position:center 30%;
+    opacity:0;
+    transition:opacity 0.6s ease;
+    transition-delay:calc(var(--panel-i, 0) * 150ms);
   }
+  .hero-img.is-active{opacity:1;z-index:1;}
+
+  .hero-shade{
+    position:absolute;inset:0;
+    background:linear-gradient(to top, rgba(0,0,0,0.4), rgba(0,0,0,0) 55%);
+    pointer-events:none;
+    z-index:1;
+  }
+
   .hero-arrow{
     position:absolute;top:50%;
     transform:translateY(-50%);
@@ -100,7 +123,7 @@
     outline-offset:2px;
   }
   @media(prefers-reduced-motion:reduce){
-    .hero-slide{transition:none;}
+    .hero-img{transition:none;}
   }
 
   .shop-delivery-note{font-size:14px;color:var(--ash);margin:-8px 0 32px;}
@@ -197,32 +220,39 @@
 <section>
   <div class="wrap">
     <div class="shop-hero-banner" id="hero-slider" aria-roledescription="carousel" aria-label="Shop highlights">
-      <div class="hero-slides">
-        <div class="hero-slide is-active" data-index="0">
-          <img src="/images/shop/hero/hero-1-hoodie-back.jpg" alt="Plus Four black hoodie, back print" loading="eager">
+      <div class="hero-panels" id="hero-panels">
+        <div class="hero-panel" data-panel="0" style="--panel-i:0">
+          <img class="hero-img is-active" data-photo="0" src="/images/shop/hero/hero-01-hoodie-back.jpg" alt="Plus Four black hoodie, back print" style="object-position:center 35%" loading="eager">
+          <img class="hero-img" data-photo="1" src="/images/shop/hero/hero-02-red-tee-back.jpg" alt="Plus Four red tee, back print" style="object-position:center 45%" loading="lazy">
+          <img class="hero-img" data-photo="2" src="/images/shop/hero/hero-03-grey-tee-front.jpg" alt="Plus Four grey tee, front" style="object-position:center 30%" loading="lazy">
+          <img class="hero-img" data-photo="3" src="/images/shop/hero/hero-04-joggers.jpg" alt="Plus Four piped joggers" style="object-position:center 55%" loading="lazy">
+          <img class="hero-img" data-photo="4" src="/images/shop/hero/hero-05-red-tee-front.jpg" alt="Plus Four red tee, front" style="object-position:center 40%" loading="lazy">
+          <img class="hero-img" data-photo="5" src="/images/shop/hero/hero-06-grey-tee-back.jpg" alt="Plus Four grey tee, back print" style="object-position:center 35%" loading="lazy">
+          <img class="hero-img" data-photo="6" src="/images/shop/hero/hero-07-red-tee-dips.jpg" alt="Plus Four red tee, training dip" style="object-position:center 40%" loading="lazy">
         </div>
-        <div class="hero-slide" data-index="1">
-          <img src="/images/shop/hero/hero-2-grey-tee-back.jpg" alt="Plus Four grey tee, back print" loading="lazy">
+        <div class="hero-panel" data-panel="1" style="--panel-i:1">
+          <img class="hero-img" data-photo="0" src="/images/shop/hero/hero-01-hoodie-back.jpg" alt="Plus Four black hoodie, back print" style="object-position:center 35%" loading="lazy">
+          <img class="hero-img" data-photo="1" src="/images/shop/hero/hero-02-red-tee-back.jpg" alt="Plus Four red tee, back print" style="object-position:center 45%" loading="eager">
+          <img class="hero-img" data-photo="2" src="/images/shop/hero/hero-03-grey-tee-front.jpg" alt="Plus Four grey tee, front" style="object-position:center 30%" loading="lazy">
+          <img class="hero-img" data-photo="3" src="/images/shop/hero/hero-04-joggers.jpg" alt="Plus Four piped joggers" style="object-position:center 55%" loading="lazy">
+          <img class="hero-img" data-photo="4" src="/images/shop/hero/hero-05-red-tee-front.jpg" alt="Plus Four red tee, front" style="object-position:center 40%" loading="lazy">
+          <img class="hero-img" data-photo="5" src="/images/shop/hero/hero-06-grey-tee-back.jpg" alt="Plus Four grey tee, back print" style="object-position:center 35%" loading="lazy">
+          <img class="hero-img" data-photo="6" src="/images/shop/hero/hero-07-red-tee-dips.jpg" alt="Plus Four red tee, training dip" style="object-position:center 40%" loading="lazy">
         </div>
-        <div class="hero-slide" data-index="2">
-          <img src="/images/shop/hero/hero-3-grey-tee-front.jpg" alt="Plus Four grey tee, front" loading="lazy">
-        </div>
-        <div class="hero-slide" data-index="3">
-          <img src="/images/shop/hero/hero-4-red-tee-back.jpg" alt="Plus Four red tee, back print" loading="lazy">
-        </div>
-        <div class="hero-slide" data-index="4">
-          <img src="/images/shop/hero/hero-5-joggers.jpg" alt="Plus Four piped joggers" loading="lazy">
+        <div class="hero-panel" data-panel="2" style="--panel-i:2">
+          <img class="hero-img" data-photo="0" src="/images/shop/hero/hero-01-hoodie-back.jpg" alt="Plus Four black hoodie, back print" style="object-position:center 35%" loading="lazy">
+          <img class="hero-img" data-photo="1" src="/images/shop/hero/hero-02-red-tee-back.jpg" alt="Plus Four red tee, back print" style="object-position:center 45%" loading="lazy">
+          <img class="hero-img" data-photo="2" src="/images/shop/hero/hero-03-grey-tee-front.jpg" alt="Plus Four grey tee, front" style="object-position:center 30%" loading="eager">
+          <img class="hero-img" data-photo="3" src="/images/shop/hero/hero-04-joggers.jpg" alt="Plus Four piped joggers" style="object-position:center 55%" loading="lazy">
+          <img class="hero-img" data-photo="4" src="/images/shop/hero/hero-05-red-tee-front.jpg" alt="Plus Four red tee, front" style="object-position:center 40%" loading="lazy">
+          <img class="hero-img" data-photo="5" src="/images/shop/hero/hero-06-grey-tee-back.jpg" alt="Plus Four grey tee, back print" style="object-position:center 35%" loading="lazy">
+          <img class="hero-img" data-photo="6" src="/images/shop/hero/hero-07-red-tee-dips.jpg" alt="Plus Four red tee, training dip" style="object-position:center 40%" loading="lazy">
         </div>
       </div>
+      <div class="hero-shade" aria-hidden="true"></div>
       <button type="button" class="hero-arrow hero-arrow-prev" aria-label="Previous slide">&#10094;</button>
       <button type="button" class="hero-arrow hero-arrow-next" aria-label="Next slide">&#10095;</button>
-      <div class="hero-dots" role="tablist" aria-label="Slide navigation">
-        <button type="button" class="hero-dot is-active" data-index="0" role="tab" aria-selected="true" aria-label="Slide 1"></button>
-        <button type="button" class="hero-dot" data-index="1" role="tab" aria-selected="false" aria-label="Slide 2"></button>
-        <button type="button" class="hero-dot" data-index="2" role="tab" aria-selected="false" aria-label="Slide 3"></button>
-        <button type="button" class="hero-dot" data-index="3" role="tab" aria-selected="false" aria-label="Slide 4"></button>
-        <button type="button" class="hero-dot" data-index="4" role="tab" aria-selected="false" aria-label="Slide 5"></button>
-      </div>
+      <div class="hero-dots" id="hero-dots" role="tablist" aria-label="Slide navigation"></div>
     </div>
     <div class="shop-filters" role="group" aria-label="Filter products">
       <button type="button" class="filter-tab" data-filter="all" aria-pressed="true">All</button>
@@ -332,35 +362,106 @@
     });
   }
 
+  /* Diagonal multi-panel hero slider.
+     7 photos form one ordered list. At any time, each visible panel shows
+     one photo from the list; a "set" is the whole row's worth of photos at
+     once, and advancing moves every panel on to the next set together
+     (wrapping back to photo 0 when the list runs out — see
+     photoForPanelInSet). Panel count is responsive (3 / 2 / 1), so the
+     number of sets and dots changes with it; resizing across a breakpoint
+     resets to set 0 rather than trying to preserve position across a
+     different grouping.
+     Panel shape: each panel is an absolutely positioned, overlapping box
+     (wider than its 1/N "fair share" so the diagonal clip has material to
+     cut from) with a clip-path carved in JS from the measured container
+     size — this keeps the gap and angle pixel-accurate at any width and
+     keeps images themselves undistorted (only the panel's silhouette is
+     cut, never the image). */
   function initHeroSlider(){
     var root = document.getElementById('hero-slider');
-    if(!root) return;
-    var slides = Array.prototype.slice.call(root.querySelectorAll('.hero-slide'));
-    var dots = Array.prototype.slice.call(root.querySelectorAll('.hero-dot'));
+    var panelsRoot = document.getElementById('hero-panels');
+    var dotsRoot = document.getElementById('hero-dots');
+    if(!root || !panelsRoot || !dotsRoot) return;
+
+    var TOTAL_PHOTOS = 7;
+    var MAX_PANELS = 3;
+    var ANGLE_DEG = 9;
+    var GAP_PX = 6;
+    var SAFETY_PX = 2;
+    var AUTOPLAY_MS = 5000;
+    var STAGGER_MS = 150;
+    var SWIPE_THRESHOLD = 40;
+
+    var panels = Array.prototype.slice.call(panelsRoot.querySelectorAll('.hero-panel')).slice(0, MAX_PANELS);
     var prevBtn = root.querySelector('.hero-arrow-prev');
     var nextBtn = root.querySelector('.hero-arrow-next');
-    if(slides.length < 2) return;
-
-    var AUTOPLAY_MS = 5000;
-    var SWIPE_THRESHOLD = 40;
-    var current = 0;
-    var timer = null;
     var reducedMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
-    function show(index){
-      index = (index + slides.length) % slides.length;
-      if(index === current) return;
-      slides[current].classList.remove('is-active');
-      dots[current].setAttribute('aria-selected', 'false');
-      dots[current].classList.remove('is-active');
-      current = index;
-      slides[current].classList.add('is-active');
-      dots[current].setAttribute('aria-selected', 'true');
-      dots[current].classList.add('is-active');
+    var panelCount = 0;
+    var currentSet = 0;
+    var dots = [];
+    var timer = null;
+    var resizeRAF = null;
+
+    function panelsForWidth(){
+      var w = window.innerWidth;
+      if(w >= 1200) return 3;
+      if(w >= 768) return 2;
+      return 1;
     }
 
-    function next(){ show(current + 1); }
-    function prev(){ show(current - 1); }
+    function setCountFor(count){
+      return Math.ceil(TOTAL_PHOTOS / count);
+    }
+
+    function photoForPanelInSet(setIndex, panelIndex, count){
+      return (setIndex * count + panelIndex) % TOTAL_PHOTOS;
+    }
+
+    function renderDots(count){
+      var sets = setCountFor(count);
+      dotsRoot.innerHTML = '';
+      dots = [];
+      for(var i = 0; i < sets; i++){
+        var dot = document.createElement('button');
+        dot.type = 'button';
+        dot.className = 'hero-dot' + (i === 0 ? ' is-active' : '');
+        dot.setAttribute('role', 'tab');
+        dot.setAttribute('aria-selected', i === 0 ? 'true' : 'false');
+        dot.setAttribute('aria-label', 'Slide set ' + (i + 1));
+        (function(index){
+          dot.addEventListener('click', function(){ goToSet(index); startAutoplay(); });
+        })(i);
+        dotsRoot.appendChild(dot);
+        dots.push(dot);
+      }
+    }
+
+    function applyActivePhoto(panelIndex, photoIndex){
+      var panel = panels[panelIndex];
+      var imgs = panel.querySelectorAll('.hero-img');
+      imgs.forEach(function(img){
+        var isMatch = parseInt(img.getAttribute('data-photo'), 10) === photoIndex;
+        img.classList.toggle('is-active', isMatch);
+      });
+    }
+
+    function goToSet(setIndex){
+      var sets = setCountFor(panelCount);
+      setIndex = ((setIndex % sets) + sets) % sets;
+      currentSet = setIndex;
+      for(var i = 0; i < panelCount; i++){
+        applyActivePhoto(i, photoForPanelInSet(setIndex, i, panelCount));
+      }
+      if(dots[setIndex]){
+        dots.forEach(function(d){ d.classList.remove('is-active'); d.setAttribute('aria-selected', 'false'); });
+        dots[setIndex].classList.add('is-active');
+        dots[setIndex].setAttribute('aria-selected', 'true');
+      }
+    }
+
+    function nextSet(){ goToSet(currentSet + 1); }
+    function prevSet(){ goToSet(currentSet - 1); }
 
     function stopAutoplay(){
       if(timer){ window.clearInterval(timer); timer = null; }
@@ -369,14 +470,79 @@
     function startAutoplay(){
       stopAutoplay();
       if(reducedMotion || document.hidden) return;
-      timer = window.setInterval(next, AUTOPLAY_MS);
+      timer = window.setInterval(nextSet, AUTOPLAY_MS);
     }
 
-    prevBtn.addEventListener('click', function(){ prev(); startAutoplay(); });
-    nextBtn.addEventListener('click', function(){ next(); startAutoplay(); });
-    dots.forEach(function(dot, i){
-      dot.addEventListener('click', function(){ show(i); startAutoplay(); });
-    });
+    function panelCorners(i, count, width, height, shift, half){
+      var nominal = width / count;
+      var shareLeft = i * nominal;
+      var shareRight = (i + 1) * nominal;
+      var lTop, lBot, rTop, rBot;
+      if(i === 0){ lTop = 0; lBot = 0; }
+      else { lTop = shareLeft - half + GAP_PX / 2; lBot = shareLeft + half + GAP_PX / 2; }
+      if(i === count - 1){ rTop = width; rBot = width; }
+      else { rTop = shareRight - half - GAP_PX / 2; rBot = shareRight + half - GAP_PX / 2; }
+      return { lTop: lTop, lBot: lBot, rTop: rTop, rBot: rBot };
+    }
+
+    function layoutPanels(){
+      var rect = root.getBoundingClientRect();
+      var width = rect.width;
+      var height = rect.height;
+      if(!width || !height) return;
+
+      var newPanelCount = panelsForWidth();
+      var panelCountChanged = newPanelCount !== panelCount;
+      panelCount = newPanelCount;
+
+      if(panelCount === 1){
+        // Mobile: behaves exactly like the old single-image slider — panel 0
+        // full-bleed, no diagonal, nothing to compute.
+        var p0 = panels[0];
+        p0.style.display = 'block';
+        p0.style.left = '0px';
+        p0.style.width = width + 'px';
+        p0.style.clipPath = 'none';
+        panels[1].style.display = 'none';
+        panels[2].style.display = 'none';
+      } else {
+        var shift = height * Math.tan(ANGLE_DEG * Math.PI / 180);
+        var half = shift / 2;
+        var overlap = half + GAP_PX / 2 + SAFETY_PX;
+        var nominal = width / panelCount;
+
+        for(var i = 0; i < MAX_PANELS; i++){
+          if(i >= panelCount){
+            panels[i].style.display = 'none';
+            continue;
+          }
+          var shareLeft = i * nominal;
+          var shareRight = (i + 1) * nominal;
+          var boxLeft = (i === 0) ? 0 : (shareLeft - overlap);
+          var boxRight = (i === panelCount - 1) ? width : (shareRight + overlap);
+          var boxWidth = boxRight - boxLeft;
+          var corners = panelCorners(i, panelCount, width, height, shift, half);
+
+          var panel = panels[i];
+          panel.style.display = 'block';
+          panel.style.left = boxLeft + 'px';
+          panel.style.width = boxWidth + 'px';
+          panel.style.clipPath = 'polygon(' +
+            (corners.lTop - boxLeft) + 'px 0px, ' +
+            (corners.rTop - boxLeft) + 'px 0px, ' +
+            (corners.rBot - boxLeft) + 'px ' + height + 'px, ' +
+            (corners.lBot - boxLeft) + 'px ' + height + 'px)';
+        }
+      }
+
+      if(panelCountChanged){
+        renderDots(panelCount);
+        goToSet(0);
+      }
+    }
+
+    prevBtn.addEventListener('click', function(){ prevSet(); startAutoplay(); });
+    nextBtn.addEventListener('click', function(){ nextSet(); startAutoplay(); });
 
     root.addEventListener('mouseenter', stopAutoplay);
     root.addEventListener('mouseleave', startAutoplay);
@@ -395,11 +561,20 @@
       var dx = e.changedTouches[0].clientX - touchStartX;
       touchStartX = null;
       if(Math.abs(dx) > SWIPE_THRESHOLD){
-        if(dx < 0){ next(); } else { prev(); }
+        if(dx < 0){ nextSet(); } else { prevSet(); }
       }
       startAutoplay();
     }, { passive: true });
 
+    window.addEventListener('resize', function(){
+      if(resizeRAF) return;
+      resizeRAF = window.requestAnimationFrame(function(){
+        resizeRAF = null;
+        layoutPanels();
+      });
+    });
+
+    layoutPanels();
     startAutoplay();
   }
 
