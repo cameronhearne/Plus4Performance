@@ -447,8 +447,10 @@
         if (r.status === 429) {
           var mins = Math.ceil((r.body.retryAfterSeconds || 0) / 60);
           errEl.textContent = 'Too many failed attempts. Try again in about ' + mins + ' minute' + (mins === 1 ? '' : 's') + '.';
-        } else {
+        } else if (r.status === 401) {
           errEl.textContent = 'Incorrect username or password.';
+        } else {
+          errEl.textContent = 'Something went wrong, try again later.';
         }
         errEl.classList.remove('hidden');
       })

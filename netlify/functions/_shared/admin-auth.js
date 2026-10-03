@@ -142,14 +142,18 @@ async function comparePassword(password, hash) {
    transient platform issue), we fail OPEN on the rate limiter only (log and
    allow the attempt) rather than locking admins out of their own dashboard
    because of an unrelated outage. Password/session checks are unaffected. */
-async function getAttemptsStore() {
-  const { getStore } = require('@netlify/blobs');
+async function getAttemptsStore(event) {
+  const { connectLambda, getStore } = require('@netlify/blobs');
+  // Classic exports.handler functions (this one included) don't get Blobs'
+  // context auto-injected the way v2 functions do — connectLambda wires it
+  // up from the raw Lambda event on every call, before getStore() runs.
+  connectLambda(event);
   return getStore({ name: 'admin-login-attempts' });
 }
 
-async function checkLockout(username) {
+async function checkLockout(event, username) {
   try {
-    const store = await getAttemptsStore();
+    const store = await getAttemptsStore(event);
     const record = await store.get(username, { type: 'json' });
     if (record && record.lockUntil && record.lockUntil > Date.now()) {
       return { locked: true, retryAfterSeconds: Math.ceil((record.lockUntil - Date.now()) / 1000) };
@@ -161,9 +165,9 @@ async function checkLockout(username) {
   }
 }
 
-async function recordFailedAttempt(username) {
+async function recordFailedAttempt(event, username) {
   try {
-    const store = await getAttemptsStore();
+    const store = await getAttemptsStore(event);
     const record = (await store.get(username, { type: 'json' })) || { count: 0 };
     const now = Date.now();
     // A lockout that has already expired starts a fresh count.
@@ -178,9 +182,9 @@ async function recordFailedAttempt(username) {
   }
 }
 
-async function clearAttempts(username) {
+async function clearAttempts(event, username) {
   try {
-    const store = await getAttemptsStore();
+    const store = await getAttemptsStore(event);
     await store.delete(username);
   } catch (e) {
     console.error('admin-auth: clearing attempts failed', e.message);

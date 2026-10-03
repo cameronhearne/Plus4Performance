@@ -36,7 +36,7 @@ exports.handler = async (event) => {
     return json(400, { error: 'missing_credentials' });
   }
 
-  const lockout = await checkLockout(username);
+  const lockout = await checkLockout(event, username);
   if (lockout.locked) {
     return json(429, { error: 'locked_out', retryAfterSeconds: lockout.retryAfterSeconds });
   }
@@ -46,11 +46,11 @@ exports.handler = async (event) => {
   const ok = await comparePassword(password, hash);
 
   if (!ok) {
-    await recordFailedAttempt(username);
+    await recordFailedAttempt(event, username);
     return json(401, { error: 'invalid_credentials' });
   }
 
-  await clearAttempts(username);
+  await clearAttempts(event, username);
 
   return json(200, { username }, { 'Set-Cookie': buildSessionCookie(username) });
 };
