@@ -5,9 +5,8 @@
 (function(){
   var TIDYCAL = 'https://tidycal.com/cameronhearne/30-minute-meeting';
   window.P4P_TIDYCAL_URL = TIDYCAL;
-  // Coaching bookings are paused (see the "Coming soon" sections on the
-  // coaching pages) — set this back to TIDYCAL to re-enable "Book a Call"
-  // links site-wide.
+  // General "Contact Us" mailto for the nav/footer link (separate from the
+  // guaranteed-coaching "Coming Soon" enquiry mailtos on that page).
   var CONTACT_MAILTO = 'mailto:cameron@plus4performance.com?subject=' + encodeURIComponent('Plus 4 Performance enquiry');
 
   var path = window.location.pathname.replace(/\/index\.html$/, '/');
@@ -42,8 +41,7 @@
         '<a href="/shop"' + (current('/shop') ? ' aria-current="page"' : '') + '>Shop</a>' +
       '</nav>' +
       '<div class="site-header-actions">' +
-        // '<a href="' + TIDYCAL + '" target="_blank" rel="noopener" class="btn-ghost btn-sm nav-cta">Book a Call</a>' +
-        '<a href="' + CONTACT_MAILTO + '" class="btn-ghost btn-sm nav-cta">Contact Us</a>' +
+        '<a href="' + TIDYCAL + '" target="_blank" rel="noopener" class="btn-ghost btn-sm nav-cta">Book a Call</a>' +
         basketButtonHTML +
       '</div>' +
     '</div>' +
@@ -69,7 +67,7 @@
             '<h5>Coaching</h5>' +
             '<a href="/online-coaching">Online Coaching</a>' +
             '<a href="/guaranteed-coaching">Guaranteed Coaching</a>' +
-            // '<a href="' + TIDYCAL + '" target="_blank" rel="noopener">Book a Call</a>' +
+            '<a href="' + TIDYCAL + '" target="_blank" rel="noopener">Book a Call</a>' +
             '<a href="/guarantee-terms">Guarantee Terms</a>' +
           '</div>' +
           '<div class="footer-col">' +
@@ -78,6 +76,7 @@
             '<a href="/size-guide">Size Guide</a>' +
             '<a href="/shipping-returns">Shipping &amp; Returns</a>' +
             '<a href="' + CONTACT_MAILTO + '">Contact Us</a>' +
+            '<a href="https://instagram.com/plus4performance" target="_blank" rel="noopener">Instagram</a>' +
           '</div>' +
           '<div class="footer-col">' +
             '<h5>Company</h5>' +

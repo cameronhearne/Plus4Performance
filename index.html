@@ -86,6 +86,7 @@
     align-items:stretch;
   }
   .coaching-card{
+    position:relative;
     display:flex;
     flex-direction:column;
     height:100%;
@@ -94,6 +95,7 @@
     overflow:hidden;
     background:var(--card-bg);
   }
+  .coaching-card .coming-soon-badge{position:absolute;top:16px;right:16px;z-index:2;}
   .coaching-card-media{aspect-ratio:4/3;overflow:hidden;}
   .coaching-card-media img{width:100%;height:100%;object-fit:cover;}
   .coaching-card-body{display:flex;flex-direction:column;flex:1;padding:32px;}
@@ -248,9 +250,7 @@
       <h1 class="reveal is-visible">1:1 online coaching.<br><span class="accent">Built around you.</span></h1>
       <p class="sub reveal is-visible">Coached by Cameron and Ethan. Monthly coaching, or our 16-week programme with a results guarantee.</p>
       <div class="hero-ctas reveal is-visible">
-        <!-- <a href="https://tidycal.com/cameronhearne/30-minute-meeting" target="_blank" rel="noopener" class="btn-filled">Book a Call</a> -->
-        <span class="coming-soon-badge">Coming Soon</span>
-        <a href="mailto:cameron@plus4performance.com?subject=Plus%204%20Performance%20coaching%20enquiry&amp;body=Hi%20Plus%204%20Performance%20team%2C%0D%0A%0D%0AI'm%20interested%20in%20your%20online%20coaching%20and%20would%20like%20more%20information.%0D%0A%0D%0AName%3A%0D%0AAge%3A%0D%0ACurrent%20goal%20(cutting%20%2F%20building%20%2F%20performance)%3A%0D%0AHow%20long%20I've%20been%20training%3A%0D%0AAnything%20else%20you%20should%20know%3A%0D%0A%0D%0AThanks" class="btn-filled">Contact Us for More Info</a>
+        <a href="https://tidycal.com/cameronhearne/30-minute-meeting" target="_blank" rel="noopener" class="btn-filled">Book a Call</a>
         <a href="#results" class="btn-ghost">See Our Results</a>
       </div>
     </div>
@@ -274,12 +274,12 @@
           <div class="coaching-card-price">From &pound;80 a month</div>
           <div class="coaching-card-ctas">
             <a href="/online-coaching" class="btn-ghost">Find out more</a>
-            <!-- <a href="https://tidycal.com/cameronhearne/30-minute-meeting" target="_blank" rel="noopener" class="btn-filled">Book a Call</a> -->
-            <span class="coming-soon-badge">Coming Soon</span>
+            <a href="https://tidycal.com/cameronhearne/30-minute-meeting" target="_blank" rel="noopener" class="btn-filled">Book a Call</a>
           </div>
         </div>
       </div>
       <div class="coaching-card">
+        <span class="coming-soon-badge">Coming Soon</span>
         <div class="coaching-card-media">
           <img src="/images/guarantee.jpg" alt="Guaranteed coaching client training">
         </div>
@@ -291,7 +291,6 @@
           <div class="coaching-card-ctas">
             <a href="/guaranteed-coaching" class="btn-ghost">Find out more</a>
             <!-- <a href="https://tidycal.com/cameronhearne/30-minute-meeting" target="_blank" rel="noopener" class="btn-filled">Book a Call</a> -->
-            <span class="coming-soon-badge">Coming Soon</span>
           </div>
         </div>
       </div>
@@ -322,9 +321,7 @@
       </div>
     </div>
     <div class="steps-cta reveal">
-      <!-- <a href="https://tidycal.com/cameronhearne/30-minute-meeting" target="_blank" rel="noopener" class="btn-filled">Book a Call</a> -->
-      <span class="coming-soon-badge">Coming Soon</span>
-      <a href="mailto:cameron@plus4performance.com?subject=Plus%204%20Performance%20coaching%20enquiry&amp;body=Hi%20Plus%204%20Performance%20team%2C%0D%0A%0D%0AI'm%20interested%20in%20your%20online%20coaching%20and%20would%20like%20more%20information.%0D%0A%0D%0AName%3A%0D%0AAge%3A%0D%0ACurrent%20goal%20(cutting%20%2F%20building%20%2F%20performance)%3A%0D%0AHow%20long%20I've%20been%20training%3A%0D%0AAnything%20else%20you%20should%20know%3A%0D%0A%0D%0AThanks" class="btn-filled">Contact Us for More Info</a>
+      <a href="https://tidycal.com/cameronhearne/30-minute-meeting" target="_blank" rel="noopener" class="btn-filled">Book a Call</a>
     </div>
   </div>
 </section>
