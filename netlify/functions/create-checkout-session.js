@@ -14,9 +14,13 @@
 const crypto = require('crypto');
 const Stripe = require('stripe');
 const PRODUCTS = require('../../js/products.js');
+const { checkAndRecordRateLimit } = require('./_shared/rate-limit');
 
 const MAX_QTY = 10;
-const MAX_LINES = 50;
+const MAX_LINES = 20;
+const MAX_TOTAL_QTY = 20;
+const MAX_BODY_BYTES = 20 * 1024; // basket payloads are small; this is generous
+const RATE_LIMIT = { storeName: 'checkout-rate-limit', maxAttempts: 10, windowMs: 10 * 60 * 1000 };
 
 // Delivery rules — mirrored (not shared) in js/basket.js for the client-side
 // display hint, which is cosmetic only. This copy is the one that's charged.
@@ -60,9 +64,19 @@ exports.handler = async (event) => {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
+  const rateLimit = await checkAndRecordRateLimit(event, RATE_LIMIT);
+  if (rateLimit.limited) {
+    return json(429, { error: 'too_many_requests', retryAfterSeconds: rateLimit.retryAfterSeconds });
+  }
+
   if (!process.env.STRIPE_SECRET_KEY) {
     console.error('create-checkout-session: STRIPE_SECRET_KEY is not set');
     return json(500, { error: 'server_misconfigured' });
+  }
+
+  const bodyBytes = Buffer.byteLength(event.body || '', event.isBase64Encoded ? 'base64' : 'utf8');
+  if (bodyBytes > MAX_BODY_BYTES) {
+    return json(413, { error: 'payload_too_large' });
   }
 
   let payload;
@@ -138,6 +152,11 @@ exports.handler = async (event) => {
         }
       }
     });
+  }
+
+  const totalQty = deliveryItems.reduce((sum, it) => sum + it.qty, 0);
+  if (totalQty > MAX_TOTAL_QTY) {
+    return json(400, { error: 'too_many_items' });
   }
 
   const stripe = Stripe(process.env.STRIPE_SECRET_KEY);

@@ -3,9 +3,41 @@
      a) an order alert to every ORDER_ALERT_EMAILS address
      b) a branded confirmation to the customer
    via Resend, using the session id as the base of the idempotency key
-   (per email type) so a retried webhook delivery never double-sends. */
+   (per email type) — Resend itself won't double-send for a given key.
+   On top of that, the Stripe event id is recorded in Blobs once processing
+   succeeds, so a Stripe retry of an already-completed delivery short-
+   circuits before even calling Resend, rather than relying solely on
+   Resend's own dedup. */
 const Stripe = require('stripe');
 const { Resend } = require('resend');
+
+const PROCESSED_EVENTS_STORE = 'webhook-processed-events';
+
+async function getProcessedEventsStore(event) {
+  const { connectLambda, getStore } = require('@netlify/blobs');
+  connectLambda(event);
+  return getStore({ name: PROCESSED_EVENTS_STORE });
+}
+
+async function wasAlreadyProcessed(lambdaEvent, stripeEventId) {
+  try {
+    const store = await getProcessedEventsStore(lambdaEvent);
+    const record = await store.get(stripeEventId, { type: 'json' });
+    return !!record;
+  } catch (e) {
+    console.error('stripe-webhook: idempotency check failed, proceeding', e.message);
+    return false;
+  }
+}
+
+async function markProcessed(lambdaEvent, stripeEventId) {
+  try {
+    const store = await getProcessedEventsStore(lambdaEvent);
+    await store.setJSON(stripeEventId, { ts: Date.now() });
+  } catch (e) {
+    console.error('stripe-webhook: marking event processed failed', e.message);
+  }
+}
 
 function formatMoney(n) {
   return `£${Number(n).toFixed(2)}`;
@@ -113,11 +145,15 @@ exports.handler = async (event) => {
     stripeEvent = stripe.webhooks.constructEvent(rawBody, sig, process.env.STRIPE_WEBHOOK_SECRET);
   } catch (err) {
     console.error('stripe-webhook: signature verification failed', err.message);
-    return { statusCode: 400, body: `Webhook Error: ${err.message}` };
+    return { statusCode: 400, body: 'Webhook Error: invalid signature' };
   }
 
   if (stripeEvent.type !== 'checkout.session.completed') {
     return { statusCode: 200, body: 'ignored' };
+  }
+
+  if (await wasAlreadyProcessed(event, stripeEvent.id)) {
+    return { statusCode: 200, body: 'already processed' };
   }
 
   const session = stripeEvent.data.object;
@@ -207,5 +243,6 @@ exports.handler = async (event) => {
     return { statusCode: 500, body: 'customer email failed' };
   }
 
+  await markProcessed(event, stripeEvent.id);
   return { statusCode: 200, body: 'ok' };
 };

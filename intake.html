@@ -216,16 +216,23 @@
             <div class="progress-fill" id="progressFill"></div>
         </div>
         <form id="intakeForm" novalidate>
+            <!-- Honeypot: real users never see or fill this; a bot that blindly
+                 fills every field in the DOM does. Checked in the submit handler
+                 below — never sent anywhere if non-empty. -->
+            <div style="position:absolute;left:-9999px;top:-9999px;" aria-hidden="true">
+                <label for="website">Website</label>
+                <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
+            </div>
             <!-- Section 1 -->
             <div class="section active" id="section1">
                 <h2>SECTION 1 — YOUR DETAILS</h2>
                 <div class="form-group">
                     <label for="firstName">First name</label>
-                    <input type="text" id="firstName" required>
+                    <input type="text" id="firstName" required maxlength="100">
                 </div>
                 <div class="form-group">
                     <label for="email">Email address</label>
-                    <input type="email" id="email" required>
+                    <input type="email" id="email" required maxlength="200">
                 </div>
                 <div class="form-group">
                     <label for="sex">Biological sex</label>
@@ -437,7 +444,7 @@
                 </div>
                 <div class="form-group">
                     <label for="foodsNotEat">Foods you will not eat</label>
-                    <textarea id="foodsNotEat" placeholder="e.g. mushrooms, shellfish, nuts"></textarea>
+                    <textarea id="foodsNotEat" placeholder="e.g. mushrooms, shellfish, nuts" maxlength="500"></textarea>
                 </div>
                 <div class="form-group">
                     <label for="supplements">Supplement preference</label>
@@ -463,7 +470,7 @@
                 </div>
                 <div class="form-group" id="injuryDetails" style="display: none;">
                     <label for="injuryDescription">Please describe your injury, which area is affected, and how it currently limits your training</label>
-                    <textarea id="injuryDescription"></textarea>
+                    <textarea id="injuryDescription" maxlength="500"></textarea>
                 </div>
                 <div class="form-group">
                     <label>Please tick if any of the following apply — your safety is our priority</label>
@@ -480,7 +487,7 @@
                 </div>
                 <div class="form-group">
                     <label for="additionalNotes">Additional notes</label>
-                    <textarea id="additionalNotes" placeholder="Anything else we should know when building your plan"></textarea>
+                    <textarea id="additionalNotes" placeholder="Anything else we should know when building your plan" maxlength="500"></textarea>
                 </div>
                 <div class="form-group">
                     <label for="startDate">Plan start date</label>
@@ -673,6 +680,15 @@ if (section === 3) {
 
         document.getElementById('intakeForm').addEventListener('submit', async function(e) {
             e.preventDefault();
+
+            // Honeypot: a bot that filled the hidden "website" field gets a
+            // fake success with no request ever sent, so it isn't tipped off.
+            const honeypot = document.getElementById('website');
+            if (honeypot && honeypot.value) {
+                document.getElementById('intakeForm').style.display = 'none';
+                document.getElementById('confirmation').style.display = 'block';
+                return;
+            }
 
             const submitBtn = document.querySelector('#summary button[type="submit"]');
             const originalText = submitBtn ? submitBtn.textContent : 'GENERATE MY PLAN';
