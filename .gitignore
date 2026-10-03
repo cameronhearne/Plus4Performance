@@ -26,3 +26,6 @@ client/.env.local
 
 # Local Netlify folder
 .netlify
+
+# Local Claude Code settings/state
+.claude/
