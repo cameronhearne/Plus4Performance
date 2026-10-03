@@ -141,25 +141,37 @@ async function comparePassword(password, hash) {
    not as an orders store. If Blobs is unavailable for any reason (e.g. a
    transient platform issue), we fail OPEN on the rate limiter only (log and
    allow the attempt) rather than locking admins out of their own dashboard
-   because of an unrelated outage. Password/session checks are unaffected. */
+   because of an unrelated outage. Password/session checks are unaffected.
+
+   One blob per failed attempt (key: "<username>/<timestamp>-<random>"),
+   counted over a trailing 15-minute sliding window, rather than a single
+   shared counter key that's read, incremented, and overwritten. Blobs only
+   offers strong read-after-write consistency with environment context this
+   classic (non-v2) function doesn't have available — under plain eventual
+   consistency, a read-modify-write on one key can read stale data and lose
+   a concurrent attempt's increment. Writing a new key per attempt has
+   nothing to overwrite, so eventual consistency only risks a few seconds'
+   delay before a burst of attempts is seen, never a lost count. */
 async function getAttemptsStore(event) {
   const { connectLambda, getStore } = require('@netlify/blobs');
   // Classic exports.handler functions (this one included) don't get Blobs'
   // context auto-injected the way v2 functions do — connectLambda wires it
   // up from the raw Lambda event on every call, before getStore() runs.
   connectLambda(event);
-  // Strong consistency: this counter is read-then-written on every request,
-  // so an eventually-consistent read (the default) can miss the previous
-  // attempt's write and never reach the lockout threshold.
-  return getStore({ name: 'admin-login-attempts', consistency: 'strong' });
+  return getStore({ name: 'admin-login-attempts' });
 }
 
 async function checkLockout(event, username) {
   try {
     const store = await getAttemptsStore(event);
-    const record = await store.get(username, { type: 'json' });
-    if (record && record.lockUntil && record.lockUntil > Date.now()) {
-      return { locked: true, retryAfterSeconds: Math.ceil((record.lockUntil - Date.now()) / 1000) };
+    const { blobs } = await store.list({ prefix: `${username}/` });
+    const cutoff = Date.now() - LOCKOUT_MS;
+    const recent = blobs
+      .map((b) => Number(b.key.slice(username.length + 1).split('-')[0]))
+      .filter((ts) => Number.isFinite(ts) && ts > cutoff)
+      .sort((a, b) => a - b);
+    if (recent.length >= MAX_FAILED_ATTEMPTS) {
+      return { locked: true, retryAfterSeconds: Math.ceil((recent[0] + LOCKOUT_MS - Date.now()) / 1000) };
     }
     return { locked: false };
   } catch (e) {
@@ -171,15 +183,8 @@ async function checkLockout(event, username) {
 async function recordFailedAttempt(event, username) {
   try {
     const store = await getAttemptsStore(event);
-    const record = (await store.get(username, { type: 'json' })) || { count: 0 };
-    const now = Date.now();
-    // A lockout that has already expired starts a fresh count.
-    const count = record.lockUntil && record.lockUntil <= now ? 1 : record.count + 1;
-    const next = { count };
-    if (count >= MAX_FAILED_ATTEMPTS) {
-      next.lockUntil = now + LOCKOUT_MS;
-    }
-    await store.setJSON(username, next);
+    const key = `${username}/${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+    await store.setJSON(key, { ts: Date.now() });
   } catch (e) {
     console.error('admin-auth: recording failed attempt failed', e.message);
   }
@@ -188,7 +193,8 @@ async function recordFailedAttempt(event, username) {
 async function clearAttempts(event, username) {
   try {
     const store = await getAttemptsStore(event);
-    await store.delete(username);
+    const { blobs } = await store.list({ prefix: `${username}/` });
+    await Promise.all(blobs.map((b) => store.delete(b.key)));
   } catch (e) {
     console.error('admin-auth: clearing attempts failed', e.message);
   }
