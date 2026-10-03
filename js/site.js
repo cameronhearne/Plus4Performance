@@ -94,6 +94,7 @@
       '</div>' +
       '<div class="footer-bottom">' +
         '<span>&copy; 2026 Plus 4 Performance. All rights reserved.</span>' +
+        '<span class="footer-legal-line">Plus 4 Performance is a trading name of Cameron Hearne and Ethan Shaw, a partnership. 77 Smeath Road, Underwood, NG16 5GU. <a href="mailto:cameron@plus4performance.com">cameron@plus4performance.com</a></span>' +
       '</div>' +
     '</div>';
 

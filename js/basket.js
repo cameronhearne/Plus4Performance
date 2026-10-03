@@ -233,7 +233,7 @@
         checkoutHTML +
         '<p class="basket-fineprint">UK delivery: £2.99 for a single tee, £3.99 for everything else. Free over £50.<br>' +
           'Made to order. Allow 2 to 4 days for production. Once shipped, around 60% of orders arrive within a week and 95% within 13 days.<br>' +
-          'By checking out you agree to our <a href="/terms-of-sale">Terms of Sale</a>.</p>' +
+          'By checking out you agree to our <a href="/terms-of-sale">Terms of Sale</a>. See our <a href="/shipping-returns">Shipping &amp; Returns</a> and <a href="/privacy.html">Privacy Policy</a>.</p>' +
       '</div>';
 
     drawerEl.querySelector('.basket-close').addEventListener('click', close);

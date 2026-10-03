@@ -312,6 +312,8 @@ footer.site-footer{
   color:rgba(255,255,255,0.4);
   flex-wrap:wrap;gap:12px;
 }
+.footer-legal-line{flex-basis:100%;font-size:12px;color:rgba(255,255,255,0.35);}
+.footer-legal-line a{color:rgba(255,255,255,0.45);}
 
 /* extra ambient glow, used on pages with a dark hero (guaranteed-coaching) */
 .ambient-glow{
