@@ -121,6 +121,9 @@ function buildCustomerHTML({ siteUrl, orderRef, items, deliveryAmount, total, ad
         <p style="color:#9a9aa2;font-size:13px;line-height:1.7;margin:24px 0 0;">
           Questions about your order or need to return something? Email us at <a href="mailto:cameron@plus4performance.com" style="color:#9a9aa2;text-decoration:underline;">cameron@plus4performance.com</a>
         </p>
+        <p style="color:#9a9aa2;font-size:13px;line-height:1.7;margin:12px 0 0;">
+          Changed your mind? You have 14 days from delivery to return it — see our <a href="${siteUrl}/shipping-returns" style="color:#9a9aa2;text-decoration:underline;">Returns Policy</a>.
+        </p>
       </div>
     </div>
   </div>`;
