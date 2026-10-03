@@ -120,6 +120,23 @@ section{padding:var(--gap) 0;}
 .btn-ghost:hover{border-color:#fff;}
 .btn-sm{padding:11px 22px;font-size:14px;min-height:44px;}
 
+/* Coaching bookings paused — see js/site.js CONTACT_MAILTO and the commented
+   TIDYCAL links throughout index.html / online-coaching.html /
+   guaranteed-coaching.html for how to re-enable booking. */
+.coming-soon-badge{
+  display:inline-flex;
+  align-items:center;
+  background:var(--ember);
+  color:#fff;
+  border-radius:var(--radius-pill);
+  padding:6px 16px;
+  font-size:12px;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:0.04em;
+  white-space:nowrap;
+}
+
 /* SITE HEADER */
 .site-header{
   position:relative;

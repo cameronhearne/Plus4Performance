@@ -87,7 +87,7 @@ function buildCustomerHTML({ siteUrl, orderRef, items, deliveryAmount, total, ad
           Made to order. Allow 2 to 4 days for production. Once shipped, around 60% of orders arrive within a week and 95% within 13 days.
         </p>
         <p style="color:#9a9aa2;font-size:13px;line-height:1.7;margin:24px 0 0;">
-          Reply to this email with any questions.
+          Questions about your order or need to return something? Email us at <a href="mailto:cameron@plus4performance.com" style="color:#9a9aa2;text-decoration:underline;">cameron@plus4performance.com</a>
         </p>
       </div>
     </div>
