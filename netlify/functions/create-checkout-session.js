@@ -148,7 +148,10 @@ exports.handler = async (event) => {
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       line_items: lineItems,
-      metadata: { order_ref: orderRef },
+      // 'source: shop' lets the admin orders dashboard (netlify/functions/
+      // shop-orders-list.js) tell these sessions apart from coaching
+      // subscriptions/payments in the same Stripe account.
+      metadata: { order_ref: orderRef, source: 'shop' },
       payment_intent_data: {
         description: `Order #${orderRef}`,
         metadata: { order_ref: orderRef }

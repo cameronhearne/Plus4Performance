@@ -22,6 +22,7 @@
     cp ../terms-of-sale.html dist/terms-of-sale.html &&
     cp ../size-guide.html dist/size-guide.html &&
     cp ../order-confirmed.html dist/order-confirmed.html &&
+    cp ../shop-orders.html dist/shop-orders.html &&
     cp ../sitemap.xml dist/sitemap.xml &&
     cp ../robots.txt dist/robots.txt &&
     cp -r ../css dist/css &&
@@ -102,6 +103,11 @@
 [[redirects]]
   from = "/order-confirmed"
   to = "/order-confirmed.html"
+  status = 200
+
+[[redirects]]
+  from = "/shop-orders"
+  to = "/shop-orders.html"
   status = 200
 
 [[redirects]]

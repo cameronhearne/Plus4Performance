@@ -1,4 +1,6 @@
 User-agent: *
 Allow: /
+Disallow: /shop-orders
+Disallow: /shop-orders.html
 
 Sitemap: https://plus4performance.com/sitemap.xml

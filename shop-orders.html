@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shop Orders | Plus 4 Performance</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/images/logo/favicon.ico" sizes="any">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0a0a0c;
+    --white:#ffffff;
+    --ash:#8e8e95;
+    --pebble:rgba(255,255,255,0.14);
+    --midnight:#0f0f14;
+    --charcoal:#0d0d10;
+    --ember:#1e3a6b;
+    --ember-deep:#152a4d;
+    --ember-bright:#5b8def;
+    --card-bg:#18181f;
+    --radius:14px;
+    --radius-pill:1000px;
+    --good:#2f9e5b;
+    --warn:#d98c2b;
+    --bad:#c0392b;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--ink);
+    color:var(--white);
+    font-family:'Inter',Arial,Helvetica,sans-serif;
+    min-height:100vh;
+  }
+  a{color:var(--ember-bright);}
+  button, input, select, textarea{font-family:inherit;}
+  .hidden{display:none !important;}
+
+  /* ── Login ───────────────────────────────────────────────── */
+  .login-wrap{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+  }
+  .login-card{
+    width:100%;
+    max-width:380px;
+    background:var(--card-bg);
+    border:1px solid var(--pebble);
+    border-radius:var(--radius);
+    padding:32px;
+  }
+  .login-card h1{font-size:20px;margin:0 0 4px;}
+  .login-card p.sub{color:var(--ash);font-size:13px;margin:0 0 24px;}
+  .field{margin-bottom:16px;}
+  .field label{display:block;font-size:13px;color:var(--ash);margin-bottom:6px;}
+  .field input, .field select, .field textarea{
+    width:100%;
+    background:var(--midnight);
+    border:1px solid var(--pebble);
+    border-radius:10px;
+    color:var(--white);
+    padding:12px 14px;
+    font-size:15px;
+    min-height:44px;
+  }
+  .field textarea{min-height:80px;resize:vertical;}
+  .field input:focus, .field select:focus, .field textarea:focus{
+    outline:none;
+    border-color:var(--ember-bright);
+  }
+  .btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    border:1px solid var(--pebble);
+    background:transparent;
+    color:var(--white);
+    border-radius:var(--radius-pill);
+    padding:12px 22px;
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    min-height:44px;
+  }
+  .btn:hover{border-color:rgba(255,255,255,0.4);}
+  .btn-primary{background:var(--ember);border-color:var(--ember);}
+  .btn-primary:hover{background:var(--ember-deep);border-color:var(--ember-deep);}
+  .btn-full{width:100%;}
+  .btn:disabled{opacity:0.5;cursor:not-allowed;}
+  .error-msg{
+    background:rgba(192,57,43,0.15);
+    border:1px solid rgba(192,57,43,0.4);
+    color:#ff9b8c;
+    border-radius:10px;
+    padding:10px 14px;
+    font-size:13px;
+    margin-bottom:16px;
+  }
+
+  /* ── Dashboard shell ─────────────────────────────────────── */
+  .dash-wrap{max-width:1200px;margin:0 auto;padding:24px 20px 80px;}
+  .dash-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    margin-bottom:24px;
+    flex-wrap:wrap;
+  }
+  .dash-header h1{font-size:20px;margin:0;}
+  .dash-header .who{color:var(--ash);font-size:13px;}
+
+  .summary-bar{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:12px;
+    margin-bottom:24px;
+  }
+  .stat-tile{
+    background:var(--card-bg);
+    border:1px solid var(--pebble);
+    border-radius:var(--radius);
+    padding:16px 18px;
+  }
+  .stat-tile .label{color:var(--ash);font-size:12px;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;}
+  .stat-tile .value{font-size:22px;font-weight:800;}
+  .stat-tile.flag .value{color:#ff9b8c;}
+
+  .filters-bar{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+    margin-bottom:20px;
+  }
+  .filters-bar input, .filters-bar select{
+    background:var(--midnight);
+    border:1px solid var(--pebble);
+    border-radius:10px;
+    color:var(--white);
+    padding:10px 14px;
+    font-size:14px;
+    min-height:40px;
+  }
+  .filters-bar input[type="text"]{flex:1;min-width:180px;}
+  .filters-bar .date-field{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ash);}
+
+  .orders-list{display:flex;flex-direction:column;gap:8px;}
+  .order-row{
+    display:grid;
+    grid-template-columns:100px 140px 1.4fr 1.6fr 90px 110px 1fr;
+    gap:14px;
+    align-items:center;
+    background:var(--card-bg);
+    border:1px solid var(--pebble);
+    border-radius:var(--radius);
+    padding:14px 16px;
+    cursor:pointer;
+    font-size:13px;
+  }
+  .order-row:hover{border-color:rgba(255,255,255,0.3);}
+  .order-row.status-new{border-color:var(--ember-bright);}
+  .order-row.flag-stale{border-color:var(--bad);background:rgba(192,57,43,0.08);}
+  .order-row .muted{color:var(--ash);font-size:12px;}
+  .order-row .ref{font-weight:700;}
+  .badge{
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    border-radius:var(--radius-pill);
+    padding:3px 10px;
+    font-size:11px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.03em;
+    white-space:nowrap;
+  }
+  .badge-paid{background:rgba(47,158,91,0.18);color:#5fd889;}
+  .badge-refunded{background:rgba(192,57,43,0.18);color:#ff9b8c;}
+  .badge-partially_refunded{background:rgba(217,140,43,0.18);color:#f3b35e;}
+  .badge-new{background:rgba(91,141,239,0.2);color:#9cbdfb;}
+  .badge-placed{background:rgba(217,140,43,0.18);color:#f3b35e;}
+  .badge-shipped{background:rgba(91,141,239,0.2);color:#9cbdfb;}
+  .badge-delivered{background:rgba(47,158,91,0.18);color:#5fd889;}
+  .badge-cancelled{background:rgba(142,142,149,0.2);color:#c8c8cf;}
+  .flag-pill{
+    display:inline-flex;align-items:center;gap:4px;
+    background:var(--bad);color:#fff;border-radius:var(--radius-pill);
+    padding:3px 9px;font-size:11px;font-weight:700;margin-left:6px;
+  }
+  .empty-state{color:var(--ash);text-align:center;padding:60px 0;font-size:14px;}
+
+  /* ── Modal ───────────────────────────────────────────────── */
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(0,0,0,0.6);
+    display:flex;align-items:flex-start;justify-content:center;
+    padding:24px;overflow-y:auto;z-index:50;
+  }
+  .modal-card{
+    width:100%;max-width:560px;background:var(--card-bg);
+    border:1px solid var(--pebble);border-radius:var(--radius);
+    padding:28px;margin-top:20px;
+  }
+  .modal-card h2{font-size:18px;margin:0 0 2px;}
+  .modal-card .modal-sub{color:var(--ash);font-size:13px;margin:0 0 20px;}
+  .modal-close{position:absolute;top:16px;right:16px;}
+  .modal-card{position:relative;}
+  .section-title{font-size:12px;text-transform:uppercase;letter-spacing:0.04em;color:var(--ash);margin:20px 0 8px;}
+  .section-title:first-of-type{margin-top:0;}
+  .addr-block{font-size:14px;line-height:1.6;}
+  .items-table{width:100%;font-size:13px;border-collapse:collapse;}
+  .items-table td{padding:6px 0;border-bottom:1px solid var(--pebble);}
+  .items-table td.num{text-align:right;white-space:nowrap;}
+  .totals-row{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;color:var(--ash);}
+  .totals-row.grand{color:var(--white);font-weight:700;font-size:15px;}
+  .checkbox-field{display:flex;align-items:center;gap:8px;margin-bottom:16px;}
+  .checkbox-field input{width:18px;height:18px;}
+  .save-row{display:flex;gap:10px;align-items:center;margin-top:16px;}
+  .save-feedback{font-size:13px;color:#5fd889;}
+  .meta-note{font-size:12px;color:var(--ash);margin-top:10px;}
+
+  @media (max-width:900px){
+    .summary-bar{grid-template-columns:repeat(2,1fr);}
+  }
+  @media (max-width:760px){
+    .order-row{
+      grid-template-columns:1fr;
+      gap:4px;
+    }
+    .order-row .col::before{
+      content:attr(data-label);
+      display:block;
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:0.03em;
+      color:var(--ash);
+      margin-bottom:2px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div id="loginView" class="login-wrap">
+  <form id="loginForm" class="login-card">
+    <h1>Shop Orders</h1>
+    <p class="sub">Private dashboard. Sign in to continue.</p>
+    <div id="loginError" class="error-msg hidden"></div>
+    <div class="field">
+      <label for="loginUsername">Username</label>
+      <input id="loginUsername" name="username" type="text" autocomplete="username" required>
+    </div>
+    <div class="field">
+      <label for="loginPassword">Password</label>
+      <input id="loginPassword" name="password" type="password" autocomplete="current-password" required>
+    </div>
+    <button type="submit" id="loginSubmit" class="btn btn-primary btn-full">Sign in</button>
+  </form>
+</div>
+
+<div id="dashView" class="dash-wrap hidden">
+  <div class="dash-header">
+    <h1>Shop Orders</h1>
+    <div style="display:flex;align-items:center;gap:14px;">
+      <span class="who">Signed in as <strong id="whoUsername"></strong></span>
+      <button id="logoutBtn" class="btn">Log out</button>
+    </div>
+  </div>
+
+  <div class="summary-bar">
+    <div class="stat-tile"><div class="label">Total orders</div><div class="value" id="statTotalOrders">—</div></div>
+    <div class="stat-tile"><div class="label">Total revenue</div><div class="value" id="statTotalRevenue">—</div></div>
+    <div class="stat-tile flag"><div class="label">Still "New"</div><div class="value" id="statNewOrders">—</div></div>
+    <div class="stat-tile"><div class="label">Revenue this month</div><div class="value" id="statMonthRevenue">—</div></div>
+  </div>
+
+  <div class="filters-bar">
+    <input type="text" id="filterSearch" placeholder="Search name, email or order #">
+    <select id="filterStatus">
+      <option value="all">All statuses</option>
+      <option value="New">New</option>
+      <option value="Placed on Tapstitch">Placed on Tapstitch</option>
+      <option value="Shipped">Shipped</option>
+      <option value="Delivered">Delivered</option>
+      <option value="Cancelled">Cancelled</option>
+    </select>
+    <span class="date-field">From <input type="date" id="filterFrom"></span>
+    <span class="date-field">To <input type="date" id="filterTo"></span>
+    <button id="exportCsvBtn" class="btn">Export CSV</button>
+    <button id="refreshBtn" class="btn">Refresh</button>
+  </div>
+
+  <div id="ordersList" class="orders-list"></div>
+  <div id="emptyState" class="empty-state hidden">No orders match these filters.</div>
+</div>
+
+<div id="detailModal" class="modal-overlay hidden">
+  <div class="modal-card">
+    <button class="btn modal-close" id="modalCloseBtn">Close</button>
+    <h2 id="modalOrderRef"></h2>
+    <p class="modal-sub" id="modalOrderDate"></p>
+
+    <div class="section-title">Customer</div>
+    <div id="modalCustomer" class="addr-block"></div>
+
+    <div class="section-title">Shipping address</div>
+    <div id="modalAddress" class="addr-block"></div>
+    <button class="btn" id="copyAddressBtn" style="margin-top:10px;">Copy address</button>
+
+    <div class="section-title">Items</div>
+    <table class="items-table" id="modalItems"></table>
+    <div style="margin-top:10px;">
+      <div class="totals-row"><span>Subtotal</span><span id="modalSubtotal"></span></div>
+      <div class="totals-row"><span>Delivery</span><span id="modalDelivery"></span></div>
+      <div class="totals-row grand"><span>Total</span><span id="modalTotal"></span></div>
+      <div class="totals-row"><span>Payment status</span><span id="modalPaymentStatus"></span></div>
+    </div>
+
+    <div class="section-title">Fulfilment</div>
+    <div class="field">
+      <label for="modalStatus">Status</label>
+      <select id="modalStatus">
+        <option value="New">New</option>
+        <option value="Placed on Tapstitch">Placed on Tapstitch</option>
+        <option value="Shipped">Shipped</option>
+        <option value="Delivered">Delivered</option>
+        <option value="Cancelled">Cancelled</option>
+      </select>
+    </div>
+    <div class="checkbox-field">
+      <input type="checkbox" id="modalPlacedTick">
+      <label for="modalPlacedTick">Placed on Tapstitch</label>
+    </div>
+    <div class="field">
+      <label for="modalTapstitchRef">Tapstitch order ref</label>
+      <input type="text" id="modalTapstitchRef" maxlength="200">
+    </div>
+    <div class="field">
+      <label for="modalTracking">Tracking number</label>
+      <input type="text" id="modalTracking" maxlength="200">
+    </div>
+    <div class="field">
+      <label for="modalNotes">Admin notes</label>
+      <textarea id="modalNotes" maxlength="500"></textarea>
+    </div>
+    <div class="save-row">
+      <button class="btn btn-primary" id="modalSaveBtn">Save</button>
+      <span class="save-feedback hidden" id="modalSaveFeedback">Saved</span>
+    </div>
+    <div class="meta-note" id="modalMeta"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  var FN = '/.netlify/functions/';
+  var allOrders = [];
+  var ordersById = {};
+  var currentFiltered = [];
+  var activeOrder = null;
+
+  function money(n){ return '£' + Number(n || 0).toFixed(2); }
+
+  function fmtDateTime(iso){
+    var d = new Date(iso);
+    return d.toLocaleString('en-GB', { timeZone: 'Europe/London', day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+  }
+
+  function hoursSince(iso){
+    return (Date.now() - new Date(iso).getTime()) / 36e5;
+  }
+
+  function statusBadgeClass(status){
+    var map = {
+      'New':'badge-new',
+      'Placed on Tapstitch':'badge-placed',
+      'Shipped':'badge-shipped',
+      'Delivered':'badge-delivered',
+      'Cancelled':'badge-cancelled'
+    };
+    return map[status] || 'badge-new';
+  }
+
+  function paymentBadgeClass(status){
+    return 'badge-' + status;
+  }
+
+  function paymentLabel(status){
+    var map = { paid:'Paid', refunded:'Refunded', partially_refunded:'Partially refunded' };
+    return map[status] || status;
+  }
+
+  function showView(view){
+    document.getElementById('loginView').classList.toggle('hidden', view !== 'login');
+    document.getElementById('dashView').classList.toggle('hidden', view !== 'dash');
+  }
+
+  // ── Session / login ─────────────────────────────────────────
+  function checkSession(){
+    fetch(FN + 'shop-orders-session', { credentials: 'same-origin' })
+      .then(function(res){
+        if (res.status === 200) return res.json();
+        throw new Error('unauthorized');
+      })
+      .then(function(data){
+        document.getElementById('whoUsername').textContent = data.username;
+        showView('dash');
+        loadOrders();
+      })
+      .catch(function(){ showView('login'); });
+  }
+
+  document.getElementById('loginForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    var errEl = document.getElementById('loginError');
+    errEl.classList.add('hidden');
+    var submitBtn = document.getElementById('loginSubmit');
+    submitBtn.disabled = true;
+
+    var username = document.getElementById('loginUsername').value.trim();
+    var password = document.getElementById('loginPassword').value;
+
+    fetch(FN + 'shop-orders-login', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: username, password: password })
+    })
+      .then(function(res){ return res.json().then(function(body){ return { status: res.status, body: body }; }); })
+      .then(function(r){
+        submitBtn.disabled = false;
+        if (r.status === 200) {
+          document.getElementById('loginPassword').value = '';
+          document.getElementById('whoUsername').textContent = r.body.username;
+          showView('dash');
+          loadOrders();
+          return;
+        }
+        if (r.status === 429) {
+          var mins = Math.ceil((r.body.retryAfterSeconds || 0) / 60);
+          errEl.textContent = 'Too many failed attempts. Try again in about ' + mins + ' minute' + (mins === 1 ? '' : 's') + '.';
+        } else {
+          errEl.textContent = 'Incorrect username or password.';
+        }
+        errEl.classList.remove('hidden');
+      })
+      .catch(function(){
+        submitBtn.disabled = false;
+        errEl.textContent = 'Something went wrong. Try again.';
+        errEl.classList.remove('hidden');
+      });
+  });
+
+  document.getElementById('logoutBtn').addEventListener('click', function(){
+    fetch(FN + 'shop-orders-logout', { method: 'POST', credentials: 'same-origin' })
+      .then(function(){ showView('login'); });
+  });
+
+  // ── Loading orders ──────────────────────────────────────────
+  function loadOrders(){
+    document.getElementById('ordersList').innerHTML = '<div class="empty-state">Loading…</div>';
+    fetch(FN + 'shop-orders-list', { credentials: 'same-origin' })
+      .then(function(res){
+        if (res.status === 401) { showView('login'); throw new Error('unauthorized'); }
+        return res.json();
+      })
+      .then(function(data){
+        allOrders = data.orders || [];
+        ordersById = {};
+        allOrders.forEach(function(o){ ordersById[o.paymentIntentId] = o; });
+        if (data.diagnostics) console.log('shop-orders diagnostics:', data.diagnostics);
+        renderSummary();
+        applyFiltersAndRender();
+      })
+      .catch(function(err){
+        if (err.message !== 'unauthorized') {
+          document.getElementById('ordersList').innerHTML = '<div class="empty-state">Could not load orders.</div>';
+        }
+      });
+  }
+
+  function renderSummary(){
+    var totalOrders = allOrders.length;
+    var totalRevenue = allOrders.reduce(function(sum, o){ return sum + o.total; }, 0);
+    var newCount = allOrders.filter(function(o){ return o.fulfilmentStatus === 'New'; }).length;
+    var now = new Date();
+    var monthRevenue = allOrders.reduce(function(sum, o){
+      var d = new Date(o.createdAt);
+      if (d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()) return sum + o.total;
+      return sum;
+    }, 0);
+
+    document.getElementById('statTotalOrders').textContent = totalOrders;
+    document.getElementById('statTotalRevenue').textContent = money(totalRevenue);
+    document.getElementById('statNewOrders').textContent = newCount;
+    document.getElementById('statMonthRevenue').textContent = money(monthRevenue);
+  }
+
+  // ── Filters ──────────────────────────────────────────────────
+  function applyFiltersAndRender(){
+    var search = document.getElementById('filterSearch').value.trim().toLowerCase();
+    var status = document.getElementById('filterStatus').value;
+    var from = document.getElementById('filterFrom').value;
+    var to = document.getElementById('filterTo').value;
+
+    currentFiltered = allOrders.filter(function(o){
+      if (status !== 'all' && o.fulfilmentStatus !== status) return false;
+      if (search) {
+        var hay = (o.customerName + ' ' + o.customerEmail + ' ' + o.orderRef).toLowerCase();
+        if (hay.indexOf(search) === -1) return false;
+      }
+      var orderDate = o.createdAt.slice(0, 10);
+      if (from && orderDate < from) return false;
+      if (to && orderDate > to) return false;
+      return true;
+    });
+
+    renderOrders(currentFiltered);
+  }
+
+  ['filterSearch', 'filterStatus', 'filterFrom', 'filterTo'].forEach(function(id){
+    document.getElementById(id).addEventListener('input', applyFiltersAndRender);
+    document.getElementById(id).addEventListener('change', applyFiltersAndRender);
+  });
+  document.getElementById('refreshBtn').addEventListener('click', loadOrders);
+
+  function itemsSummary(items){
+    return items.map(function(it){
+      return it.qty + 'x ' + it.name + ' (' + it.colour + ' / ' + it.size + ')';
+    }).join(', ');
+  }
+
+  function renderOrders(orders){
+    var list = document.getElementById('ordersList');
+    var empty = document.getElementById('emptyState');
+    list.innerHTML = '';
+
+    if (!orders.length) {
+      empty.classList.remove('hidden');
+      return;
+    }
+    empty.classList.add('hidden');
+
+    orders.forEach(function(o){
+      var row = document.createElement('div');
+      var isNew = o.fulfilmentStatus === 'New';
+      var isStale = isNew && hoursSince(o.createdAt) > 48;
+      row.className = 'order-row' + (isNew ? ' status-new' : '') + (isStale ? ' flag-stale' : '');
+      row.setAttribute('data-id', o.paymentIntentId);
+
+      row.innerHTML =
+        '<div class="col ref" data-label="Order">#' + escapeHtml(o.orderRef) + '</div>' +
+        '<div class="col" data-label="Date">' + fmtDateTime(o.createdAt) + '</div>' +
+        '<div class="col" data-label="Customer">' + escapeHtml(o.customerName) + '<br><span class="muted">' + escapeHtml(o.customerEmail) + '</span></div>' +
+        '<div class="col" data-label="Items">' + escapeHtml(itemsSummary(o.items)) + '</div>' +
+        '<div class="col" data-label="Total">' + money(o.total) + '</div>' +
+        '<div class="col" data-label="Payment"><span class="badge ' + paymentBadgeClass(o.paymentStatus) + '">' + paymentLabel(o.paymentStatus) + '</span></div>' +
+        '<div class="col" data-label="Fulfilment"><span class="badge ' + statusBadgeClass(o.fulfilmentStatus) + '">' + escapeHtml(o.fulfilmentStatus) + '</span>' +
+          (isStale ? '<span class="flag-pill">48h+</span>' : '') + '</div>';
+
+      row.addEventListener('click', function(){ openDetail(o); });
+      list.appendChild(row);
+    });
+  }
+
+  function escapeHtml(s){
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+    });
+  }
+
+  // ── Detail modal ─────────────────────────────────────────────
+  function addressText(addr){
+    if (!addr) return '';
+    return [addr.line1, addr.line2, addr.city, addr.state, addr.postalCode, addr.country].filter(Boolean).join(', ');
+  }
+
+  function openDetail(o){
+    activeOrder = o;
+    document.getElementById('modalOrderRef').textContent = 'Order #' + o.orderRef;
+    document.getElementById('modalOrderDate').textContent = fmtDateTime(o.createdAt);
+
+    document.getElementById('modalCustomer').innerHTML =
+      escapeHtml(o.customerName) + '<br>' + escapeHtml(o.customerEmail) + (o.customerPhone ? '<br>' + escapeHtml(o.customerPhone) : '');
+
+    document.getElementById('modalAddress').textContent = addressText(o.shippingAddress) || '—';
+
+    var itemsHtml = o.items.map(function(it){
+      return '<tr><td>' + escapeHtml(it.qty + 'x ' + it.name + ' — ' + it.colour + ' / ' + it.size) + '</td><td class="num">' + money(it.price * it.qty) + '</td></tr>';
+    }).join('');
+    document.getElementById('modalItems').innerHTML = itemsHtml;
+
+    document.getElementById('modalSubtotal').textContent = money(o.subtotal);
+    document.getElementById('modalDelivery').textContent = o.delivery === 0 ? 'Free' : money(o.delivery);
+    document.getElementById('modalTotal').textContent = money(o.total);
+    document.getElementById('modalPaymentStatus').innerHTML = '<span class="badge ' + paymentBadgeClass(o.paymentStatus) + '">' + paymentLabel(o.paymentStatus) + '</span>';
+
+    document.getElementById('modalStatus').value = o.fulfilmentStatus;
+    document.getElementById('modalPlacedTick').checked = ['Placed on Tapstitch', 'Shipped', 'Delivered'].indexOf(o.fulfilmentStatus) !== -1;
+    document.getElementById('modalTapstitchRef').value = o.tapstitchOrderRef || '';
+    document.getElementById('modalTracking').value = o.trackingNumber || '';
+    document.getElementById('modalNotes').value = o.adminNotes || '';
+
+    document.getElementById('modalMeta').textContent = o.updatedBy
+      ? 'Last updated by ' + o.updatedBy + ' on ' + fmtDateTime(o.updatedAt)
+      : 'Not yet edited.';
+
+    document.getElementById('modalSaveFeedback').classList.add('hidden');
+    document.getElementById('detailModal').classList.remove('hidden');
+  }
+
+  document.getElementById('modalCloseBtn').addEventListener('click', function(){
+    document.getElementById('detailModal').classList.add('hidden');
+  });
+  document.getElementById('detailModal').addEventListener('click', function(e){
+    if (e.target === document.getElementById('detailModal')) {
+      document.getElementById('detailModal').classList.add('hidden');
+    }
+  });
+
+  document.getElementById('modalPlacedTick').addEventListener('change', function(){
+    if (this.checked) document.getElementById('modalStatus').value = 'Placed on Tapstitch';
+  });
+
+  document.getElementById('copyAddressBtn').addEventListener('click', function(){
+    var text = activeOrder ? addressText(activeOrder.shippingAddress) : '';
+    navigator.clipboard.writeText(text).then(function(){
+      var btn = document.getElementById('copyAddressBtn');
+      var original = btn.textContent;
+      btn.textContent = 'Copied';
+      setTimeout(function(){ btn.textContent = original; }, 1500);
+    });
+  });
+
+  document.getElementById('modalSaveBtn').addEventListener('click', function(){
+    if (!activeOrder) return;
+    var btn = document.getElementById('modalSaveBtn');
+    btn.disabled = true;
+
+    var payload = {
+      paymentIntentId: activeOrder.paymentIntentId,
+      fulfilmentStatus: document.getElementById('modalStatus').value,
+      tapstitchOrderRef: document.getElementById('modalTapstitchRef').value.trim(),
+      trackingNumber: document.getElementById('modalTracking').value.trim(),
+      adminNotes: document.getElementById('modalNotes').value.trim()
+    };
+
+    fetch(FN + 'shop-orders-update', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+      .then(function(res){
+        if (res.status === 401) { showView('login'); throw new Error('unauthorized'); }
+        if (!res.ok) throw new Error('save_failed');
+        return res.json();
+      })
+      .then(function(updated){
+        btn.disabled = false;
+        Object.assign(activeOrder, {
+          fulfilmentStatus: updated.fulfilmentStatus,
+          tapstitchOrderRef: updated.tapstitchOrderRef,
+          trackingNumber: updated.trackingNumber,
+          adminNotes: updated.adminNotes,
+          updatedBy: updated.updatedBy,
+          updatedAt: updated.updatedAt
+        });
+        document.getElementById('modalMeta').textContent = 'Last updated by ' + updated.updatedBy + ' on ' + fmtDateTime(updated.updatedAt);
+        document.getElementById('modalSaveFeedback').classList.remove('hidden');
+        renderSummary();
+        applyFiltersAndRender();
+      })
+      .catch(function(err){
+        btn.disabled = false;
+        if (err.message !== 'unauthorized') alert('Could not save changes. Try again.');
+      });
+  });
+
+  // ── CSV export ───────────────────────────────────────────────
+  function csvCell(value){
+    var s = String(value == null ? '' : value);
+    // Prefix a leading apostrophe-triggering character with a single quote
+    // so spreadsheet apps (Excel, Sheets) never interpret the cell as a
+    // formula when the export is opened.
+    if (/^[=+\-@]/.test(s)) s = "'" + s;
+    if (/[",\n]/.test(s)) s = '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  }
+
+  document.getElementById('exportCsvBtn').addEventListener('click', function(){
+    var headers = ['Order', 'Date', 'Customer', 'Email', 'Items', 'Subtotal', 'Delivery', 'Total', 'Payment status', 'Fulfilment status', 'Tapstitch ref', 'Tracking number', 'Notes'];
+    var rows = currentFiltered.map(function(o){
+      return [
+        o.orderRef,
+        fmtDateTime(o.createdAt),
+        o.customerName,
+        o.customerEmail,
+        itemsSummary(o.items),
+        o.subtotal.toFixed(2),
+        o.delivery.toFixed(2),
+        o.total.toFixed(2),
+        paymentLabel(o.paymentStatus),
+        o.fulfilmentStatus,
+        o.tapstitchOrderRef,
+        o.trackingNumber,
+        o.adminNotes
+      ].map(csvCell).join(',');
+    });
+    var csv = [headers.map(csvCell).join(',')].concat(rows).join('\r\n');
+    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'shop-orders-' + new Date().toISOString().slice(0, 10) + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  checkSession();
+})();
+</script>
+</body>
+</html>
