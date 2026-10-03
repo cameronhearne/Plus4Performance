@@ -4,8 +4,8 @@
    password anywhere else.
 
    Usage:
-     cd netlify/functions && npm install   # once, so bcryptjs is present
-     node ../../scripts/generate-admin-hash.js
+     npm install                           # once, so bcryptjs is present
+     node scripts/generate-admin-hash.js
      (type the password when prompted — it won't echo to the terminal)
 */
 const readline = require('readline');
@@ -34,9 +34,9 @@ function promptHidden(question) {
 async function main() {
   let bcrypt;
   try {
-    bcrypt = require(path.join(__dirname, '..', 'netlify', 'functions', 'node_modules', 'bcryptjs'));
+    bcrypt = require(path.join(__dirname, '..', 'node_modules', 'bcryptjs'));
   } catch (e) {
-    console.error('Could not find bcryptjs. Run `npm install` inside netlify/functions first.');
+    console.error('Could not find bcryptjs. Run `npm install` at the project root first.');
     process.exit(1);
   }
 
