@@ -10,6 +10,7 @@
     cp ../public/images/logo/favicon.ico dist/favicon.ico &&
     # ^ some browsers look for /favicon.ico at the site root by default.
     cp ../calculator.html dist/calculator.html &&
+    cp ../faq.html dist/faq.html &&
     cp ../privacy.html dist/privacy.html &&
     cp ../terms.html dist/terms.html &&
     cp ../guaranteed-coaching.html dist/guaranteed-coaching.html &&
@@ -123,6 +124,11 @@
 [[redirects]]
   from = "/privacy"
   to = "/privacy.html"
+  status = 200
+
+[[redirects]]
+  from = "/faq"
+  to = "/faq.html"
   status = 200
 
 # Product detail pages: /shop/:slug renders the shared shop/product.html template,

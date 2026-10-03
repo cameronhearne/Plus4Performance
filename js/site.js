@@ -86,6 +86,7 @@
           '</div>' +
           '<div class="footer-col">' +
             '<h5>Legal</h5>' +
+            '<a href="/faq">FAQ</a>' +
             '<a href="/privacy.html">Privacy Policy</a>' +
             '<a href="/terms.html">Terms</a>' +
             '<a href="/terms-of-sale">Terms of Sale</a>' +
