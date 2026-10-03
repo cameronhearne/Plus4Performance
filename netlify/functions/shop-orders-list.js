@@ -4,26 +4,38 @@
 
    This Stripe account also takes coaching subscriptions and one-off coaching
    payments through other code paths, so every Checkout Session is filtered
-   down to shop orders only:
-     - New sessions: create-checkout-session.js tags session.metadata.source
-       = 'shop' going forward.
-     - Older sessions created before that tag existed: treated as a shop
-       order only if mode === 'payment' AND every line item's product
-       metadata.product_id matches a slug in js/products.js (the shop's
-       catalogue) — i.e. it could only have come from this checkout function.
+   down to shop orders only, by any of (in order checked):
+     1. session.metadata.source === 'shop', or payment_intent.metadata.source
+        === 'shop' — the tag create-checkout-session.js sets going forward
+        (checked on the PaymentIntent too so a pre-tag order can be tagged
+        retroactively there, since a *completed* Checkout Session's own
+        metadata can no longer be edited via the Stripe API, but its
+        PaymentIntent's can).
+     2. mode === 'payment' AND success_url/cancel_url point at this shop's
+        pages (/order-confirmed, /shop) — the two URLs create-checkout-
+        session.js has always hardcoded, tag or no tag. Available on every
+        session with no expand needed, so this is the primary signal for
+        pre-tag orders.
+     3. mode === 'payment' AND every line item's product metadata.product_id
+        matches a slug in js/products.js — last-resort fallback for the rare
+        case neither signal above applies (e.g. a future URL change).
 
-   Performance: tries one bulk expand (line items + payment intent + latest
-   charge) across the whole paginated list first, so the common case is one
-   API call per 100 sessions rather than one call per order. Falls back to
-   a per-session line-items call only if Stripe doesn't return the deep
-   expansion (and even then, only for sessions that could plausibly be shop
-   orders), so the dashboard stays correct even if that optimisation isn't
-   available. */
+   Note: an EXPAND of 'data.line_items.data.price.product' on the *list*
+   call is NOT used here — Stripe's API rejects it outright (exceeds the
+   4-level expand limit on list endpoints), so there's no "fast path" to
+   attempt. Line items are fetched individually, but only for sessions
+   already known to be shop orders (via signal 1 or 2), so this stays one
+   call per shop order rather than one call per Stripe session overall. */
 const Stripe = require('stripe');
 const PRODUCTS = require('../../js/products.js');
 const { getSessionUser, unauthorized } = require('./_shared/admin-auth');
 
 const PRODUCT_SLUGS = new Set(PRODUCTS.map((p) => p.slug));
+const SITE_URL = (process.env.SITE_URL || 'https://plus4performance.com').replace(/\/+$/, '');
+const SHOP_URL_PREFIXES = [`${SITE_URL}/order-confirmed`, `${SITE_URL}/shop`];
+// autoPagingToArray's hard ceiling (Stripe SDK throws above this) — far more
+// than this shop will ever need, but exceeding it crashes the whole call.
+const MAX_SESSIONS = 10000;
 
 function json(statusCode, body) {
   return { statusCode, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
@@ -56,14 +68,24 @@ function lineItemsToItems(lineItemsData) {
   });
 }
 
-function isShopByLineItems(lineItemsData) {
-  const items = lineItemsData || [];
-  if (!items.length) return false;
-  return items.every((li) => {
+function matchesShopUrls(session) {
+  const urls = [session.success_url, session.cancel_url].filter(Boolean);
+  return urls.some((u) => SHOP_URL_PREFIXES.some((prefix) => u.startsWith(prefix)));
+}
+
+async function isShopByLineItems(stripe, sessionId) {
+  const lineItems = await stripe.checkout.sessions.listLineItems(sessionId, {
+    limit: 100,
+    expand: ['data.price.product']
+  });
+  const items = lineItems.data || [];
+  if (!items.length) return { match: false, items };
+  const match = items.every((li) => {
     const product = li.price && li.price.product;
     const pid = product && typeof product === 'object' && product.metadata && product.metadata.product_id;
     return !!pid && PRODUCT_SLUGS.has(pid);
   });
+  return { match, items };
 }
 
 function derivePaymentStatus(charge) {
@@ -72,39 +94,6 @@ function derivePaymentStatus(charge) {
     if ((charge.amount_refunded || 0) > 0) return 'partially_refunded';
   }
   return 'paid';
-}
-
-const LIST_PARAMS_BASE = { status: 'complete', limit: 100 };
-
-async function fetchSessionsDeepExpand(stripe) {
-  return stripe.checkout.sessions
-    .list(
-      Object.assign({}, LIST_PARAMS_BASE, {
-        expand: ['data.line_items.data.price.product', 'data.payment_intent', 'data.payment_intent.latest_charge']
-      })
-    )
-    .autoPagingToArray({ limit: 100000 });
-}
-
-async function fetchSessionsShallow(stripe) {
-  const sessions = await stripe.checkout.sessions
-    .list(Object.assign({}, LIST_PARAMS_BASE, { expand: ['data.payment_intent', 'data.payment_intent.latest_charge'] }))
-    .autoPagingToArray({ limit: 100000 });
-
-  for (const session of sessions) {
-    if (session.payment_status !== 'paid') continue;
-    const byTag = !!(session.metadata && session.metadata.source === 'shop');
-    // Only sessions that could plausibly be a (legacy, untagged) shop order
-    // need a line-items call — skips it for coaching subscriptions etc.
-    if (!byTag && session.mode !== 'payment') continue;
-
-    const lineItems = await stripe.checkout.sessions.listLineItems(session.id, {
-      limit: 100,
-      expand: ['data.price.product']
-    });
-    session.line_items = { data: lineItems.data };
-  }
-  return sessions;
 }
 
 exports.handler = async (event) => {
@@ -123,22 +112,23 @@ exports.handler = async (event) => {
   const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
   let sessions;
-  let expandMode = 'deep';
   try {
-    sessions = await fetchSessionsDeepExpand(stripe);
-    const expansionLooksReal = sessions.every((s) => {
-      const items = s.line_items && s.line_items.data;
-      if (!items || !items.length) return true;
-      return items.every((li) => typeof (li.price && li.price.product) === 'object');
-    });
-    if (!expansionLooksReal) throw new Error('deep expand did not return product objects');
+    sessions = await stripe.checkout.sessions
+      .list({ status: 'complete', limit: 100, expand: ['data.payment_intent', 'data.payment_intent.latest_charge'] })
+      .autoPagingToArray({ limit: MAX_SESSIONS });
   } catch (err) {
-    console.error('shop-orders-list: deep expand unavailable, falling back:', err.message);
-    expandMode = 'fallback';
-    sessions = await fetchSessionsShallow(stripe);
+    console.error('shop-orders-list: failed to list sessions:', err.message);
+    return json(502, { error: 'stripe_error' });
   }
 
-  const diagnostics = { scanned: 0, excludedNotPaid: 0, excludedNotShop: 0, includedByTag: 0, includedByLegacy: 0 };
+  const diagnostics = {
+    scanned: 0,
+    excludedNotPaid: 0,
+    excludedNotShop: 0,
+    includedByTag: 0,
+    includedByUrl: 0,
+    includedByLineItems: 0
+  };
   const orders = [];
 
   for (const session of sessions) {
@@ -149,16 +139,6 @@ exports.handler = async (event) => {
       continue;
     }
 
-    const byTag = !!(session.metadata && session.metadata.source === 'shop');
-    const byLegacy = !byTag && session.mode === 'payment' && isShopByLineItems(session.line_items && session.line_items.data);
-
-    if (!byTag && !byLegacy) {
-      diagnostics.excludedNotShop++;
-      continue;
-    }
-    if (byTag) diagnostics.includedByTag++;
-    else diagnostics.includedByLegacy++;
-
     const pi = session.payment_intent;
     let piObj = pi && typeof pi === 'object' ? pi : null;
     if (!piObj && pi) {
@@ -166,6 +146,44 @@ exports.handler = async (event) => {
         piObj = await stripe.paymentIntents.retrieve(pi, { expand: ['latest_charge'] });
       } catch (e) {
         console.error('shop-orders-list: payment intent retrieve failed for', pi, e.message);
+      }
+    }
+
+    const byTag = !!((session.metadata && session.metadata.source === 'shop') || (piObj && piObj.metadata && piObj.metadata.source === 'shop'));
+    const byUrl = !byTag && session.mode === 'payment' && matchesShopUrls(session);
+
+    let included = byTag || byUrl;
+    let lineItemsData = null;
+    let reason = byTag ? 'tag' : byUrl ? 'url' : null;
+
+    if (!included && session.mode === 'payment') {
+      try {
+        const check = await isShopByLineItems(stripe, session.id);
+        lineItemsData = check.items;
+        if (check.match) {
+          included = true;
+          reason = 'lineItems';
+        }
+      } catch (e) {
+        console.error('shop-orders-list: line items check failed for', session.id, e.message);
+      }
+    }
+
+    if (!included) {
+      diagnostics.excludedNotShop++;
+      continue;
+    }
+    if (reason === 'tag') diagnostics.includedByTag++;
+    else if (reason === 'url') diagnostics.includedByUrl++;
+    else diagnostics.includedByLineItems++;
+
+    if (!lineItemsData) {
+      try {
+        const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { limit: 100, expand: ['data.price.product'] });
+        lineItemsData = lineItems.data;
+      } catch (e) {
+        console.error('shop-orders-list: line items fetch failed for', session.id, e.message);
+        lineItemsData = [];
       }
     }
 
@@ -182,7 +200,7 @@ exports.handler = async (event) => {
     const metadata = (piObj && piObj.metadata) || {};
     const customerDetails = session.customer_details || {};
     const shippingAddress = (session.shipping_details && session.shipping_details.address) || customerDetails.address;
-    const items = lineItemsToItems(session.line_items && session.line_items.data);
+    const items = lineItemsToItems(lineItemsData);
     const total = (session.amount_total || 0) / 100;
     const delivery = ((session.shipping_cost && session.shipping_cost.amount_total) || 0) / 100;
     const subtotal = session.amount_subtotal != null ? session.amount_subtotal / 100 : total - delivery;
@@ -212,5 +230,5 @@ exports.handler = async (event) => {
 
   orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-  return json(200, { orders, diagnostics: Object.assign({ expandMode, included: orders.length }, diagnostics) });
+  return json(200, { orders, diagnostics: Object.assign({ included: orders.length }, diagnostics) });
 };

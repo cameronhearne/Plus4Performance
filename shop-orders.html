@@ -470,9 +470,11 @@
     fetch(FN + 'shop-orders-list', { credentials: 'same-origin' })
       .then(function(res){
         if (res.status === 401) { showView('login'); throw new Error('unauthorized'); }
+        if (!res.ok) throw new Error('fetch_failed');
         return res.json();
       })
       .then(function(data){
+        if (!Array.isArray(data.orders)) throw new Error('fetch_failed');
         allOrders = data.orders || [];
         ordersById = {};
         allOrders.forEach(function(o){ ordersById[o.paymentIntentId] = o; });

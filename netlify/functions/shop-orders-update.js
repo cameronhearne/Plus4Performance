@@ -60,6 +60,11 @@ exports.handler = async (event) => {
   try {
     const paymentIntent = await stripe.paymentIntents.update(paymentIntentId, {
       metadata: {
+        // Only ever reached for an order shop-orders-list.js already
+        // classified as a shop order, so this is a safe, authoritative
+        // permanent tag — belt-and-suspenders for any pre-tag order that
+        // only matched via a weaker signal (URL/line-items) at list time.
+        source: 'shop',
         fulfilment_status: fulfilmentStatus,
         tapstitch_order_ref: tapstitchOrderRef,
         tracking_number: trackingNumber,
