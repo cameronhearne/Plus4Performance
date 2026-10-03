@@ -148,7 +148,10 @@ async function getAttemptsStore(event) {
   // context auto-injected the way v2 functions do — connectLambda wires it
   // up from the raw Lambda event on every call, before getStore() runs.
   connectLambda(event);
-  return getStore({ name: 'admin-login-attempts' });
+  // Strong consistency: this counter is read-then-written on every request,
+  // so an eventually-consistent read (the default) can miss the previous
+  // attempt's write and never reach the lockout threshold.
+  return getStore({ name: 'admin-login-attempts', consistency: 'strong' });
 }
 
 async function checkLockout(event, username) {
