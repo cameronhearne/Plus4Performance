@@ -41,7 +41,6 @@
         '<a href="/shop"' + (current('/shop') ? ' aria-current="page"' : '') + '>Shop</a>' +
       '</nav>' +
       '<div class="site-header-actions">' +
-        '<a href="' + TIDYCAL + '" target="_blank" rel="noopener" class="btn-ghost btn-sm nav-cta">Book a Call</a>' +
         basketButtonHTML +
       '</div>' +
     '</div>' +
@@ -67,7 +66,6 @@
             '<h5>Coaching</h5>' +
             '<a href="/online-coaching">Online Coaching</a>' +
             '<a href="/guaranteed-coaching">Guaranteed Coaching</a>' +
-            '<a href="' + TIDYCAL + '" target="_blank" rel="noopener">Book a Call</a>' +
             '<a href="/guarantee-terms">Guarantee Terms</a>' +
           '</div>' +
           '<div class="footer-col">' +
