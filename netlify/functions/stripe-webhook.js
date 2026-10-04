@@ -74,7 +74,7 @@ function buildAlertText({ orderRef, orderDate, customerName, customerEmail, cust
   ].join('\n');
 }
 
-function buildCustomerHTML({ siteUrl, orderRef, items, deliveryAmount, total, addressText }) {
+function buildCustomerHTML({ siteUrl, orderRef, items, subtotal, deliveryAmount, total, addressText }) {
   const rows = items
     .map(
       (it) => `
@@ -103,8 +103,12 @@ function buildCustomerHTML({ siteUrl, orderRef, items, deliveryAmount, total, ad
           <tbody>
             ${rows}
             <tr>
-              <td style="padding:14px 0 0;color:#9a9aa2;font-size:13px;font-family:Arial,Helvetica,sans-serif;">Delivery</td>
-              <td style="padding:14px 0 0;color:#9a9aa2;font-size:13px;font-family:Arial,Helvetica,sans-serif;text-align:right;">${deliveryAmount === 0 ? 'Free' : formatMoney(deliveryAmount)}</td>
+              <td style="padding:14px 0 0;color:#9a9aa2;font-size:13px;font-family:Arial,Helvetica,sans-serif;">Subtotal</td>
+              <td style="padding:14px 0 0;color:#9a9aa2;font-size:13px;font-family:Arial,Helvetica,sans-serif;text-align:right;">${formatMoney(subtotal)}</td>
+            </tr>
+            <tr>
+              <td style="padding:6px 0 0;color:#9a9aa2;font-size:13px;font-family:Arial,Helvetica,sans-serif;">Delivery</td>
+              <td style="padding:6px 0 0;color:#9a9aa2;font-size:13px;font-family:Arial,Helvetica,sans-serif;text-align:right;">${deliveryAmount === 0 ? 'Free' : formatMoney(deliveryAmount)}</td>
             </tr>
             <tr>
               <td style="padding:18px 0 0;color:#ffffff;font-size:16px;font-weight:800;">Total</td>
@@ -116,13 +120,13 @@ function buildCustomerHTML({ siteUrl, orderRef, items, deliveryAmount, total, ad
           Shipping to<br>${addressText || ''}
         </p>
         <p style="color:#ffffff;font-size:14px;line-height:1.7;margin:24px 0 0;">
-          Made to order. Allow 2 to 4 days for production. Once shipped, around 60% of orders arrive within a week and 95% within 13 days.
+          Printed to order and dispatched within 2 to 4 days. Delivery usually takes 1 to 2 weeks.
         </p>
         <p style="color:#9a9aa2;font-size:13px;line-height:1.7;margin:24px 0 0;">
           Questions about your order or need to return something? Email us at <a href="mailto:cameron@plus4performance.com" style="color:#9a9aa2;text-decoration:underline;">cameron@plus4performance.com</a>
         </p>
         <p style="color:#9a9aa2;font-size:13px;line-height:1.7;margin:12px 0 0;">
-          Changed your mind? You have 14 days from delivery to return it — see our <a href="${siteUrl}/shipping-returns" style="color:#9a9aa2;text-decoration:underline;">Returns Policy</a>.
+          Changed your mind? You have 14 days from delivery to return it, see our <a href="${siteUrl}/shipping-returns" style="color:#9a9aa2;text-decoration:underline;">Returns Policy</a>.
         </p>
       </div>
     </div>
@@ -190,7 +194,11 @@ exports.handler = async (event) => {
   });
 
   const total = (session.amount_total || 0) / 100;
-  const deliveryAmount = ((session.shipping_cost && session.shipping_cost.amount_total) || 0) / 100;
+  const subtotal = (session.amount_subtotal || 0) / 100;
+  const deliveryAmount =
+    ((session.shipping_cost && session.shipping_cost.amount_total) ||
+      (session.total_details && session.total_details.amount_shipping) ||
+      0) / 100;
   // Fixed random ref set at creation (create-checkout-session.js), not
   // derived from the session id, so it's the exact same ref the customer
   // already saw on the Stripe payment description and order-confirmed page.
@@ -236,7 +244,7 @@ exports.handler = async (event) => {
           to: customerEmail,
           reply_to: process.env.REPLY_TO_EMAIL,
           subject: `Order confirmed - #${orderRef}`,
-          html: buildCustomerHTML({ siteUrl, orderRef, items, deliveryAmount, total, addressText })
+          html: buildCustomerHTML({ siteUrl, orderRef, items, subtotal, deliveryAmount, total, addressText })
         },
         { idempotencyKey: `${session.id}:customer` }
       );
