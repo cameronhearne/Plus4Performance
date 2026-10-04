@@ -222,6 +222,11 @@ exports.handler = async (event) => {
       fulfilmentStatus: metadata.fulfilment_status || 'New',
       tapstitchOrderRef: metadata.tapstitch_order_ref || '',
       trackingNumber: metadata.tracking_number || '',
+      carrier: metadata.tracking_carrier || '',
+      trackingUrl: metadata.tracking_url || '',
+      shippedAt: metadata.shipped_at || '',
+      shippedEmailSent: metadata.shipped_email_sent === 'true',
+      shippedEmailSentAt: metadata.shipped_email_sent_at || '',
       adminNotes: metadata.admin_notes || '',
       updatedBy: metadata.updated_by || '',
       updatedAt: metadata.updated_at || ''

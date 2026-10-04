@@ -221,9 +221,19 @@
   .totals-row.grand{color:var(--white);font-weight:700;font-size:15px;}
   .checkbox-field{display:flex;align-items:center;gap:8px;margin-bottom:16px;}
   .checkbox-field input{width:18px;height:18px;}
-  .save-row{display:flex;gap:10px;align-items:center;margin-top:16px;}
+  .save-row{display:flex;gap:10px;align-items:center;margin-top:16px;flex-wrap:wrap;}
   .save-feedback{font-size:13px;color:#5fd889;}
+  .save-error{font-size:13px;color:#ff9b8c;}
   .meta-note{font-size:12px;color:var(--ash);margin-top:10px;}
+  .field .required-mark{color:#ff9b8c;}
+  .field .field-hint{font-size:12px;color:var(--ash);margin-top:4px;}
+  .shipped-email-row{
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+    background:var(--midnight);border:1px solid var(--pebble);border-radius:10px;
+    padding:12px 14px;margin:16px 0;font-size:13px;color:var(--ash);
+  }
+  .shipped-email-row.is-sent{border-color:rgba(47,158,91,0.4);}
+  .shipped-email-row.is-error{border-color:rgba(192,57,43,0.4);}
 
   @media (max-width:900px){
     .summary-bar{grid-template-columns:repeat(2,1fr);}
@@ -342,16 +352,37 @@
       <input type="text" id="modalTapstitchRef" maxlength="200">
     </div>
     <div class="field">
-      <label for="modalTracking">Tracking number</label>
+      <label for="modalTracking">Tracking number <span class="required-mark" id="modalTrackingRequiredMark" hidden>*</span></label>
       <input type="text" id="modalTracking" maxlength="200">
+    </div>
+    <div class="field">
+      <label for="modalCarrier">Carrier <span class="required-mark" id="modalCarrierRequiredMark" hidden>*</span></label>
+      <select id="modalCarrier">
+        <option value="">Select a carrier&hellip;</option>
+        <option value="Royal Mail">Royal Mail</option>
+        <option value="Evri">Evri</option>
+        <option value="DPD">DPD</option>
+        <option value="Yodel">Yodel</option>
+        <option value="UPS">UPS</option>
+        <option value="DHL">DHL</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="modalTrackingUrl">Tracking URL</label>
+      <input type="text" id="modalTrackingUrl" maxlength="500" placeholder="Leave blank to use the carrier's standard tracking link">
+      <div class="field-hint">Optional. If left blank and the carrier is known, the standard tracking link is used automatically.</div>
     </div>
     <div class="field">
       <label for="modalNotes">Admin notes</label>
       <textarea id="modalNotes" maxlength="500"></textarea>
     </div>
+    <div id="shippedEmailRow" class="shipped-email-row hidden"></div>
     <div class="save-row">
       <button class="btn btn-primary" id="modalSaveBtn">Save</button>
+      <button class="btn hidden" id="modalResendEmailBtn">Resend shipping email</button>
       <span class="save-feedback hidden" id="modalSaveFeedback">Saved</span>
+      <span class="save-error hidden" id="modalSaveError"></span>
     </div>
     <div class="meta-note" id="modalMeta"></div>
   </div>
@@ -611,15 +642,95 @@
     document.getElementById('modalPlacedTick').checked = ['Placed on Tapstitch', 'Shipped', 'Delivered'].indexOf(o.fulfilmentStatus) !== -1;
     document.getElementById('modalTapstitchRef').value = o.tapstitchOrderRef || '';
     document.getElementById('modalTracking').value = o.trackingNumber || '';
+    document.getElementById('modalCarrier').value = o.carrier || '';
+    document.getElementById('modalTrackingUrl').value = o.trackingUrl || '';
     document.getElementById('modalNotes').value = o.adminNotes || '';
 
     document.getElementById('modalMeta').textContent = o.updatedBy
       ? 'Last updated by ' + o.updatedBy + ' on ' + fmtDateTime(o.updatedAt)
       : 'Not yet edited.';
 
+    updateRequiredMarks();
+    renderShippedEmailRow();
     document.getElementById('modalSaveFeedback').classList.add('hidden');
+    document.getElementById('modalSaveError').classList.add('hidden');
     document.getElementById('detailModal').classList.remove('hidden');
   }
+
+  // ── Shipped tracking + email ──────────────────────────────────
+  function updateRequiredMarks(){
+    var isShipped = document.getElementById('modalStatus').value === 'Shipped';
+    document.getElementById('modalTrackingRequiredMark').hidden = !isShipped;
+    document.getElementById('modalCarrierRequiredMark').hidden = !isShipped;
+  }
+
+  document.getElementById('modalStatus').addEventListener('change', updateRequiredMarks);
+
+  function renderShippedEmailRow(){
+    var row = document.getElementById('shippedEmailRow');
+    var resendBtn = document.getElementById('modalResendEmailBtn');
+    if (!activeOrder || activeOrder.fulfilmentStatus !== 'Shipped') {
+      row.classList.add('hidden');
+      resendBtn.classList.add('hidden');
+      return;
+    }
+    resendBtn.classList.remove('hidden');
+    row.classList.remove('hidden');
+    row.classList.remove('is-error');
+    if (activeOrder.shippedEmailSent) {
+      row.classList.add('is-sent');
+      row.textContent = 'Shipped email sent' + (activeOrder.shippedEmailSentAt ? ' on ' + fmtDateTime(activeOrder.shippedEmailSentAt) : '') + '.';
+    } else {
+      row.classList.remove('is-sent');
+      row.textContent = 'Shipped email not sent yet.';
+    }
+  }
+
+  function triggerShippedEmail(forceResend){
+    var row = document.getElementById('shippedEmailRow');
+    row.classList.remove('hidden', 'is-sent', 'is-error');
+    row.textContent = forceResend ? 'Resending shipping email…' : 'Sending shipping email…';
+
+    return fetch(FN + 'shop-orders-send-shipped-email', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paymentIntentId: activeOrder.paymentIntentId, forceResend: !!forceResend })
+    })
+      .then(function(res){
+        if (res.status === 401) { showView('login'); throw new Error('unauthorized'); }
+        return res.json().then(function(body){ return { ok: res.ok, body: body }; });
+      })
+      .then(function(r){
+        if (!r.ok) {
+          row.classList.add('is-error');
+          row.textContent = 'Could not send the shipping email. It has not been marked as sent — try again.';
+          return;
+        }
+        if (r.body.sent) {
+          activeOrder.shippedEmailSent = true;
+          activeOrder.shippedEmailSentAt = r.body.shippedEmailSentAt;
+          var stored = ordersById[activeOrder.paymentIntentId];
+          if (stored) Object.assign(stored, { shippedEmailSent: true, shippedEmailSentAt: r.body.shippedEmailSentAt });
+        } else if (r.body.skipped) {
+          activeOrder.shippedEmailSent = true;
+          activeOrder.shippedEmailSentAt = r.body.shippedEmailSentAt || activeOrder.shippedEmailSentAt;
+        }
+        renderShippedEmailRow();
+      })
+      .catch(function(err){
+        if (err.message === 'unauthorized') return;
+        row.classList.add('is-error');
+        row.textContent = 'Could not send the shipping email. It has not been marked as sent — try again.';
+      });
+  }
+
+  document.getElementById('modalResendEmailBtn').addEventListener('click', function(){
+    if (!activeOrder) return;
+    var ok = window.confirm('Resend the shipping email to ' + activeOrder.customerEmail + '?');
+    if (!ok) return;
+    triggerShippedEmail(true);
+  });
 
   document.getElementById('modalCloseBtn').addEventListener('click', function(){
     document.getElementById('detailModal').classList.add('hidden');
@@ -647,13 +758,30 @@
   document.getElementById('modalSaveBtn').addEventListener('click', function(){
     if (!activeOrder) return;
     var btn = document.getElementById('modalSaveBtn');
+    var errEl = document.getElementById('modalSaveError');
+    var feedbackEl = document.getElementById('modalSaveFeedback');
+    errEl.classList.add('hidden');
+    feedbackEl.classList.add('hidden');
+
+    var fulfilmentStatus = document.getElementById('modalStatus').value;
+    var trackingNumber = document.getElementById('modalTracking').value.trim();
+    var carrier = document.getElementById('modalCarrier').value;
+
+    if (fulfilmentStatus === 'Shipped' && (!trackingNumber || !carrier)) {
+      errEl.textContent = 'Tracking number and carrier are required to mark an order as Shipped.';
+      errEl.classList.remove('hidden');
+      return;
+    }
+
     btn.disabled = true;
 
     var payload = {
       paymentIntentId: activeOrder.paymentIntentId,
-      fulfilmentStatus: document.getElementById('modalStatus').value,
+      fulfilmentStatus: fulfilmentStatus,
       tapstitchOrderRef: document.getElementById('modalTapstitchRef').value.trim(),
-      trackingNumber: document.getElementById('modalTracking').value.trim(),
+      trackingNumber: trackingNumber,
+      carrier: carrier,
+      trackingUrl: document.getElementById('modalTrackingUrl').value.trim(),
       adminNotes: document.getElementById('modalNotes').value.trim()
     };
 
@@ -674,18 +802,40 @@
           fulfilmentStatus: updated.fulfilmentStatus,
           tapstitchOrderRef: updated.tapstitchOrderRef,
           trackingNumber: updated.trackingNumber,
+          carrier: updated.carrier,
+          trackingUrl: updated.trackingUrl,
+          shippedAt: updated.shippedAt,
+          shippedEmailSent: updated.shippedEmailSent,
           adminNotes: updated.adminNotes,
           updatedBy: updated.updatedBy,
           updatedAt: updated.updatedAt
         });
+        var stored = ordersById[activeOrder.paymentIntentId];
+        if (stored) Object.assign(stored, activeOrder);
+
+        // Reflect the final tracking URL (auto-built from the carrier when
+        // left blank) back into the field, so the admin can see/copy it.
+        document.getElementById('modalTrackingUrl').value = updated.trackingUrl || '';
+
         document.getElementById('modalMeta').textContent = 'Last updated by ' + updated.updatedBy + ' on ' + fmtDateTime(updated.updatedAt);
-        document.getElementById('modalSaveFeedback').classList.remove('hidden');
+        feedbackEl.classList.remove('hidden');
+        renderShippedEmailRow();
         renderSummary();
         applyFiltersAndRender();
+
+        // Exactly one automatic send per order: only fires the first time
+        // a save lands on "Shipped" while no shipped email has gone out
+        // yet. Re-saving Shipped later (e.g. editing admin notes) never
+        // re-triggers it — that's what the manual Resend button is for.
+        if (updated.fulfilmentStatus === 'Shipped' && !updated.shippedEmailSent) {
+          triggerShippedEmail(false);
+        }
       })
       .catch(function(err){
         btn.disabled = false;
-        if (err.message !== 'unauthorized') alert('Could not save changes. Try again.');
+        if (err.message === 'unauthorized') return;
+        errEl.textContent = 'Could not save changes. Try again.';
+        errEl.classList.remove('hidden');
       });
   });
 
@@ -701,7 +851,7 @@
   }
 
   document.getElementById('exportCsvBtn').addEventListener('click', function(){
-    var headers = ['Order', 'Date', 'Customer', 'Email', 'Items', 'Subtotal', 'Delivery', 'Total', 'Payment status', 'Fulfilment status', 'Tapstitch ref', 'Tracking number', 'Notes'];
+    var headers = ['Order', 'Date', 'Customer', 'Email', 'Items', 'Subtotal', 'Delivery', 'Total', 'Payment status', 'Fulfilment status', 'Tapstitch ref', 'Tracking number', 'Carrier', 'Tracking URL', 'Shipped email sent', 'Notes'];
     var rows = currentFiltered.map(function(o){
       return [
         o.orderRef,
@@ -716,6 +866,9 @@
         o.fulfilmentStatus,
         o.tapstitchOrderRef,
         o.trackingNumber,
+        o.carrier,
+        o.trackingUrl,
+        o.shippedEmailSent ? 'Yes' : 'No',
         o.adminNotes
       ].map(csvCell).join(',');
     });
