@@ -85,7 +85,9 @@ var P4P_PRODUCTS = [
     sizes: ['S', 'M', 'L', 'XL', 'XXL'],
     colours: [
       { name: 'Black', swatch: '#111111', images: ['/images/shop/crewneck-black-front.jpg', '/images/shop/crewneck-black-back.jpg'] },
-      { name: 'Grey Marl', swatch: '#c9c9c9', light: true, images: ['/images/shop/crewneck-grey-marl-front.jpg', '/images/shop/crewneck-grey-marl-back.jpg'] }
+      { name: 'Navy', swatch: '#26344a', images: ['/images/shop/crewneck-navy-front.jpg', '/images/shop/crewneck-navy-back.jpg'] },
+      { name: 'Dark Grey', swatch: '#4a4a4a', images: ['/images/shop/crewneck-dark-grey-front.jpg', '/images/shop/crewneck-dark-grey-back.jpg'] },
+      { name: 'Brown', swatch: '#5a4a40', images: ['/images/shop/crewneck-brown-front.jpg', '/images/shop/crewneck-brown-back.jpg'] }
     ],
     stripePaymentLink: 'REPLACE_WITH_LINK'
   },
