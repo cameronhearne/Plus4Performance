@@ -21,17 +21,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/site.css">
 <style>
-  .size-table{width:100%;border-collapse:collapse;margin-top:8px;}
-  .size-table th,
-  .size-table td{
-    text-align:left;
-    padding:14px 16px;
-    border-bottom:1px solid var(--pebble);
-    font-size:15px;
-    color:rgba(255,255,255,0.8);
+  .size-guide-controls{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:8px;}
+  .size-guide-how-cols{display:grid;grid-template-columns:1fr 1fr;gap:40px;}
+  @media(max-width:600px){
+    .size-guide-how-cols{grid-template-columns:1fr;gap:24px;}
   }
-  .size-table th{color:rgba(255,255,255,0.5);font-size:12px;text-transform:uppercase;letter-spacing:0.08em;font-weight:700;}
-  .table-wrap{overflow-x:auto;}
 </style>
 </head>
 <body>
@@ -41,41 +35,107 @@
   <div class="wrap">
     <span class="eyebrow">Size Guide</span>
     <h1>Find your size.</h1>
-    <p>Measurements in centimetres. If you're between sizes, we'd size up.</p>
+    <p>Measurements are taken flat across the garment. If you're between sizes, we'd size up.</p>
   </div>
 </section>
 
 <section>
   <div class="wrap">
-    <div class="content-block reveal">
-      <span class="placeholder-note">Placeholder</span>
-      <p>[PLACEHOLDER: Confirm final measurements once print-on-demand supplier and garment blanks are chosen.]</p>
-      <div class="table-wrap">
-        <table class="size-table">
-          <thead>
-            <tr><th>Size</th><th>Chest (cm)</th><th>Length (cm)</th><th>Sleeve (cm)</th></tr>
-          </thead>
-          <tbody>
-            <tr><td>S</td><td>[PLACEHOLDER]</td><td>[PLACEHOLDER]</td><td>[PLACEHOLDER]</td></tr>
-            <tr><td>M</td><td>[PLACEHOLDER]</td><td>[PLACEHOLDER]</td><td>[PLACEHOLDER]</td></tr>
-            <tr><td>L</td><td>[PLACEHOLDER]</td><td>[PLACEHOLDER]</td><td>[PLACEHOLDER]</td></tr>
-            <tr><td>XL</td><td>[PLACEHOLDER]</td><td>[PLACEHOLDER]</td><td>[PLACEHOLDER]</td></tr>
-            <tr><td>XXL</td><td>[PLACEHOLDER]</td><td>[PLACEHOLDER]</td><td>[PLACEHOLDER]</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-    <div class="content-block reveal">
-      <h2>How to measure</h2>
-      <span class="placeholder-note">Placeholder</span>
-      <p>[PLACEHOLDER: Short instructions for measuring chest, length and sleeve at home.]</p>
-    </div>
+    <div id="size-guide-root"><p>Loading...</p></div>
   </div>
 </section>
 
 <div id="site-footer"></div>
 
+<script src="/js/products.js"></script>
+<script src="/js/size-guides.js"></script>
 <script src="/js/site.js" defer></script>
 <script src="/js/basket.js" defer></script>
+<script>
+(function(){
+  var unit = 'cm';
+
+  function productsWithGuides(){
+    var all = window.P4P_PRODUCTS || [];
+    var guides = window.P4P_SIZE_GUIDES || {};
+    return all.filter(function(p){ return !!guides[p.slug]; });
+  }
+
+  function jumpLinksHTML(products){
+    return '<nav class="size-guide-jumplinks" aria-label="Jump to product">' +
+      products.map(function(p){ return '<a href="#' + p.slug + '">' + p.name + '</a>'; }).join('') +
+    '</nav>';
+  }
+
+  function controlsHTML(){
+    return (
+      '<div class="size-guide-controls">' +
+        '<div class="size-guide-unit-toggle" role="group" aria-label="Units">' +
+          '<button type="button" data-unit="cm" aria-pressed="' + (unit === 'cm' ? 'true' : 'false') + '">cm</button>' +
+          '<button type="button" data-unit="in" aria-pressed="' + (unit === 'in' ? 'true' : 'false') + '">in</button>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  function howToMeasureHTML(){
+    var helpers = window.P4P_SIZE_GUIDE_HELPERS;
+    return (
+      '<div class="content-block reveal is-visible">' +
+        '<h2>How to measure</h2>' +
+        '<p>' + window.P4P_SIZE_GUIDE_NOTE + '</p>' +
+        '<div class="size-guide-how-cols">' +
+          '<div class="size-guide-how">' +
+            '<h3>Tops</h3>' +
+            helpers.howToMeasureHTML('top') +
+          '</div>' +
+          '<div class="size-guide-how">' +
+            '<h3>Bottoms</h3>' +
+            helpers.howToMeasureHTML('bottom') +
+          '</div>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  function productSectionHTML(product){
+    var helpers = window.P4P_SIZE_GUIDE_HELPERS;
+    var guides = window.P4P_SIZE_GUIDES || {};
+    var entry = guides[product.slug];
+    return (
+      '<div class="content-block reveal is-visible size-guide-section" id="' + product.slug + '">' +
+        '<h2>' + product.name + '</h2>' +
+        '<p class="size-guide-flat-note">' + window.P4P_SIZE_GUIDE_NOTE + '</p>' +
+        '<div class="size-guide-table-wrap">' + helpers.tableHTML(entry, unit, product.sizes) + '</div>' +
+      '</div>'
+    );
+  }
+
+  function render(){
+    var root = document.getElementById('size-guide-root');
+    var products = productsWithGuides();
+
+    if(!products.length){
+      root.innerHTML = '<p>Size guide coming soon.</p>';
+      return;
+    }
+
+    root.innerHTML =
+      controlsHTML() +
+      jumpLinksHTML(products) +
+      howToMeasureHTML() +
+      products.map(productSectionHTML).join('');
+
+    root.querySelectorAll('.size-guide-unit-toggle [data-unit]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        unit = btn.getAttribute('data-unit');
+        render();
+      });
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', render);
+})();
+</script>
 </body>
 </html>

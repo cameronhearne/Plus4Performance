@@ -541,3 +541,117 @@ body.basket-drawer-open{overflow:hidden;}
 @media(max-width:480px){
   .basket-drawer{width:100%;max-width:100%;}
 }
+
+/* SIZE GUIDE — shared table + "how to measure" styles used by both
+   size-guide.html and the product page's size guide modal below. */
+.size-guide-table-wrap{overflow-x:auto;}
+.size-guide-table{width:100%;border-collapse:collapse;margin-top:8px;}
+.size-guide-table th,
+.size-guide-table td{
+  text-align:left;
+  padding:14px 16px;
+  border-bottom:1px solid var(--pebble);
+  font-size:15px;
+  color:rgba(255,255,255,0.8);
+  white-space:nowrap;
+}
+.size-guide-table th{color:rgba(255,255,255,0.5);font-size:12px;text-transform:uppercase;letter-spacing:0.08em;font-weight:700;}
+.size-guide-flat-note{font-size:13px;color:var(--ash);margin:12px 0 18px;}
+.size-guide-how h3{font-size:15px;font-weight:800;margin-bottom:10px;}
+.size-guide-how-list{list-style:none;margin:0 0 4px;padding:0;font-size:14px;color:rgba(255,255,255,0.75);line-height:1.6;}
+.size-guide-how-list li{margin-bottom:6px;}
+.size-guide-how-list strong{color:#fff;}
+.size-guide-unit-toggle{display:inline-flex;border:1px solid var(--pebble);border-radius:var(--radius-pill);overflow:hidden;margin:4px 0 4px;}
+.size-guide-unit-toggle button{background:transparent;border:none;color:#fff;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;}
+.size-guide-unit-toggle button[aria-pressed="true"]{background:var(--ember);}
+
+/* SIZE GUIDE PAGE (size-guide.html) */
+.size-guide-jumplinks{
+  display:flex;flex-wrap:wrap;gap:10px 20px;
+  margin:20px 0 40px;
+  padding:16px 20px;
+  border:1px solid var(--pebble);
+  border-radius:var(--radius);
+}
+.size-guide-jumplinks a{color:rgba(255,255,255,0.75);font-size:14px;text-decoration:underline;}
+.size-guide-jumplinks a:hover{color:#fff;}
+.size-guide-section{padding-top:16px;scroll-margin-top:110px;}
+.size-guide-section h2{font-size:24px;font-weight:800;letter-spacing:-0.01em;margin-bottom:6px;}
+
+/* SIZE GUIDE MODAL (shop/product.html) */
+.size-guide-btn{
+  background:none;
+  border:none;
+  padding:0;
+  color:var(--ember-bright);
+  font-size:13px;
+  font-weight:700;
+  text-decoration:underline;
+  cursor:pointer;
+}
+.size-guide-btn:hover{color:#fff;}
+body.size-guide-modal-open{overflow:hidden;}
+.size-guide-overlay{
+  position:fixed;inset:0;
+  background:rgba(0,0,0,0.6);
+  z-index:90;
+  opacity:0;
+  transition:opacity 0.25s ease;
+}
+.size-guide-overlay[hidden]{display:none;}
+.size-guide-overlay.is-open{opacity:1;}
+.size-guide-modal{
+  position:fixed;
+  top:50%;left:50%;
+  transform:translate(-50%,-50%) scale(0.98);
+  width:480px;max-width:90vw;
+  max-height:85vh;
+  background:var(--card-bg);
+  border:1px solid var(--pebble);
+  border-radius:var(--radius);
+  z-index:95;
+  display:flex;
+  flex-direction:column;
+  opacity:0;
+  transition:opacity 0.2s ease, transform 0.2s ease;
+}
+.size-guide-modal[hidden]{display:none;}
+.size-guide-modal.is-open{opacity:1;transform:translate(-50%,-50%) scale(1);}
+.size-guide-modal-head{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:12px;
+  padding:18px 20px;
+  border-bottom:1px solid var(--pebble);
+  flex-shrink:0;
+}
+.size-guide-modal-head h2{font-size:17px;font-weight:800;letter-spacing:-0.01em;}
+.size-guide-modal-close{
+  width:32px;height:32px;
+  flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  background:transparent;
+  border:1px solid rgba(255,255,255,0.2);
+  border-radius:50%;
+  color:#fff;
+  font-size:18px;
+  line-height:1;
+  cursor:pointer;
+}
+.size-guide-modal-close:hover{border-color:rgba(255,255,255,0.5);}
+.size-guide-modal-body{flex:1;overflow-y:auto;padding:16px 20px 20px;}
+.size-guide-modal .size-guide-table th,
+.size-guide-modal .size-guide-table td{padding:9px 10px;font-size:13px;}
+.size-guide-modal-link{display:inline-block;margin-top:14px;font-size:13px;color:var(--ash);text-decoration:underline;}
+.size-guide-modal-link:hover{color:#fff;}
+
+@media(max-width:600px){
+  .size-guide-modal{
+    top:auto;left:0;right:0;bottom:0;
+    transform:translateY(100%);
+    width:100%;max-width:100%;
+    max-height:88vh;
+    border-radius:16px 16px 0 0;
+    border-left:none;border-right:none;border-bottom:none;
+  }
+  .size-guide-modal.is-open{transform:translateY(0);}
+}

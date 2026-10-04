@@ -74,6 +74,8 @@
   }
   .size-pill:hover{border-color:rgba(255,255,255,0.5);}
   .size-pill[aria-pressed="true"]{background:var(--ember);border-color:var(--ember);}
+  .size-section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
+  .size-section-head h2{margin-bottom:0;}
 
   .product-ship{font-size:14px;color:var(--ash);margin-bottom:24px;}
   .buy-note{font-size:13px;color:var(--ash);margin-bottom:12px;}
@@ -121,6 +123,7 @@
 <div id="site-footer"></div>
 
 <script src="/js/products.js"></script>
+<script src="/js/size-guides.js"></script>
 <script src="/js/site.js" defer></script>
 <script src="/js/basket.js" defer></script>
 <script>
@@ -177,6 +180,96 @@
     );
   }
 
+  function setupSizeGuideModal(product, sizeGuide){
+    var btn = document.getElementById('size-guide-btn');
+    if(!btn) return;
+    var helpers = window.P4P_SIZE_GUIDE_HELPERS;
+    var overlay, modal, currentUnit = 'cm';
+
+    function bodyHTML(){
+      return (
+        '<div class="size-guide-unit-toggle" role="group" aria-label="Units">' +
+          '<button type="button" data-unit="cm" aria-pressed="' + (currentUnit === 'cm' ? 'true' : 'false') + '">cm</button>' +
+          '<button type="button" data-unit="in" aria-pressed="' + (currentUnit === 'in' ? 'true' : 'false') + '">in</button>' +
+        '</div>' +
+        '<div class="size-guide-table-wrap">' + helpers.tableHTML(sizeGuide, currentUnit, product.sizes) + '</div>' +
+        '<p class="size-guide-flat-note">' + window.P4P_SIZE_GUIDE_NOTE + '</p>' +
+        '<div class="size-guide-how">' +
+          '<h3>How to measure</h3>' +
+          helpers.howToMeasureHTML(sizeGuide.type) +
+        '</div>' +
+        '<a class="size-guide-modal-link" href="/size-guide#' + product.slug + '">View full size guide</a>'
+      );
+    }
+
+    function renderBody(){
+      var body = modal.querySelector('.size-guide-modal-body');
+      body.innerHTML = bodyHTML();
+      body.querySelectorAll('[data-unit]').forEach(function(unitBtn){
+        unitBtn.addEventListener('click', function(){
+          currentUnit = unitBtn.getAttribute('data-unit');
+          renderBody();
+        });
+      });
+    }
+
+    function close(){
+      if(!modal) return;
+      overlay.classList.remove('is-open');
+      modal.classList.remove('is-open');
+      document.body.classList.remove('size-guide-modal-open');
+      window.setTimeout(function(){
+        if(overlay) overlay.setAttribute('hidden', '');
+        if(modal) modal.setAttribute('hidden', '');
+      }, 220);
+      btn.focus();
+    }
+
+    function build(){
+      overlay = document.createElement('div');
+      overlay.className = 'size-guide-overlay';
+      overlay.setAttribute('hidden', '');
+      overlay.addEventListener('click', close);
+
+      modal = document.createElement('div');
+      modal.className = 'size-guide-modal';
+      modal.setAttribute('role', 'dialog');
+      modal.setAttribute('aria-modal', 'true');
+      modal.setAttribute('aria-labelledby', 'size-guide-modal-title');
+      modal.setAttribute('hidden', '');
+      modal.innerHTML =
+        '<div class="size-guide-modal-head">' +
+          '<h2 id="size-guide-modal-title">Size Guide &mdash; ' + product.name + '</h2>' +
+          '<button type="button" class="size-guide-modal-close" aria-label="Close size guide">&times;</button>' +
+        '</div>' +
+        '<div class="size-guide-modal-body"></div>';
+
+      document.body.appendChild(overlay);
+      document.body.appendChild(modal);
+
+      modal.querySelector('.size-guide-modal-close').addEventListener('click', close);
+      document.addEventListener('keydown', function(e){
+        if(e.key === 'Escape' && modal && !modal.hasAttribute('hidden')) close();
+      });
+
+      renderBody();
+    }
+
+    function open(){
+      if(!modal) build();
+      overlay.removeAttribute('hidden');
+      modal.removeAttribute('hidden');
+      requestAnimationFrame(function(){
+        overlay.classList.add('is-open');
+        modal.classList.add('is-open');
+      });
+      document.body.classList.add('size-guide-modal-open');
+      modal.querySelector('.size-guide-modal-close').focus();
+    }
+
+    btn.addEventListener('click', open);
+  }
+
   function render(){
     var root = document.getElementById('product-root');
     var slug = getSlug();
@@ -200,9 +293,15 @@
     var comingSoon = isComingSoon(product);
     var initialColourIndex = getInitialColourIndex(product);
 
+    var sizeGuide = (window.P4P_SIZE_GUIDES || {})[product.slug];
+
     var sizesHTML = '<div class="size-list" role="group" aria-label="Size">' + product.sizes.map(function(s){
       return '<button type="button" class="size-pill" aria-pressed="false" aria-label="Size ' + s + '">' + s + '</button>';
     }).join('') + '</div>';
+
+    var sizeHeadHTML = '<div class="size-section-head"><h2>Size</h2>' +
+      (sizeGuide ? '<button type="button" class="size-guide-btn" id="size-guide-btn">Size guide</button>' : '') +
+      '</div>';
 
     var swatchesHTML = '<div class="colour-row" role="group" aria-label="Colour">' + product.colours.map(function(c, i){
       return '<button type="button" class="colour-swatch-btn' + (c.light ? ' is-light' : '') + '" style="background:' + c.swatch + '" ' +
@@ -254,7 +353,7 @@
               swatchesHTML +
             '</div>' +
             '<div class="product-section">' +
-              '<h2>Size</h2>' +
+              sizeHeadHTML +
               sizesHTML +
             '</div>' +
             '<p class="product-ship">Made to order. Allow 2 to 4 days for production. Once shipped, around 60% of orders arrive within a week and 95% within 13 days.<br>' +
@@ -337,6 +436,10 @@
         updateAddToBasketButton();
       });
     });
+
+    if(sizeGuide){
+      setupSizeGuideModal(product, sizeGuide);
+    }
 
     if(!comingSoon){
       document.getElementById('qty-dec').addEventListener('click', function(){
