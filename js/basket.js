@@ -56,9 +56,19 @@
     return l.productId + '|' + l.colour + '|' + l.size;
   }
 
+  /* Products taken out of the shop. A basket saved before removal may
+     still hold them; drop those lines quietly, because checkout rejects
+     the whole basket if any line is an unknown product. */
+  var REMOVED_PRODUCTS = ['camo-joggers'];
+
   function getLines(){
     var lines = readBasket();
-    return Array.isArray(lines) ? lines : [];
+    if(!Array.isArray(lines)) return [];
+    var kept = lines.filter(function(l){
+      return l && REMOVED_PRODUCTS.indexOf(l.productId) === -1;
+    });
+    if(kept.length !== lines.length) writeBasket(kept);
+    return kept;
   }
 
   function setLines(lines){

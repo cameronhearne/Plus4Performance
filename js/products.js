@@ -118,18 +118,6 @@ var P4P_PRODUCTS = [
     stripePaymentLink: 'REPLACE_WITH_LINK'
   },
   {
-    name: 'Camo Joggers',
-    slug: 'camo-joggers',
-    category: 'joggers',
-    price: 35,
-    description: 'Relaxed barrel-leg joggers in tree camo.',
-    sizes: ['S', 'M', 'L', 'XL', 'XXL'],
-    colours: [
-      { name: 'Tree Camo', swatch: '#5c5a3f', images: ['/images/shop/camo-joggers-front.jpg', '/images/shop/camo-joggers-back.jpg'] }
-    ],
-    stripePaymentLink: 'REPLACE_WITH_LINK'
-  },
-  {
     name: 'Plus Four Shorts',
     slug: 'plus-four-shorts',
     category: 'shorts',

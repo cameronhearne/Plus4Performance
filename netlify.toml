@@ -131,6 +131,14 @@
   to = "/faq.html"
   status = 200
 
+# Discontinued products: send old product URLs back to the shop grid.
+# Must sit above /shop/:slug so it takes priority.
+[[redirects]]
+  from = "/shop/camo-joggers"
+  to = "/shop"
+  status = 301
+  force = true
+
 # Product detail pages: /shop/:slug renders the shared shop/product.html template,
 # which looks the slug up in js/products.js. URL stays as /shop/:slug.
 [[redirects]]
